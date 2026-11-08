@@ -4,15 +4,19 @@
 // ONLY way live content reaches this site is the HTTP API served by the
 // Next.js backend (plan section 7). This loader never touches the DB.
 //
-// API contract (to be built in the monorepo):
+// API contract:
 //   GET {PUBLIC_CONTENT_API_URL}/api/public/content/:type        -> list
 //   GET {PUBLIC_CONTENT_API_URL}/api/public/content/:type/:slug   -> one
 // Response items carry: title, slug, content, meta, tags, dates, media
 // URLs, SEO fields. Only `published` items are returned by the API.
 //
-// Until PUBLIC_CONTENT_API_URL is set, the loader returns empty results —
-// it never crashes the build or the page. Auth (read-only token) is wired
-// when the API lands, from server-only Worker env — never hardcoded here.
+// The base URL resolves at request time, Worker runtime env first
+// (PUBLIC_CONTENT_API_URL set as a Worker Variable in the Cloudflare
+// dashboard — no rebuild needed to change it), then build-time
+// import.meta.env. Until it is set anywhere, the loader returns empty
+// results — it never crashes the build or the page. Auth (read-only
+// token) is wired from server-only Worker env when the API requires one —
+// never hardcoded here.
 //
 // Note: Astro does not re-export the LiveLoader type from "astro:content",
 // so the loader is typed structurally here; defineLiveCollection() in
@@ -44,10 +48,48 @@ interface LoaderOptions {
 	token?: string;
 }
 
-function apiBase(options: LoaderOptions): string | undefined {
-	const fromEnv = import.meta.env.PUBLIC_CONTENT_API_URL as string | undefined;
-	const base = (options.apiUrl ?? fromEnv ?? "").replace(/\/$/, "");
-	return base || undefined;
+interface ResolvedBase {
+	value?: string | undefined;
+	done: boolean;
+}
+
+/**
+ * Resolve the API base URL at request time. Explicit option wins, then the
+ * Worker runtime env (dashboard Variable — same pattern as the cache
+ * invalidate secret), then build-time import.meta.env. Resolved once per
+ * loader instance and cached. Returns undefined when unset everywhere.
+ */
+async function resolveApiBase(
+	options: LoaderOptions,
+	cached: ResolvedBase,
+): Promise<string | undefined> {
+	if (cached.done) return cached.value;
+	let base: string | undefined;
+	const explicit = (options.apiUrl ?? "").replace(/\/$/, "");
+	if (explicit) {
+		base = explicit;
+	} else {
+		try {
+			// Worker runtime — dynamic import so the Node prerender build stays green.
+			const { env } = await import("cloudflare:workers");
+			const runtime = (env as Record<string, unknown>)
+				.PUBLIC_CONTENT_API_URL;
+			if (typeof runtime === "string" && runtime) {
+				base = runtime.replace(/\/$/, "");
+			}
+		} catch {
+			// Not running in a Worker (local dev / build) — fall through.
+		}
+		if (!base) {
+			const fromEnv = import.meta.env.PUBLIC_CONTENT_API_URL as
+				| string
+				| undefined;
+			base = (fromEnv ?? "").replace(/\/$/, "") || undefined;
+		}
+	}
+	cached.value = base;
+	cached.done = true;
+	return base;
 }
 
 function isItem(value: unknown): value is PublicContentItem {
@@ -86,12 +128,13 @@ export function createPublicContentLoader(
 	type: PublicContentType,
 	options: LoaderOptions = {},
 ) {
-	const base = apiBase(options);
 	const token = options.token;
+	const cached: ResolvedBase = { done: false };
 
 	return {
 		name: `public-content-${type}`,
 		loadCollection: async () => {
+			const base = await resolveApiBase(options, cached);
 			if (!base) return { entries: [] };
 			const raw = await fetchJson(`${base}/api/public/content/${type}`, token);
 			const items = Array.isArray(raw)
@@ -107,6 +150,7 @@ export function createPublicContentLoader(
 			filter: { id: string };
 			collection: string;
 		}) => {
+			const base = await resolveApiBase(options, cached);
 			if (!base) return undefined;
 			const raw = await fetchJson(
 				`${base}/api/public/content/${type}/${encodeURIComponent(filter.id)}`,
