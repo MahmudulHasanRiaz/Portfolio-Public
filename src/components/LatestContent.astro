@@ -3,12 +3,12 @@ import {
 	formatDate,
 	getPosts,
 	readingTimeFromText,
-	truncateShort,
 } from "../lib/content";
 
 // "Latest" block — preview presentation: cards with thumbnail (or a
 // deliberate monogram tile when a post has none) + tag chip + title +
-// excerpt + "date · reading time". Reading time is computed from the
+// "date · reading time". No description/excerpt on the card — the preview
+// shows title + other info only. Reading time is computed from the
 // actual post text (body, then live API content), never the stored
 // value on its own — the API ships readingTime: 1 for every post.
 const posts = await getPosts();
@@ -47,9 +47,6 @@ const latest = posts.slice(0, 3);
 								</div>
 							) : null}
 							<h3>{post.data.title}</h3>
-							{post.data.excerpt ? (
-								<p>{truncateShort(post.data.excerpt)}</p>
-							) : null}
 							<p class="post-meta">
 								{formatDate(post.data.publishedAt)}
 								{readingTime ? ` · ${readingTime} min read` : ""}

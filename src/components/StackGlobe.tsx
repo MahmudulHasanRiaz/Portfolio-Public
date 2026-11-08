@@ -883,8 +883,9 @@ export default function StackGlobe({
 								aria-hidden="true"
 								style={{
 									display: "inline-block",
-									width: 6,
-									height: 6,
+									/* Preview globe-chip color dot is 4px. */
+									width: 4,
+									height: 4,
 									flex: "none",
 									borderRadius: "50%",
 									background: CATEGORY_COLORS[cat],

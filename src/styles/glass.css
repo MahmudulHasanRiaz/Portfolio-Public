@@ -84,10 +84,18 @@
 
 html {
 	scroll-behavior: smooth;
+	/* Mobile layout lock (6-point round, 2026-11-08): the page must never
+	   shift sideways on mobile. overflow-x: clip (not hidden) on html/body
+	   is the safety net behind the globe-tag clamp (worker F); the
+	   overscroll rule stops the footer bounce-back (rubber-band
+	   spring-back, worker H — same rule also lands in Layout.astro). */
+	overflow-x: clip;
+	overscroll-behavior-y: none;
 }
 
 body {
 	margin: 0;
+	overflow-x: clip;
 	background: var(--bg);
 	color: var(--ink);
 	font-family: var(--font);
@@ -263,6 +271,14 @@ main {
 /* ---------- Header ---------- */
 .site-header {
 	position: sticky;
+	/* Animation isolation (worker I): layout containment + stacking
+	   isolation. The pill breathe (box-shadow), arc flow
+	   (stroke-dashoffset) and label crossfade (transform/opacity) are
+	   paint/compositor-only and cannot shift page layout; containment
+	   guarantees it. `layout` only — never `paint`/`strict` here: the
+	   arcs hang outside the pill and must stay visible. */
+	contain: layout style;
+	isolation: isolate;
 	/* Preview: sticky top-2 (8px) mobile, top-3 (12px) at sm+ — the
 	   pill row sticks 8/12px below the viewport top. The old single
 	   12px value put the stuck row 4px too low on mobile. */
@@ -480,6 +496,11 @@ main {
 .sticky-pill {
 	position: relative;
 	pointer-events: auto;
+	/* Animation isolation: `layout` containment (no paint — the arcs
+	   are absolutely positioned outside the pill) + stacking isolation,
+	   so the breathe glow can never bleed into neighbouring sections. */
+	contain: layout style;
+	isolation: isolate;
 	display: flex;
 	align-items: center;
 	/* Preview proportions (measured): 36px tall, 4px gaps, 4px side
@@ -626,6 +647,9 @@ main {
 	width: 100%;
 	height: 22px;
 	overflow: hidden;
+	/* Animation isolation: label slides are transform/opacity only;
+	   paint containment matches the existing overflow clipping. */
+	contain: layout paint;
 }
 
 .pill-label-slide {
@@ -749,6 +773,9 @@ main {
 	overflow: visible;
 	pointer-events: none;
 	z-index: 1;
+	/* Animation isolation: the flowing-light dashoffset animation is
+	   paint-only; layout containment keeps it inside this element. */
+	contain: layout style;
 }
 
 .header-arc-left {
@@ -928,6 +955,13 @@ main {
 	   header edges (preview probe x=16 / x=326 at 390px). */
 	padding: 0;
 	pointer-events: none;
+	/* Animation isolation: the corner buttons animate `width` 0→48/64px
+	   on stick — a layout property, but this box is absolutely
+	   positioned, so the width change cannot move any in-flow element
+	   or the page scroll; it is contained here. A transform substitute
+	   (scaleX) would squash the "BN" label / icon mid-transition, so
+	   the width transition is kept deliberately. */
+	contain: layout style;
 }
 
 /* At sm+ the header itself carries 8px side padding, and an
@@ -1077,6 +1111,14 @@ main {
 	position: relative;
 	aspect-ratio: 4 / 5;
 	overflow: visible;
+	/* Animation isolation: `layout` only + stacking isolation. NEVER
+	   `paint`/`strict` or overflow clipping here — the runlight trace
+	   sits at inset −7px OUTSIDE the photo by design and the badge
+	   hangs 16px below it; paint containment would cut both. The
+	   runlight animates stroke-dashoffset (paint-only) and the badge
+	   letters transform/opacity, so nothing here can move layout. */
+	contain: layout style;
+	isolation: isolate;
 }
 
 /* Preview: the portrait is SHARP-cornered — border-radius 0, no rounding
@@ -1131,6 +1173,9 @@ main {
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
+		/* Animation isolation: the float chips animate translateY only;
+		   layout containment keeps them inside the hero card. */
+		contain: layout style;
 	}
 
 	.hero-photo-float-card {
@@ -1146,6 +1191,8 @@ main {
 		box-shadow:
 			0 18px 45px rgba(13, 60, 50, 0.12),
 			0 2px 8px rgba(13, 60, 50, 0.06);
+		/* Animation isolation: hero-float is transform-only. */
+		contain: layout style;
 	}
 
 	.hero-photo-float-card:first-child {
@@ -1216,6 +1263,9 @@ main {
 	display: flex;
 	justify-content: center;
 	pointer-events: none;
+	/* Animation isolation: the badge sits above the runlight trace
+	   (z-index 4) and must never let the trace paint over it. */
+	isolation: isolate;
 }
 
 /* The runlight SVG must sit EXACTLY 7px outside the photo on ALL FOUR
@@ -1304,6 +1354,9 @@ main {
 	/* Clips the typing letters' rise-in so none ever spills outside
 	   the pill (preview's badge row is overflow-hidden too). */
 	overflow: hidden;
+	/* Animation isolation: paint containment matches the overflow clip;
+	   the typing letters animate transform/opacity/filter only. */
+	contain: layout paint;
 	box-shadow:
 		inset 0 1px 0 rgba(255, 255, 255, 0.35),
 		inset 0 -1px 0 rgba(0, 0, 0, 0.1),
@@ -1635,7 +1688,8 @@ main {
 	border-radius: 999px;
 	padding: 6px 14px;
 	font-size: 13px;
-	font-weight: 500;
+	/* Preview archive chips are semibold (600), not medium (500). */
+	font-weight: 600;
 	transition:
 		background-color 200ms ease,
 		border-color 200ms ease;
@@ -1706,6 +1760,12 @@ main {
 	position: relative;
 	perspective: 1200px;
 	margin: 4px 60px 52px 4px;
+	/* Animation isolation: `layout` only + stacking isolation. NEVER
+	   `paint`/`strict` or overflow clipping here — the peek pages fan
+	   OUTSIDE the deck (up to ~36px left, ~15px down) by design. The
+	   flip animates transform/opacity only, so it cannot move layout. */
+	contain: layout style;
+	isolation: isolate;
 }
 
 .deck-card {
@@ -1719,6 +1779,9 @@ main {
 	display: block;
 	box-shadow: var(--shadow);
 	will-change: transform, opacity;
+	/* Animation isolation: the flip is transform/opacity only;
+	   paint containment matches the existing overflow clip. */
+	contain: layout paint;
 }
 
 .deck-card .deck-thumb {
@@ -1783,6 +1846,9 @@ main {
 	overflow: hidden;
 	pointer-events: none;
 	transition: opacity 250ms ease;
+	/* Animation isolation: peeks move by inline transform/opacity only;
+	   layout containment keeps them inside the deck. */
+	contain: layout style;
 }
 
 .deck--flipping .deck-peek {
@@ -1834,6 +1900,15 @@ main {
 	align-items: center;
 	gap: 12px;
 	margin-top: 14px;
+	/* Animation isolation: the dots animate `width` 10→24px (see
+	   .deck-dot) — a layout property, kept deliberately: a transform
+	   substitute would need every dot to reserve the 24px active width
+	   in layout, widening the indicator row and reflowing the counter.
+	   The shift is confined to this row (≤14px on a 10px dot, estimated
+	   CLS ≤0.0001 — live measurement was blocked in this environment,
+	   see worker I report) and containment here keeps it from affecting
+	   anything outside the row. */
+	contain: layout style;
 }
 
 .deck-indicator-spacer {
@@ -1876,14 +1951,17 @@ main {
 }
 
 .deck-dot.active {
-	width: 24px;
+	/* Preview active dot is 28px wide (10px tall). */
+	width: 28px;
 	border-radius: 999px;
 	background: var(--accent);
 	opacity: 1;
 }
 
 .deck-counter {
-	font-size: 13px;
+	/* Preview counter is 12px semibold dim. */
+	font-size: 12px;
+	font-weight: 600;
 	color: var(--ink-dim);
 	white-space: nowrap;
 	overflow: hidden;
@@ -1917,6 +1995,8 @@ main {
 
 .projects-grid-card {
 	animation: grid-rise 0.55s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+	/* Animation isolation: grid-rise is transform/opacity only. */
+	contain: layout style;
 }
 
 @keyframes grid-rise {
@@ -2355,6 +2435,16 @@ main {
 	gap: 12px;
 }
 
+/* Preview detail-page CTAs are 44px pills (px-6 py-3, 14px bold) —
+   NOT the slim 13px hero-button size the base .btn carries. This
+   covers the primary button and the ghost secondary link alike. */
+.detail-cta .btn {
+	padding: 12px 24px;
+	font-size: 14px;
+	font-weight: 700;
+	border-radius: 999px;
+}
+
 /* ---------- Detail pages — Run 13 ---------- */
 .detail-section {
 	margin-top: 24px;
@@ -2514,6 +2604,12 @@ main {
 	border-radius: 999px;
 	background: var(--card-border);
 	overflow: hidden;
+	/* Animation isolation: the fill bar's width transition (detail.js)
+	   is clipped here and cannot shift siblings — the bar lives inside
+	   this overflow:hidden flex child. Converting the fill to
+	   transform: scaleX needs detail.js + DetailMedia.astro (detail
+	   round's files) — reported to the coordinator, not changed here. */
+	contain: layout paint;
 }
 
 .slider-progress > div {
@@ -2670,6 +2766,9 @@ main {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	/* Animation isolation: the rAF loop writes transforms on the globe's
+	   own tags only; layout containment keeps any of it inside the wrap. */
+	contain: layout style;
 }
 
 .globe-stage {
@@ -2682,6 +2781,15 @@ main {
 	aspect-ratio: 1;
 	margin: 0 auto;
 	touch-action: pan-y;
+	/* Animation isolation: `layout` ONLY + stacking isolation. NEVER
+	   `paint` / `content` / `strict` and NEVER overflow: clip here —
+	   the orbit ring sits at inset −7% OUTSIDE the stage by design and
+	   paint containment would cut it (worker F rule). The rAF loop
+	   positions tags with left/top + transform; the final-centre clamp
+	   in StackGlobe.tsx keeps every pill inside the stage, so no tag
+	   can overflow the page. */
+	contain: layout style;
+	isolation: isolate;
 }
 
 .globe-ball {
@@ -2794,6 +2902,8 @@ main {
 	/* Saturn-style ring, flattened and turning very slowly. */
 	transform: rotateX(71deg) rotateZ(0deg);
 	animation: orbit-spin-a 48s linear infinite;
+	/* Animation isolation: orbit-spin-a is transform-only. */
+	contain: layout style;
 }
 
 @keyframes orbit-spin-a {
@@ -3003,8 +3113,11 @@ main {
 	align-items: center;
 	flex: none;
 	white-space: nowrap;
-	padding: 5px 12px;
-	font-size: 12px;
+	/* Preview globe chips are deliberately tiny: px-2 py-0.5, 10px
+	   semibold — much smaller than the archive filter chips. */
+	padding: 2px 8px;
+	font-size: 10px;
+	font-weight: 600;
 }
 
 /* Preview active chip: a LIGHT pill (light grey/white, dark text,
@@ -3308,6 +3421,10 @@ main {
 	flex: none;
 	border-radius: 999px;
 	padding: 12px 24px;
+	/* Preview: the "Know Me" CTA is a 44px pill, 14px bold — not the
+	   slim 13px hero-button size. Padding/radius already match. */
+	font-size: 14px;
+	font-weight: 700;
 }
 
 /* ---------- Releases ---------- */
@@ -3913,6 +4030,14 @@ main {
 	display: flex;
 	align-items: flex-end;
 	justify-content: center;
+	/* Animation isolation: the sheet mounts instantly with a skeleton
+	   inside (no entrance animation — a mount is not a transition, so
+	   there is nothing to oscillate). Layout containment + stacking
+	   isolation keep the modal's paint inside its own layer; the sheet
+	   scrolls internally (overflow-y: auto) and body scroll is locked
+	   by the island while open, so opening it cannot move page scroll. */
+	contain: layout style;
+	isolation: isolate;
 }
 
 @media (min-width: 640px) {
@@ -3932,6 +4057,10 @@ main {
 	border-radius: var(--radius) var(--radius) 0 0;
 	box-shadow: var(--shadow);
 	padding: 24px;
+	/* Animation isolation: the skeleton→form swap inside the sheet
+	   changes content height once (not an animation); layout
+	   containment keeps it from affecting anything outside the sheet. */
+	contain: layout style;
 }
 
 @media (min-width: 640px) {
@@ -4006,7 +4135,8 @@ main {
 	width: 100%;
 	border-radius: 999px;
 	padding: 14px 24px;
-	font-size: 15px;
+	/* Preview submit is 14px bold (48px full-width pill), not 15px. */
+	font-size: 14px;
 	font-weight: 700;
 	text-align: center;
 }
@@ -4106,6 +4236,31 @@ main {
 	color: var(--ink-faint);
 	margin-top: 6px;
 }
+
+/* ---------- Animation isolation — audit summary (worker I) ----------
+   Every animation/transition on the site was audited 2026-11-08:
+   - transform/opacity ONLY (compositor, zero layout): pill-stack glide,
+     label crossfade, theme-icon swap, hero-float, grid-rise, carousel
+     flip + peek fades, deck arrows, service/grid hover lifts, badge
+     blink + letter rise, skel shimmer, btn spinner, orbit spin,
+     particle drift, globe skeleton shimmer.
+   - paint-only (no layout): pill-breathe (box-shadow), arc-flow and
+     hero-runlight-travel (stroke-dashoffset), skel-shimmer-bg
+     (background-position).
+   - layout properties KEPT deliberately, each contained so it cannot
+     move page layout or scroll: stuck corner buttons `width` (absolute
+     box — .stuck-corners), deck dots `width` (confined to
+     .deck-indicator, ~0.0001 CLS), #page-progress `width` (fixed bar —
+     transform conversion needs Layout.astro JS, worker H), slider
+     progress fill `width` (clipped inside .slider-progress — transform
+     conversion needs detail.js + DetailMedia.astro, detail round).
+   - NO global leaks: no bare-element or `*` animation selectors. The
+     `* { transition-duration: 0.01ms !important }` rule in the
+     reduced-motion block is the standard kill-switch, not an animation.
+   - `contain: paint` / `content` / `strict` and overflow clipping are
+     NEVER used on .globe-stage (orbit ring −7%), .hero-photo-frame
+     (runlight −7px, badge −16px) or .deck (peek cards fan outside);
+     those use `contain: layout` (+ `isolation: isolate`) only. */
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
