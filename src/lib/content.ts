@@ -30,6 +30,34 @@ function byDateDesc<T extends { data: { publishedAt?: string } }>(a: T, b: T) {
 	return (b.data.publishedAt ?? "").localeCompare(a.data.publishedAt ?? "");
 }
 
+// A live row is "empty" for a field when the API returned nothing for it
+// (null, undefined, "", or []). The API only returns what the DB holds, so
+// an empty field means the DB row was never filled — NOT that the field
+// should be blank. In that case the build-time value is kept, so an
+// incomplete API row can never strip data the design relies on (thumbnail,
+// tags, platforms, gallery, videos). Live wins whenever it has a value.
+function isEmptyValue(v: unknown): boolean {
+	return (
+		v === undefined ||
+		v === null ||
+		v === "" ||
+		(Array.isArray(v) && v.length === 0)
+	);
+}
+
+function mergeEntryData<T extends Record<string, unknown>>(
+	base: T,
+	live: Record<string, unknown>,
+): T {
+	const out: Record<string, unknown> = { ...base };
+	for (const [key, value] of Object.entries(live)) {
+		if (!isEmptyValue(value)) {
+			out[key] = value;
+		}
+	}
+	return out as T;
+}
+
 async function mergeWithLive<
 	T extends { data: { slug: string; publishedAt?: string } },
 >(buildTime: T[], liveName: LiveCollectionName): Promise<T[]> {
@@ -43,10 +71,20 @@ async function mergeWithLive<
 	const bySlug = new Map<string, T>();
 	for (const item of buildTime) bySlug.set(item.data.slug, item);
 	for (const item of live) {
-		// Live entries carry the same data fields as the build-time rows
-		// (schemas mirror each other); present them in the build-time shape
-		// so list/detail consumers work unchanged.
-		bySlug.set(item.data.slug, item as unknown as T);
+		// Field-wise merge, not a full-row replace: live wins where it has
+		// a value; build-time is kept where the live row is empty.
+		const existing = bySlug.get(item.data.slug);
+		if (existing) {
+			bySlug.set(item.data.slug, {
+				...existing,
+				data: mergeEntryData(
+					existing.data as Record<string, unknown>,
+					item.data as Record<string, unknown>,
+				),
+			} as T);
+		} else {
+			bySlug.set(item.data.slug, item as unknown as T);
+		}
 	}
 	return [...bySlug.values()].sort(byDateDesc);
 }

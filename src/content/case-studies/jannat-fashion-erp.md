@@ -1,6 +1,6 @@
 ---
 title: "Jannat Fashion ERP"
-slug: "jannat-fashion-erp"
+slug: "jannat-fashion-erp-case-study"
 description: "How one ERP carries 2,000 to 5,000 orders a day for Jannat Fashion — across stores, fraud checks, payroll and wholesale."
 tags: ["Next.js", "ERP", "E-commerce"]
 projectSlug: "jannat-fashion-erp"
