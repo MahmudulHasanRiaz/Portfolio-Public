@@ -115,8 +115,16 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 		return () => window.removeEventListener("scroll", onScroll);
 	}, []);
 
-	// Scroll restoration: on mount, force the unscrolled header state so
-	// a browser-restored scroll position never leaves the header stuck.
+	// Scroll restoration: never let the browser restore a scroll
+	// position that leaves the header stuck. NOTE: there is NO
+	// window.scrollTo(0, 0) here on purpose — the scroll listener
+	// below already sets `stuck` from the current scrollY on mount,
+	// so the header state is correct without forcing the page to
+	// the top. Forcing scroll-to-top on mount yanked the page to 0
+	// whenever the island hydrated late (e.g. a visitor who had
+	// already scrolled to the globe was bounced back to the top
+	// a few seconds after load). "manual" restoration alone keeps
+	// navigations at the top without touching the user's scroll.
 	useEffect(() => {
 		try {
 			if ("scrollRestoration" in history) {
@@ -124,11 +132,6 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 			}
 		} catch {
 			/* history API unavailable */
-		}
-		// Don't yank the page when the URL carries an anchor — the
-		// browser still needs to land on it.
-		if (!window.location.hash) {
-			window.scrollTo(0, 0);
 		}
 	}, []);
 
@@ -172,9 +175,13 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 	// NEVER navigates. While paused, the label sits on the current
 	// profile and the interval stays cleared. The crossfade (see
 	// showProfile) keeps both labels mounted, so scrolling never
-	// resets or flickers the animation.
+	// resets or flickers the animation. The interval also pauses
+	// while the picker is open, so the pill shows the page's own
+	// profile steadily while the visitor is choosing — otherwise
+	// the label and its dot keep flipping between the two profiles
+	// above the open picker.
 	useEffect(() => {
-		if (rotationPaused) {
+		if (rotationPaused || pickerOpen) {
 			showProfile(current);
 			return;
 		}
@@ -185,7 +192,7 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 			);
 		}, LABEL_CYCLE_MS);
 		return () => window.clearInterval(t);
-	}, [rotationPaused, current, showProfile]);
+	}, [rotationPaused, pickerOpen, current, showProfile]);
 
 	const pauseRotation = () => {
 		setRotationPaused(true);

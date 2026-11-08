@@ -285,7 +285,10 @@ textarea {
 	align-items: flex-start;
 	/* Preview: top row pt-4 (16px) mobile, pt-5 (20px) sm+ — the
 	   buttons land at y=16 / y=20. The 4px sm+ top padding lives here
-	   (not on the header), so the stuck collapse can zero it. */
+	   (not on the header). The row keeps its FULL height in both
+	   states (see the stuck rule below) — collapsing it changed the
+	   header's in-flow height and made scrollY oscillate around
+	   the stuck threshold (a stuck/un-stuck feedback loop). */
 	height: 32px;
 	/* No side padding: the corner buttons sit flush with the header
 	   edges (preview probe: lang x=16, theme x=326 at 390px). The 4px
@@ -293,10 +296,7 @@ textarea {
 	   part of why the pill overlapped the buttons when stuck. */
 	padding: 0;
 	overflow: hidden;
-	transition:
-		height 350ms ease,
-		padding-top 350ms ease,
-		opacity 250ms ease;
+	transition: opacity 250ms ease;
 }
 
 @media (min-width: 640px) {
@@ -309,10 +309,24 @@ textarea {
 	}
 }
 
+/* Stuck (scrolled) header: the top row fades out but KEEPS its
+   height — it is never collapsed. Collapsing it to height 0 changed
+   the header's in-flow height by 20px (mobile) / 28px (sm+) every
+   time `stuck` toggled, and the document's scroll anchoring moved
+   scrollY by the same amount, which re-toggled `stuck` — a feedback
+   loop (scrollY oscillated 30 → 2 → 30 … near the 24px threshold).
+   With a constant header height the loop cannot happen. The pill
+   reaches the top of the sticky row by translating up instead (see
+   .site-header.is-stuck .pill-stack), so its visual position is
+   unchanged. The faded-out buttons are fully inert: opacity 0,
+   pointer-events none, tabIndex -1 and aria-hidden (set in
+   SiteHeader.tsx). */
 .site-header.is-stuck .header-top {
-	height: 0;
-	padding-top: 0;
 	opacity: 0;
+}
+
+.site-header.is-stuck .header-top .corner-btn {
+	pointer-events: none;
 }
 
 .lang-hint {
@@ -407,26 +421,41 @@ textarea {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	/* The pull-up margin animates in sync with the top-row collapse
-	   (both 350ms ease) so the pill glides smoothly from y=36 to y=8
-	   instead of jumping down 4–12px when the margin snaps to 0. */
-	transition: margin-top 350ms ease;
-}
-
-/* Preview: the pill is pulled up into the top-row band at ALL widths
-   (-mt-3 = -12px mobile, sm:-mt-4 = -16px) so pill + corner buttons
-   read as ONE row, not two separate rows. The old rule pulled up only
-   at ≥1024px (-28px, too much), which is why mobile showed a clear
-   two-row header (pill y=82 vs preview y=36). Only when UNSTUCK:
-   once scrolled, the top row has collapsed and the pill sits at the
-   top of the sticky row. */
-.site-header:not(.is-stuck) .pill-stack {
+	/* Preview: the pill is pulled up into the top-row band at ALL
+	   widths (-mt-3 = -12px mobile, sm:-mt-4 = -16px) so pill +
+	   corner buttons read as ONE row, not two separate rows. The old
+	   rule pulled up only at ≥1024px (-28px, too much), which is why
+	   mobile showed a clear two-row header (pill y=82 vs preview
+	   y=36). The margin is the SAME in both states — it must never
+	   change, or the header's in-flow height changes and the
+	   stuck/un-stuck scroll feedback loop comes back. The stuck
+	   move is a transform instead (below), so the pill still glides
+	   smoothly from y=36 to y=8 over 350ms. */
 	margin-top: -12px;
+	transition: transform 350ms ease;
 }
 
 @media (min-width: 640px) {
-	.site-header:not(.is-stuck) .pill-stack {
+	.pill-stack {
 		margin-top: -16px;
+	}
+}
+
+/* Stuck: translate the pill up by exactly the top row's height so it
+   lands at the top of the sticky row (the same visual position the
+   old collapse gave it). Mobile: top row 32px, pill pulled up 12px,
+   so the pill top sits at 32 − 12 = 20px → translate −20px. sm+:
+   top row 44px, pill pulled up 16px → 44 − 16 = 28px → −28px.
+   A transform never changes layout, so the header's in-flow height
+   stays 56px (mobile) / 64px (sm+) in both states and scrolling
+   can never re-toggle `stuck`. */
+.site-header.is-stuck .pill-stack {
+	transform: translateY(-20px);
+}
+
+@media (min-width: 640px) {
+	.site-header.is-stuck .pill-stack {
+		transform: translateY(-28px);
 	}
 }
 
@@ -862,7 +891,7 @@ textarea {
 
 /* Stuck (scrolled) header: the two corner buttons flank the pill at
    the same x positions as the top row. The pill itself stays in
-   .pill-stack (it glides up as .header-top collapses). The buttons
+   .pill-stack (it glides up by transform when stuck). The buttons
    sit at top: 0 — the same y as the stuck pill (preview: buttons and
    pill both start at y=8 mobile / y=12 sm+). They are ALWAYS rendered
    (preview's in-row copies): unstuck they collapse to width 0 +
