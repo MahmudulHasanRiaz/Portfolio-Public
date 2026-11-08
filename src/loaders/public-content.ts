@@ -113,8 +113,13 @@ async function fetchJson(
 	url: string,
 	token: string | undefined,
 ): Promise<unknown> {
+	// Bound the fetch: during `astro build` prerender this runs inside
+	// workerd, and a hanging fetch (TLS/network stall to the API host)
+	// used to stall the whole build for 7+ minutes until it failed.
+	// Failing fast lets the caller fall back to build-time rows.
 	const res = await fetch(url, {
 		headers: token ? { Authorization: `Bearer ${token}` } : {},
+		signal: AbortSignal.timeout(8000),
 	});
 	if (res.status === 404) return undefined;
 	if (!res.ok) {
