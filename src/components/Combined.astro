@@ -1,7 +1,7 @@
 ---
 import BrandIcon from "./BrandIcon.astro";
 import { PLATFORMS } from "../data/site";
-import { getVentures } from "../lib/content";
+import { getVentures, truncateShort } from "../lib/content";
 
 const ventures = await getVentures();
 const musicPlatforms = PLATFORMS.filter((p) => p.group === "music");
@@ -110,8 +110,10 @@ const artistShortPoints = [
 								{VENTURE_SHORT[venture.data.slug] ??
 								venture.data.description ? (
 									<span>
-										{VENTURE_SHORT[venture.data.slug] ??
-											venture.data.description}
+										{truncateShort(
+											VENTURE_SHORT[venture.data.slug] ??
+												venture.data.description,
+										)}
 									</span>
 								) : null}
 							</span>

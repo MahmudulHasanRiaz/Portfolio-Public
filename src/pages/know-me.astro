@@ -16,7 +16,7 @@ import Ventures from "../components/Ventures.astro";
 import ContactForm from "../components/ContactForm";
 import BrandIcon from "../components/BrandIcon.astro";
 import { PLATFORMS, PROFILE, PUBLIC_FIGURE_POINTS } from "../data/site";
-import { formatDate, getPosts, getProjects, getReleases } from "../lib/content";
+import { formatDate, getPosts, getProjects, getReleases, truncateShort } from "../lib/content";
 
 const releases = (await getReleases()).map((r) => ({
 	slug: r.data.slug,
@@ -57,6 +57,7 @@ const musicPlatforms = PLATFORMS.filter((p) => p.group === "music");
 			}
 			.knowme-hero :global(.hero-photo-float-card:last-child) {
 				left: 12px;
+				right: auto;
 			}
 		}
 	</style>
@@ -237,7 +238,7 @@ const musicPlatforms = PLATFORMS.filter((p) => p.group === "music");
 							</div>
 							<div class="grid-body">
 								<h3>{project.data.title}</h3>
-								{project.data.description && <p>{project.data.description}</p>}
+								{project.data.description && <p>{truncateShort(project.data.description)}</p>}
 							</div>
 						</a>
 					))}
@@ -273,7 +274,7 @@ const musicPlatforms = PLATFORMS.filter((p) => p.group === "music");
 							</div>
 							<div class="grid-body">
 								<h3>{post.data.title}</h3>
-								{post.data.excerpt && <p>{post.data.excerpt}</p>}
+								{post.data.excerpt && <p>{truncateShort(post.data.excerpt)}</p>}
 								{post.data.publishedAt && (
 									<p class="post-meta">{formatDate(post.data.publishedAt)}</p>
 								)}

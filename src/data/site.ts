@@ -14,6 +14,8 @@ export interface Platform {
 	icon: string | null;
 	group: "music" | "social" | "professional";
 	note?: string;
+	/** Descriptive subtitle shown on the All platforms card (preview copy). */
+	subtitle?: string;
 }
 
 export const PROFILE = {
@@ -205,30 +207,35 @@ export const PLATFORMS: Platform[] = [
 		url: "https://www.youtube.com/@MahmudRiazBD",
 		icon: "youtube",
 		group: "music",
+		subtitle: "Nasheed channel — @MahmudRiazBD",
 	},
 	{
 		name: "Spotify",
 		url: "https://open.spotify.com/artist/6nRAJg1qLQq3hwlWGtyVap",
 		icon: "spotify",
 		group: "music",
+		subtitle: "Artist profile — the nasheed singles",
 	},
 	{
 		name: "Apple Music",
 		url: "https://music.apple.com/us/artist/mahmudul-hasan-riaz/1727545988",
 		icon: "applemusic",
 		group: "music",
+		subtitle: "Artist profile — the nasheed singles",
 	},
 	{
 		name: "Deezer",
 		url: "https://www.deezer.com/artist/251928172",
 		icon: "deezer",
 		group: "music",
+		subtitle: "Artist profile — the nasheed singles",
 	},
 	{
 		name: "Boomplay",
 		url: "https://www.boomplay.com/artists/84197326",
 		icon: `wikimedia:${WIKIMEDIA_LOGOS.boomplay}`,
 		group: "music",
+		subtitle: "Artist profile — the nasheed singles",
 		// NOTE: profile match not yet confirmed by the user (handle/photo match,
 		// 0 songs visible) — do not show a "please confirm" note on the public page.
 	},
@@ -237,12 +244,14 @@ export const PLATFORMS: Platform[] = [
 		url: "https://www.jiosaavn.com/artist/mahmudul-hasan-riaz-songs/kxedaLEBozo_",
 		icon: `wikimedia:${WIKIMEDIA_LOGOS.jiosaavn}`,
 		group: "music",
+		subtitle: "Artist profile — the nasheed singles",
 	},
 	{
 		name: "SoundCloud",
 		url: "https://soundcloud.com/mahmudulhasanriazbd",
 		icon: "soundcloud",
 		group: "music",
+		subtitle: "Artist profile — the nasheed singles",
 	},
 	// Social Media
 	{
@@ -252,6 +261,7 @@ export const PLATFORMS: Platform[] = [
 		icon: "facebook",
 		group: "social",
 		note: "Personal",
+		subtitle: "Personal profile — MahmudulHasanRiazBD",
 	},
 	{
 		name: "Facebook",
@@ -260,12 +270,14 @@ export const PLATFORMS: Platform[] = [
 		icon: "facebook",
 		group: "social",
 		note: "Professional",
+		subtitle: "Professional page — MahmudulHasanRiaz.Official",
 	},
 	{
 		name: "WhatsApp",
 		url: "https://wa.me/8801601701567",
 		icon: "whatsapp",
 		group: "social",
+		subtitle: "Direct chat — message him any time",
 	},
 	{
 		name: "Instagram",
@@ -273,6 +285,7 @@ export const PLATFORMS: Platform[] = [
 		url: "https://www.instagram.com/mahmudulhasanriazbd",
 		icon: "instagram",
 		group: "social",
+		subtitle: "Photos and updates — @mahmudulhasanriazbd",
 	},
 	{
 		name: "TikTok",
@@ -280,6 +293,7 @@ export const PLATFORMS: Platform[] = [
 		url: "https://www.tiktok.com/@mahmudulhasanriazbd",
 		icon: "tiktok",
 		group: "social",
+		subtitle: "Short videos — @mahmudulhasanriazbd",
 	},
 	{
 		name: "Threads",
@@ -287,12 +301,14 @@ export const PLATFORMS: Platform[] = [
 		url: "https://www.threads.net/@mahmudulhasanriazbd",
 		icon: "threads",
 		group: "social",
+		subtitle: "Posts and conversation — @mahmudulhasanriazbd",
 	},
 	{
 		name: "Telegram",
 		url: "https://t.me/mahmudulhasanriazbd",
 		icon: "telegram",
 		group: "social",
+		subtitle: "Channel — @mahmudulhasanriazbd",
 		// NOTE: profile match not yet confirmed by the user (handle matches,
 		// no display name/bio on the page) — do not show a "please confirm"
 		// note on the public page.
@@ -303,6 +319,7 @@ export const PLATFORMS: Platform[] = [
 		url: "https://x.com/MahmudRiazBD",
 		icon: "x",
 		group: "social",
+		subtitle: "Updates and posts — @MahmudRiazBD",
 	},
 	// Professional / Code
 	{
@@ -310,12 +327,14 @@ export const PLATFORMS: Platform[] = [
 		url: "https://www.linkedin.com/in/mahmudulhasanriaz",
 		icon: `wikimedia:${WIKIMEDIA_LOGOS.linkedin}`,
 		group: "professional",
+		subtitle: "Professional profile — in/mahmudulhasanriaz",
 	},
 	{
 		name: "GitHub",
 		url: "https://github.com/MahmudulHasanRiaz",
 		icon: "github",
 		group: "professional",
+		subtitle: "Code profile — MahmudulHasanRiaz",
 	},
 ];
 

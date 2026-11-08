@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+	Check,
 	ChevronDown,
 	Code,
 	Menu,
 	Moon,
+	Pause,
+	Play,
 	Sun,
 	User,
 } from "lucide-react";
@@ -28,19 +31,27 @@ const NAV_LINKS = [
 	{ label: "Contact", href: "/#contact" },
 ];
 
+// Auto-rotation (preview): the pill cycles between the two profiles
+// every ~2.8s, with a smooth vertical slide + fade (~450ms). In the
+// preview this swaps the whole page view; in Astro the profiles are
+// real routes (/ and /know-me), so rotating navigates to the other
+// profile's route. Tapping a profile pauses rotation on that profile;
+// "Resume auto-rotation" (picker + pill toggle) resumes it. The paused
+// state survives the navigations via sessionStorage (each rotation is
+// a full page load, so component state alone would reset).
+const ROTATION_MS = 2800;
+const ROTATION_PAUSED_KEY = "profile-rotation-paused";
+
 /**
  * Site header — a profile switcher, not a designation display.
  * Top row (not sticky): language switcher left, theme switcher right.
  * Below it, a sticky compact glass pill (hamburger + profile label +
- * teal dot + chevron) with glowing teal arcs hanging above it.
+ * teal dot + chevron + nav links) with glowing teal arcs hanging above it.
  * On scroll the header becomes one unified sticky row: the two corner
  * buttons join the pill on the same baseline, at the far edges.
  *
- * Deviation from the React preview (deliberate): the preview auto-rotates
- * the pill between profiles, but in Astro the profiles are real routes
- * (/ and /know-me) — auto-rotating would yank the visitor between pages.
- * So the pill shows the CURRENT profile and the picker switches on tap.
- * There is no "Resume auto-rotation" button for the same reason.
+ * The pill auto-rotates between the two profiles (~2.8s) exactly like
+ * the React preview; the pill label slides + fades on each rotation.
  */
 export default function SiteHeader({ current }: { current: ProfileId }) {
 	const [stuck, setStuck] = useState(false);
@@ -48,9 +59,11 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 	const [lang, setLang] = useState<"en" | "bn">("en");
 	const [langHint, setLangHint] = useState(false);
 	const [theme, setTheme] = useState<"light" | "dark">("light");
+	const [rotationPaused, setRotationPaused] = useState(false);
+	const rotationTimer = useRef<number | null>(null);
 
 	useEffect(() => {
-		const onScroll = () => setStuck(window.scrollY > 16);
+		const onScroll = () => setStuck(window.scrollY > 24);
 		onScroll();
 		window.addEventListener("scroll", onScroll, { passive: true });
 		return () => window.removeEventListener("scroll", onScroll);
@@ -96,6 +109,55 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 		return () => window.removeEventListener("keydown", onKey);
 	}, []);
 
+	// Rotation paused state: read once on mount (sessionStorage survives
+	// the full-page navigations each rotation performs).
+	useEffect(() => {
+		try {
+			setRotationPaused(
+				sessionStorage.getItem(ROTATION_PAUSED_KEY) === "1",
+			);
+		} catch {
+			/* storage unavailable */
+		}
+	}, []);
+
+	// Auto-rotation: after ROTATION_MS on the current profile, navigate
+	// to the other profile's route. Paused while the picker is open (so
+	// the page never navigates away mid-choice) and while the user has
+	// paused it. Each rotation is a fresh page load, so the timer
+	// restarts on the new page — the cycle continues until paused.
+	useEffect(() => {
+		if (rotationPaused || pickerOpen) return;
+		const other = current === "se" ? PROFILES[1]! : PROFILES[0]!;
+		rotationTimer.current = window.setTimeout(() => {
+			window.location.href = other.href;
+		}, ROTATION_MS);
+		return () => {
+			if (rotationTimer.current !== null) {
+				window.clearTimeout(rotationTimer.current);
+			}
+		};
+	}, [rotationPaused, pickerOpen, current]);
+
+	const pauseRotation = () => {
+		setRotationPaused(true);
+		try {
+			sessionStorage.setItem(ROTATION_PAUSED_KEY, "1");
+		} catch {
+			/* storage unavailable */
+		}
+	};
+
+	const resumeRotation = () => {
+		setRotationPaused(false);
+		try {
+			sessionStorage.removeItem(ROTATION_PAUSED_KEY);
+		} catch {
+			/* storage unavailable */
+		}
+		setPickerOpen(false);
+	};
+
 	const toggleTheme = () => {
 		const next = theme === "dark" ? "light" : "dark";
 		setTheme(next);
@@ -111,6 +173,16 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 		// Language switching is coming soon — show a brief hint.
 		setLangHint(true);
 		window.setTimeout(() => setLangHint(false), 2000);
+	};
+
+	// Tapping a profile in the picker pauses rotation ON that profile
+	// (preview behavior) and navigates there if it is not current.
+	const pickProfile = (p: (typeof PROFILES)[number]) => {
+		pauseRotation();
+		setPickerOpen(false);
+		if (p.id !== current) {
+			window.location.href = p.href;
+		}
 	};
 
 	const currentProfile =
@@ -171,8 +243,40 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 				<span className="pill-icon">
 					<CurrentIcon size={16} />
 				</span>
-				<span className="pill-label">{currentProfile.label}</span>
+				{/* The label slides + fades on each rotation (preview: smooth
+				    vertical slide + fade, ~450ms ease-in-out). The animation
+				    runs on mount, so every rotation's navigation replays it. */}
+				<span className="pill-label pill-label-anim">
+					{currentProfile.label}
+				</span>
 				<span className="pill-dot" aria-hidden="true" />
+			</button>
+			{/* Rotation toggle (preview: teal play button in the pill).
+			    Play = rotation paused, tap to resume; Pause = rotating. */}
+			<button
+				type="button"
+				className="pill-rotate-btn"
+				onClick={rotationPaused ? resumeRotation : pauseRotation}
+				aria-label={
+					rotationPaused
+						? "Resume auto-rotation"
+						: "Pause auto-rotation"
+				}
+				title={
+					rotationPaused
+						? "Resume auto-rotation"
+						: "Pause auto-rotation"
+				}
+			>
+				{rotationPaused ? <Play size={13} /> : <Pause size={13} />}
+			</button>
+			<button
+				type="button"
+				className="pill-menu-btn"
+				onClick={() => setPickerOpen((v) => !v)}
+				aria-label={pickerOpen ? "Close menu" : "Open menu"}
+				aria-expanded={pickerOpen}
+			>
 				<span className="pill-chev">
 					<ChevronDown size={14} />
 				</span>
@@ -187,6 +291,11 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 		</div>
 	);
 
+	// The picker holds ONLY the two profile options (preview): the nav
+	// links live in the pill itself, never duplicated in the dropdown.
+	// The selected profile carries a teal checkmark (not a dot), and the
+	// big full-width teal "Resume auto-rotation" button sits at the
+	// bottom (preview).
 	const picker = pickerOpen ? (
 		<div className="header-picker" role="menu" aria-label="Choose a profile">
 			<p
@@ -208,7 +317,10 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 					<a
 						key={p.id}
 						href={p.href}
-						onClick={() => setPickerOpen(false)}
+						onClick={(e) => {
+							e.preventDefault();
+							pickProfile(p);
+						}}
 						className={`picker-row${active ? " active" : ""}`}
 						role="menuitem"
 						aria-current={active ? "true" : undefined}
@@ -219,37 +331,23 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 						<span>{p.label}</span>
 						{active ? (
 							<span
-								style={{
-									marginLeft: "auto",
-									width: 6,
-									height: 6,
-									borderRadius: "50%",
-									background: "var(--accent)",
-								}}
+								className="picker-check"
 								aria-hidden="true"
-							/>
+							>
+								<Check size={16} />
+							</span>
 						) : null}
 					</a>
 				);
 			})}
-			<div
-				style={{
-					height: 1,
-					background: "var(--card-border)",
-					margin: "8px 4px",
-				}}
-			/>
-			{NAV_LINKS.map((l) => (
-				<a
-					key={l.label}
-					href={l.href}
-					onClick={() => setPickerOpen(false)}
-					className="picker-row"
-					role="menuitem"
-				>
-					<span>{l.label}</span>
-				</a>
-			))}
+			<button
+				type="button"
+				className="picker-resume-btn"
+				onClick={resumeRotation}
+			>
+				<Play size={14} />
+				Resume auto-rotation
+			</button>
 		</div>
 	) : null;
 

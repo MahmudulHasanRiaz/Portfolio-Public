@@ -1,6 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { getVentures, formatDate } from "../../lib/content";
+import { getVentures, formatDate, truncateShort } from "../../lib/content";
 
 const ventures = await getVentures();
 const allTags = [...new Set(ventures.flatMap((v) => v.data.tags ?? []))].sort();
@@ -68,7 +68,7 @@ const allTags = [...new Set(ventures.flatMap((v) => v.data.tags ?? []))].sort();
 							<div class="grid-body">
 								<h3>{venture.data.title}</h3>
 								{venture.data.description ? (
-									<p>{venture.data.description}</p>
+									<p>{truncateShort(venture.data.description)}</p>
 								) : null}
 								<p class="grid-meta">
 									{formatDate(venture.data.publishedAt)}

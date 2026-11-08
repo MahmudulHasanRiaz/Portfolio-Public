@@ -13,6 +13,12 @@
 // are on-demand and show live instantly.
 import { getCollection, getLiveCollection, type CollectionEntry } from "astro:content";
 
+// Text helpers (truncateShort, SHORT_DESC_MAX) live in lib/text.ts —
+// this module re-exports them so .astro pages keep importing from
+// lib/content, while client islands import from lib/text directly
+// (lib/content imports astro:content, which is server-only).
+export { SHORT_DESC_MAX, truncateShort } from "./text";
+
 export type Project = CollectionEntry<"projects">;
 export type CaseStudy = CollectionEntry<"caseStudies">;
 export type Post = CollectionEntry<"posts">;

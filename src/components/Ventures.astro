@@ -1,5 +1,5 @@
 ---
-import { getVentures } from "../lib/content";
+import { getVentures, truncateShort } from "../lib/content";
 
 const ventures = await getVentures();
 ---
@@ -40,7 +40,7 @@ const ventures = await getVentures();
 						<div class="grid-body">
 							<h3>{venture.data.title}</h3>
 							{venture.data.description ? (
-								<p>{venture.data.description}</p>
+								<p>{truncateShort(venture.data.description)}</p>
 							) : null}
 						</div>
 					</a>

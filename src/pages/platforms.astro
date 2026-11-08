@@ -2,15 +2,29 @@
 // All platforms — every verified profile, grouped, each a real link so
 // Google and other AIs can see which platforms he has and which is which.
 // Only confirmed URLs are listed — never invented. The Person JSON-LD
-// carries every URL in sameAs.
+// carries every URL in sameAs. Layout + copy match the React preview
+// exactly: 2-column compact card grid (sm:grid-cols-2), per-platform
+// descriptive subtitle, diagonal ↗ arrow, group sub-lines.
 import Layout from "../layouts/Layout.astro";
 import BrandIcon from "../components/BrandIcon.astro";
 import { PLATFORMS, PROFILE, type Platform } from "../data/site";
 
-const groups: { key: Platform["group"]; title: string }[] = [
-	{ key: "music", title: "Music & Streaming" },
-	{ key: "social", title: "Social Media" },
-	{ key: "professional", title: "Professional / Code" },
+const groups: { key: Platform["group"]; title: string; blurb: string }[] = [
+	{
+		key: "music",
+		title: "Music & Streaming",
+		blurb: "Where the nasheed lives — the channel and the artist profile.",
+	},
+	{
+		key: "social",
+		title: "Social Media",
+		blurb: "Day-to-day updates, community and public work.",
+	},
+	{
+		key: "professional",
+		title: "Professional / Code",
+		blurb: "The engineering work, in the open.",
+	},
 ];
 
 const sameAs = PLATFORMS.flatMap((p) => [p.url]);
@@ -32,7 +46,7 @@ const jsonLd = {
 		<p style="margin:0 0 8px;"><a href="/">← Back to home</a></p>
 		<h1 style="margin:0 0 8px;font-size:24px;">All platforms</h1>
 		<p class="muted" style="margin:0;">
-			{PLATFORMS.length} profiles across {groups.length} groups
+			Every profile, in one place — grouped by where it lives.
 		</p>
 	</section>
 
@@ -42,28 +56,43 @@ const jsonLd = {
 			return (
 				<section class="glass section platform-group">
 					<h3>{group.title}</h3>
-					{rows.map((platform) => (
-						<a
-							class="platform-row"
-							href={platform.url}
-							target="_blank"
-							rel="noopener noreferrer"
-						>
-							<BrandIcon icon={platform.icon} name={platform.name} size={24} />
-							<span>
-								<span class="plat-name">{platform.name}</span>
-								{(platform.handle ?? platform.note) && (
-									<span
-										class="plat-handle"
-										style="display:block;"
-									>
-										{platform.handle ?? platform.note}
-									</span>
-								)}
-							</span>
-							<span class="plat-arrow">→</span>
-						</a>
-					))}
+					<p class="platform-blurb">{group.blurb}</p>
+					<div class="platform-grid">
+						{rows.map((platform) => (
+							<a
+								class="platform-row"
+								href={platform.url}
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								<span class="plat-icon">
+									<BrandIcon
+										icon={platform.icon}
+										name={platform.name}
+										size={22}
+									/>
+								</span>
+								<span class="plat-text">
+									<span class="plat-name">{platform.name}</span>
+									{(platform.subtitle ??
+										platform.handle ??
+										platform.note) && (
+										<span
+											class="plat-handle"
+											style="display:block;"
+										>
+											{platform.subtitle ??
+												platform.handle ??
+												platform.note}
+										</span>
+									)}
+								</span>
+								<span class="plat-arrow" aria-hidden="true">
+									↗
+								</span>
+							</a>
+						))}
+					</div>
 				</section>
 			);
 		})

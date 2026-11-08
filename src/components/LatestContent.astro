@@ -1,5 +1,10 @@
 ---
-import { formatDate, getPosts, readingTimeFromText } from "../lib/content";
+import {
+	formatDate,
+	getPosts,
+	readingTimeFromText,
+	truncateShort,
+} from "../lib/content";
 
 // "Latest" block — preview presentation: cards with thumbnail (or a
 // deliberate monogram tile when a post has none) + tag chip + title +
@@ -42,7 +47,9 @@ const latest = posts.slice(0, 3);
 								</div>
 							) : null}
 							<h3>{post.data.title}</h3>
-							{post.data.excerpt ? <p>{post.data.excerpt}</p> : null}
+							{post.data.excerpt ? (
+								<p>{truncateShort(post.data.excerpt)}</p>
+							) : null}
 							<p class="post-meta">
 								{formatDate(post.data.publishedAt)}
 								{readingTime ? ` · ${readingTime} min read` : ""}

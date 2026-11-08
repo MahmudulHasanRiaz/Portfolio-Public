@@ -1,6 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { getCaseStudies } from "../../lib/content";
+import { getCaseStudies, truncateShort } from "../../lib/content";
 
 // Static archive — no filters (one case study now); grid of cards with
 // title + one-line hook, linking to the case-study detail page.
@@ -40,7 +40,7 @@ const studies = await getCaseStudies();
 							</div>
 							<div class="grid-body">
 								<h3>{s.data.title}</h3>
-								{s.data.description && <p>{s.data.description}</p>}
+								{s.data.description && <p>{truncateShort(s.data.description)}</p>}
 							</div>
 						</a>
 					))}

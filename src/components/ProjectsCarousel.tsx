@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+// truncateShort lives in lib/text.ts (no astro:content) — a client
+// island cannot import lib/content.ts (server-only astro:content).
+import { truncateShort } from "../lib/text";
 
 // Projects carousel — stacked deck ported from the approved React preview.
 // The page renders the section wrapper (heading + "View all projects →");
@@ -192,7 +195,7 @@ export default function ProjectsCarousel({ projects }: Props) {
 						</div>
 						<div className="grid-body">
 							<h3>{project.title}</h3>
-							<p>{project.description}</p>
+							<p>{truncateShort(project.description)}</p>
 							{project.tags.length > 0 && (
 								<div className="tag-row">
 									{project.tags.map((tag) => (
@@ -297,7 +300,7 @@ export default function ProjectsCarousel({ projects }: Props) {
 					</div>
 					<div className="deck-body">
 						<h3>{current.title}</h3>
-						<p>{current.description}</p>
+						<p>{truncateShort(current.description)}</p>
 						{current.tags.length > 0 && (
 							<div className="tag-row">
 								{current.tags.map((tag) => (

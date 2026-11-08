@@ -27,15 +27,25 @@ const isKnowMe = profile === "knowme";
 				preserveAspectRatio="none"
 				aria-hidden="true"
 			>
-				{/* Faint continuous perimeter trace only — no moving dash
-				    segment: the dash rendered as a stray teal line across
-				    the photo edge (and through the badge). */}
+				{/* Perimeter runlight (preview): faint continuous trace +
+				    a short soft teal segment travelling around it. The
+				    segment is soft (0.38 opacity, round caps, glow) —
+				    never a hard thin line. */}
 				<rect
 					class="trace-base"
 					x="0.5"
 					y="0.5"
 					width="99"
 					height="124"
+					vector-effect="non-scaling-stroke"
+				/>
+				<rect
+					class="trace-glow"
+					x="0.5"
+					y="0.5"
+					width="99"
+					height="124"
+					pathLength="400"
 					vector-effect="non-scaling-stroke"
 				/>
 			</svg>

@@ -124,9 +124,13 @@ const LINE_PAIRS: Array<[number, number]> = CONSTELLATION_PAIRS.flatMap(
 // Filter cluster: matching techs gather on a small sphere in front.
 const CLUSTER_CENTER: Vec = { x: 0, y: 0, z: 0.62 };
 const CLUSTER_RADIUS = 0.38;
-// Tag spread: % of the stage half-width a sphere unit maps to. 40 (was
-// 38) pushes tags further apart so centre neighbours collide less.
-const SPREAD = 40;
+// Tag spread: % of the stage half-width a sphere unit maps to. 42 (was
+// 40) pushes tags further toward the sphere edge so centre neighbours
+// collide less. 42 is the widest that still keeps tags inside the stage:
+// the longest edge tags (e.g. "TanStack Start", "DigitalOcean") sit with
+// their pill edge just on the ball edge, as in the preview — any wider
+// and their centres + half-widths would run past the stage edge.
+const SPREAD = 42;
 const LANDING_MS = 1600;
 const MAX_VEL = 0.12;
 const INERTIA_DECAY = 0.9;
@@ -374,7 +378,8 @@ export default function StackGlobe() {
 			// Fibonacci sphere puts several tags at nearly the same
 			// (x, y) with different z, so centre tags stacked on each
 			// other. After positions are known, nudge overlapping tags
-			// apart (a few relaxation passes, using each tag's real
+			// apart (12 relaxation passes — 4 was not enough for the
+			// centre cluster to settle — using each tag's real
 			// measured size × its scale). The front tag never moves —
 			// neighbours move away from it — so the spotlight tag is
 			// always clearly readable and never overlapped. Back tags
@@ -393,14 +398,18 @@ export default function StackGlobe() {
 				const p = cur[i];
 				const depth = (p.z + 1) / 2;
 				depths[i] = depth;
-				// Back tags stay legible: scale floor 0.72 (was 0.6).
-				let scale = 0.72 + 0.28 * depth;
+				// Back tags recede so the centre reads clean: scale floor
+				// 0.60 (was 0.72), so back tags are small and faint like
+				// the preview and the front/mid tags dominate. Smaller
+				// back tags also shrink their collision boxes, which is
+				// what lets the relaxation below actually separate them.
+				let scale = 0.6 + 0.4 * depth;
 				if (i === frontIdx) scale *= 1.35;
 				scales[i] = scale;
 				posX[i] = 50 + p.x * SPREAD;
 				posY[i] = 50 + p.y * SPREAD;
 			}
-			for (let pass = 0; pass < 4; pass++) {
+			for (let pass = 0; pass < 12; pass++) {
 				for (let i = 0; i < STACK.length; i++) {
 					for (let j = i + 1; j < STACK.length; j++) {
 						const elI = tagRefs.current[i];
@@ -413,13 +422,14 @@ export default function StackGlobe() {
 							(elI?.offsetHeight || 18) * scales[i];
 						const hJ =
 							(elJ?.offsetHeight || 18) * scales[j];
-						// 0.92 leaves a hair of breathing room instead of
-						// demanding a full gap (tags may sit close, never
-						// on top of each other).
+						// 1.05 demands a full gap plus a hair of
+						// breathing room between tags (0.92 let them sit
+						// 8% overlapped, which is what stacked the centre
+						// cluster on top of each other).
 						const minDx =
-							((wI + wJ) / 2 / stageW) * 100 * 0.92;
+							((wI + wJ) / 2 / stageW) * 100 * 1.05;
 						const minDy =
-							((hI + hJ) / 2 / stageH) * 100 * 0.92;
+							((hI + hJ) / 2 / stageH) * 100 * 1.05;
 						const dx =
 							posX[j] + offX[j] - (posX[i] + offX[i]);
 						const dy =
@@ -442,7 +452,7 @@ export default function StackGlobe() {
 									: 0.6 + 0.4 * (1 - depths[j]);
 							const wSum = wi + wj || 1;
 							const push =
-								(pushX ? overlapX : overlapY) + 0.4;
+								(pushX ? overlapX : overlapY) + 1.0;
 							const dirX = dx === 0 ? (i % 2 ? 1 : -1) : Math.sign(dx);
 							const dirY = dy === 0 ? (j % 2 ? 1 : -1) : Math.sign(dy);
 							if (pushX) {
@@ -457,8 +467,11 @@ export default function StackGlobe() {
 				}
 			}
 			for (let i = 0; i < STACK.length; i++) {
-				offX[i] = Math.max(-14, Math.min(14, offX[i]));
-				offY[i] = Math.max(-10, Math.min(10, offY[i]));
+				// Clamp tightened (±10 x / ±8 y, was ±14 / ±10) to match
+				// the wider SPREAD: nudged tags stay on the sphere and
+				// inside the stage instead of being pushed past its edge.
+				offX[i] = Math.max(-10, Math.min(10, offX[i]));
+				offY[i] = Math.max(-8, Math.min(8, offY[i]));
 				posX[i] += offX[i];
 				posY[i] += offY[i];
 			}
@@ -479,10 +492,12 @@ export default function StackGlobe() {
 						i === frontIdx
 							? "200"
 							: String(Math.round(depth * 100));
-					// Back tags stay legible: opacity floor 0.55 (was 0.3).
+					// Back tags recede: opacity floor 0.38 (was 0.55),
+					// so back tags are faint and the front/mid tags
+					// dominate, like the preview.
 					el.style.opacity = dimmed
 						? ""
-						: String(0.55 + 0.45 * depth);
+						: String(0.38 + 0.62 * depth);
 					el.classList.toggle("front", i === frontIdx);
 					el.classList.toggle("dimmed", dimmed);
 				}

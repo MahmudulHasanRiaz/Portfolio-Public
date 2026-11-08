@@ -245,11 +245,22 @@ textarea {
 /* ---------- Header ---------- */
 .site-header {
 	position: sticky;
-	top: 0;
+	/* Preview: sticky top-3 (12px) — the pill row sticks 12px below
+	   the viewport top, leaving room for the arcs above it. */
+	top: 12px;
 	z-index: 40;
 	padding-top: 8px;
 	pointer-events: none;
 }
+
+/* NO full-width sticky band and NO background on the sticky row
+   (preview): only the ~38px pill row plus the two flank buttons are
+   sticky; the rest of the row stays transparent, so page content
+   scrolls visibly beneath the gaps and only briefly under the pill
+   itself (normal floating-pill behavior). A frosted band here was
+   tried and removed — it obscured content instead of helping. The
+   stuck pill's own stronger glass + deeper glow (below) is what
+   keeps it readable. */
 
 .header-top {
 	display: flex;
@@ -359,6 +370,17 @@ textarea {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+}
+
+/* Preview: at lg the pill is pulled up 28px (-mt-7) so it tucks
+   vertically between/under the corner buttons while staying
+   horizontally clear of them — one composition, not two separate
+   rows. Only when UNSTUCK: once scrolled, the top row has collapsed
+   and the pill sits at the top of the sticky row. */
+@media (min-width: 1024px) {
+	.site-header:not(.is-stuck) .pill-stack {
+		margin-top: -28px;
+	}
 }
 
 .sticky-pill {
@@ -472,6 +494,59 @@ textarea {
 	white-space: nowrap;
 }
 
+/* Auto-rotation label change (preview): smooth vertical slide + fade,
+   ~450ms ease-in-out. Runs on mount, so every rotation's navigation
+   replays the label sliding in. */
+.pill-label-anim {
+	display: inline-block;
+	animation: pill-label-in 450ms ease-in-out both;
+}
+
+@keyframes pill-label-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pill-label-anim {
+		animation: none;
+	}
+}
+
+/* Rotation toggle in the pill (preview: teal play button). A small
+   teal-filled rounded square; Play = paused, tap to resume. */
+.pill-rotate-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	flex: none;
+	padding: 0;
+	border: 0;
+	border-radius: 7px;
+	background: var(--accent);
+	color: #fff;
+	cursor: pointer;
+}
+
+.pill-rotate-btn:hover {
+	background: var(--accent-strong);
+}
+
+.pill-rotate-btn:focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 2px var(--bg),
+		0 0 0 4px var(--accent);
+}
+
 .sticky-pill .pill-dot {
 	width: 6px;
 	height: 6px;
@@ -494,11 +569,22 @@ textarea {
 	align-items: center;
 }
 
+/* Arcs hang above the pill (preview: svg h-54px, w-24 sm / w-28 lg,
+   -translate-y-72%, in BOTH states, never fading). They are a NARROW
+   centered decoration above the pill — NOT a full-width line: the old
+   width: 100% stretched the arcs across the whole header, so the arc
+   lines cut through page content scrolling underneath. */
 .header-arcs {
-	width: 100%;
+	width: 96px;
 	height: 26px;
 	overflow: visible;
 	pointer-events: none;
+}
+
+@media (min-width: 1024px) {
+	.header-arcs {
+		width: 112px;
+	}
 }
 
 .header-arcs .arc-base {
@@ -560,6 +646,7 @@ textarea {
 	font-size: 14px;
 	font-weight: 500;
 	text-align: left;
+	text-decoration: none;
 	white-space: nowrap;
 }
 
@@ -573,25 +660,52 @@ textarea {
 	background: var(--accent-soft);
 }
 
-.header-picker .picker-resume {
-	display: block;
+/* Selected profile marker (preview): a teal CHECKMARK on the right —
+   not a dot. Pushed to the row's far edge. */
+.header-picker .picker-row .picker-check {
+	margin-left: auto;
+	display: inline-flex;
+	flex: none;
+	color: var(--accent);
+}
+
+/* "Resume auto-rotation" (preview): big full-width teal button at the
+   bottom of the picker, play icon + label. */
+.picker-resume-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
 	width: 100%;
-	margin-top: 4px;
-	padding: 6px 10px;
+	margin-top: 8px;
+	padding: 11px 12px;
 	border: 0;
-	border-radius: var(--radius-xs);
-	background: transparent;
-	color: var(--ink-dim);
-	font-size: 13px;
-	text-align: center;
+	border-radius: 12px;
+	background: var(--accent);
+	color: #fff;
+	font-size: 14px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.picker-resume-btn:hover {
+	background: var(--accent-strong);
+}
+
+.picker-resume-btn:focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 2px var(--bg),
+		0 0 0 4px var(--accent);
 }
 
 /* Stuck (scrolled) header: the two corner buttons flank the pill at the
    same x positions as the top row. The pill itself stays in .pill-stack
-   (it glides up as .header-top collapses). */
+   (it glides up as .header-top collapses). Top aligns the buttons with
+   the pill's stuck position (8px header padding + 26px arcs = 34px). */
 .stuck-corners {
 	position: absolute;
-	top: 8px;
+	top: 34px;
 	left: 0;
 	right: 0;
 	display: flex;
@@ -713,8 +827,9 @@ textarea {
 	overflow: visible;
 }
 
-/* Preview: the portrait is (nearly) SQUARE-cornered — sharp sides, at
-   most a tiny radius. The old 28px radius is gone. object-position
+/* Preview: the portrait is SHARP-cornered — border-radius 0, no rounding
+   at all (user decision, 2026-11-08 ~18:12; the earlier 4px "essentially
+   square" was a misreading of the radius-free decision). object-position
    favors the speaker's face/upper body so the podium bar at the bottom
    of the photo does not dominate. */
 .hero-photo-frame img {
@@ -723,7 +838,7 @@ textarea {
 	height: 100%;
 	object-fit: cover;
 	object-position: 50% 20%;
-	border-radius: 4px;
+	border-radius: 0;
 	border: 1px solid var(--card-border);
 	box-shadow:
 		0 0 0 1px rgba(255, 255, 255, 0.14),
@@ -739,7 +854,7 @@ textarea {
 	bottom: 0;
 	height: 42%;
 	background: linear-gradient(to top, rgba(0, 0, 0, 0.25), transparent);
-	border-radius: 0 0 4px 4px;
+	border-radius: 0;
 	pointer-events: none;
 }
 
@@ -754,8 +869,16 @@ textarea {
 }
 
 @media (min-width: 1024px) {
+	/* The float container is ABSOLUTELY positioned over the hero card
+	   (not a grid item): as a third grid child it auto-placed into a
+	   second row, adding a 44px phantom row-gap of dead white space at
+	   the bottom of the hero card on desktop. Out of the grid flow the
+	   card's height is set only by the photo + copy, like the preview. */
 	.hero-photo-float {
 		display: block;
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
 	}
 
 	.hero-photo-float-card {
@@ -849,14 +972,44 @@ textarea {
 	pointer-events: none;
 }
 
-/* Faint CONTINUOUS perimeter trace only — the old moving dash segment
-   rendered as a stray teal line on the photo's edge, so it is gone
-   (see Hero.astro: the glow rect was removed). */
+/* Running light around the photo's perimeter (preview): a faint
+   continuous trace + a SHORT SOFT teal segment travelling around it
+   (inset −7px, outside the photo edge). The segment is soft — 0.38
+   opacity, round caps, ~3px with a glow — never a hard thin line.
+   Restored 2026-11-08 ~18:12: the first fix round had wrongly removed
+   it, mistaking it for the stray hard dash on the photo's left/top
+   edge (that artifact stays removed — this is the soft perimeter
+   runlight only). */
 .hero-runlight .trace-base {
 	fill: none;
 	stroke: var(--accent);
 	stroke-opacity: 0.1;
 	stroke-width: 1.5;
+}
+
+.hero-runlight .trace-glow {
+	fill: none;
+	stroke: var(--accent);
+	stroke-opacity: 0.38;
+	stroke-width: 3;
+	stroke-linecap: round;
+	/* pathLength 400 on the rect: a 56-unit segment (~14% of the
+	   perimeter) travelling the full loop in ~7s. */
+	stroke-dasharray: 56 344;
+	animation: hero-runlight-travel 7s linear infinite;
+	filter: drop-shadow(0 0 3px rgba(13, 148, 136, 0.6));
+}
+
+@keyframes hero-runlight-travel {
+	to {
+		stroke-dashoffset: -400;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.hero-runlight .trace-glow {
+		animation: none;
+	}
 }
 
 /* Designation badge — a SOLID TEAL pill (preview ground truth): opaque
@@ -1340,6 +1493,11 @@ textarea {
 	margin: 6px 0 0;
 	font-size: 14px;
 	color: var(--ink-dim);
+	/* Mobile carousel card — same max-2-lines rule as the grid cards. */
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
 }
 
 /* Stacked pages: solid paper cards behind the main card, pivoting on
@@ -1605,12 +1763,22 @@ textarea {
 	margin: 6px 0 0;
 	font-size: 13px;
 	color: var(--ink-dim);
+	/* Grid short descriptions show max 2 lines (user decision, 2026-11-08):
+	   the visual 2-line limit is the primary enforcement; the character
+	   cap in truncateShort() is only a text-level safety net above the
+	   preview's longest card copy. */
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
 }
 
 .grid-card .grid-meta {
 	margin-top: 8px;
 	font-size: 12px;
 	color: var(--ink-faint);
+	/* Single-line meta — undo the -webkit-box clamp above. */
+	display: block;
 }
 
 /* ---------- Detail pages ---------- */
@@ -1847,8 +2015,9 @@ textarea {
 	inset: 0;
 	border-radius: 50%;
 	/* Top-left light + teal core glow: a real sphere, not a flat disc.
-	   Stronger shading than before so the ball's edge is unmistakable
-	   against the white card — a pale wash hid it entirely. */
+	   The mint wash is clearly visible across the whole ball (preview) —
+	   a deeper base + stronger core glow, so the ball never reads as a
+	   pale washed-out disc against the white card. */
 	background:
 		radial-gradient(
 			circle at 32% 26%,
@@ -1858,23 +2027,23 @@ textarea {
 		),
 		radial-gradient(
 			circle at 50% 58%,
-			rgba(13, 148, 136, 0.22) 0%,
-			rgba(13, 148, 136, 0.08) 48%,
+			rgba(13, 148, 136, 0.32) 0%,
+			rgba(13, 148, 136, 0.14) 48%,
 			transparent 72%
 		),
 		radial-gradient(
 			circle at 50% 50%,
-			transparent 58%,
-			rgba(12, 26, 21, 0.1) 88%,
-			rgba(12, 26, 21, 0.14) 100%
+			transparent 55%,
+			rgba(12, 26, 21, 0.14) 85%,
+			rgba(12, 26, 21, 0.2) 100%
 		),
-		#eef6f3;
-	border: 1px solid rgba(13, 148, 136, 0.32);
+		#d9ede5;
+	border: 1px solid rgba(13, 148, 136, 0.45);
 	box-shadow:
-		inset 0 0 60px rgba(13, 148, 136, 0.2),
-		inset -24px -28px 60px rgba(12, 26, 21, 0.12),
+		inset 0 0 60px rgba(13, 148, 136, 0.28),
+		inset -24px -28px 60px rgba(12, 26, 21, 0.14),
 		inset 18px 20px 40px rgba(255, 255, 255, 0.55),
-		0 0 44px rgba(13, 148, 136, 0.1),
+		0 0 54px rgba(13, 148, 136, 0.18),
 		0 18px 45px rgba(12, 26, 21, 0.1);
 	backdrop-filter: blur(18px) saturate(1.4);
 	-webkit-backdrop-filter: blur(18px) saturate(1.4);
@@ -2449,164 +2618,182 @@ textarea {
 }
 
 /* ---------- Releases ---------- */
+/* Releases — the preview's 3-column card grid (NOT full-width rows):
+   aspect-video thumbnail on top + p-4 body with title, type · year
+   meta, up to 6 platform icons opposite the title, and an "Audio only"
+   pill for audio singles. The card carries NO description — the full
+   description lives on the detail page. */
+.release-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 16px;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+@media (min-width: 640px) {
+	.release-grid {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+@media (min-width: 1024px) {
+	.release-grid {
+		grid-template-columns: 1fr 1fr 1fr;
+	}
+}
+
 .release-card {
-	display: flex;
-	gap: 12px;
-	/* Top-aligned: the platform row now lives inside .release-info, so a
-	   vertically centered layout left a tall empty band beside short info. */
-	align-items: flex-start;
-	padding: 16px;
-	border-radius: var(--radius-sm);
+	overflow: hidden;
+	border-radius: var(--radius);
 	border: 1px solid var(--card-border);
 	background: var(--card);
+	transition: background-color 200ms ease;
+}
+
+.release-card:hover {
+	background: var(--accent-wash);
+}
+
+.release-card-link {
+	display: block;
 	text-decoration: none;
 	color: inherit;
-	margin-top: 10px;
 }
 
-.release-thumb {
-	flex: none;
-	width: 72px;
-	height: 72px;
-	border-radius: var(--radius-xs);
+.release-card-link:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+/* Aspect-video thumbnail on top of the card. */
+.release-card-thumb {
+	position: relative;
+	display: block;
+	aspect-ratio: 16 / 9;
 	overflow: hidden;
 	background: var(--bg-wash);
-	position: relative;
 }
 
-.release-thumb img {
+.release-card-thumb img {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
 	display: block;
 }
 
-/* Audio-only releases get a designed tile — deep teal gradient, white mic
-   + "Audio" label — not a bare pale square with a lone icon. */
-.release-thumb .audio-mark {
-	width: 100%;
-	height: 100%;
+/* Play overlay on video thumbnails (preview: h-12 w-12 circle,
+   bg-black/55, backdrop-blur, white play triangle). */
+.release-play {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	background: rgba(0, 0, 0, 0.55);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
+	color: #fff;
 	display: flex;
-	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 3px;
-	background: linear-gradient(135deg, var(--accent) 0%, #0f766e 100%);
-	color: #fff;
-	font-size: 22px;
+	pointer-events: none;
 }
 
-.release-thumb .audio-mark span {
-	font-size: 9px;
-	font-weight: 700;
-	letter-spacing: 0.14em;
-	text-transform: uppercase;
-	color: rgba(255, 255, 255, 0.85);
+/* Audio-only releases: accent-soft tile with a large Spotify logo
+   (preview), not a small mic tile. */
+.release-audio-tile {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	background: var(--accent-wash);
 }
 
-.release-info {
-	flex: 1;
+.release-audio-tile img,
+.release-audio-tile svg {
+	width: 52px;
+	height: 52px;
+	opacity: 0.9;
+}
+
+.release-card-body {
+	display: block;
+	padding: 16px;
+}
+
+.release-card-top {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.release-card-title {
+	display: block;
 	min-width: 0;
 }
 
-.release-info h3 {
-	margin: 0;
+.release-title {
+	display: block;
 	font-size: 15px;
+	font-weight: 700;
 	line-height: 1.35;
+	color: var(--ink);
 }
 
-.release-info .release-meta {
-	margin-top: 2px;
+.release-meta {
+	display: block;
+	margin-top: 4px;
 	font-size: 12px;
+	font-weight: 600;
 	color: var(--ink-dim);
 }
 
-.audio-badge {
-	display: inline-block;
-	margin-top: 6px;
-	font-size: 11px;
-	font-weight: 600;
-	padding: 2px 8px;
-	border-radius: 999px;
-	background: var(--accent-wash);
-	color: var(--accent-strong);
-	/* Solid chip: no decorative line may cross this text. (The line seen
-	   in the audit is the sticky header's arc graphic passing over the
-	   page while scrolling — a header issue, not this badge.) */
-	text-decoration: none;
-	white-space: nowrap;
-}
-
-/* Platforms sit in the info flow, adjacent to the content — not stranded
-   in a far-right column across a huge empty gap. */
-.release-platforms {
+/* Platform icons sit in the free space opposite the title (preview). */
+.release-card-platforms {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
+	flex: none;
 	align-items: center;
-	margin-top: 10px;
+	gap: 6px;
 }
 
-.release-platforms img {
+.release-card-platforms img,
+.release-card-platforms svg {
 	width: 20px;
 	height: 20px;
 	object-fit: contain;
 }
 
-.release-platforms .plat-more {
+.release-card-platforms .plat-more {
 	font-size: 12px;
 	font-weight: 600;
 	color: var(--ink-dim);
 	padding: 0 4px;
 }
 
-.release-thumb-link {
-	flex: none;
-	display: block;
-	border-radius: var(--radius-xs);
-}
-
-.release-info h3 a {
-	color: inherit;
-	text-decoration: none;
-}
-
-.release-desc {
-	margin: 6px 0 0;
-	font-size: 13px;
-	line-height: 1.5;
-	color: var(--ink-dim);
-	display: -webkit-box;
-	-webkit-line-clamp: 3;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
-}
-
-.release-listen {
-	display: inline-block;
-	margin-top: 8px;
-	font-size: 13px;
-	font-weight: 700;
-	color: var(--accent-strong);
-	text-decoration: none;
-}
-
-.release-listen:hover {
-	text-decoration: underline;
-}
-
-.release-platforms a {
+/* Audio-only pill (preview): solid teal pill, white text + music-note
+   icon, 11px bold — NOT a pale wash chip. */
+.audio-badge {
 	display: inline-flex;
 	align-items: center;
-	border-radius: 6px;
+	gap: 6px;
+	margin-top: 12px;
+	font-size: 11px;
+	font-weight: 700;
+	padding: 4px 12px;
+	border-radius: 999px;
+	background: var(--accent);
+	color: #fff;
+	white-space: nowrap;
 }
 
-.release-thumb-link:focus-visible,
-.release-info h3 a:focus-visible,
-.release-listen:focus-visible,
-.release-platforms a:focus-visible {
-	outline: 2px solid var(--accent);
-	outline-offset: 2px;
+.audio-badge svg {
+	flex: none;
 }
 
 .type-tag {
@@ -2709,7 +2896,7 @@ textarea {
 	align-items: center;
 	justify-content: center;
 	min-height: 0;
-	padding: 32px 20px;
+	padding: 16px 18px;
 	border-radius: 24px;
 	border: 1px solid var(--card-border);
 	background: var(--card);
@@ -2720,7 +2907,7 @@ textarea {
 
 @media (min-width: 640px) {
 	.client-cell {
-		padding: 36px 32px;
+		padding: 18px 20px;
 	}
 }
 
@@ -2943,8 +3130,29 @@ textarea {
 }
 
 .platform-group h3 {
-	margin: 0 0 10px;
+	margin: 0 0 4px;
 	font-size: 15px;
+}
+
+/* Group sub-line (preview): one line under each group heading. */
+.platform-blurb {
+	margin: 0 0 14px;
+	font-size: 13px;
+	color: var(--ink-dim);
+}
+
+/* Preview: 2-column compact card grid (sm:grid-cols-2, gap-3) —
+   single column below 640px. */
+.platform-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 12px;
+}
+
+@media (min-width: 640px) {
+	.platform-grid {
+		grid-template-columns: 1fr 1fr;
+	}
 }
 
 .platform-row {
@@ -2955,25 +3163,42 @@ textarea {
 	border-radius: var(--radius-sm);
 	border: 1px solid var(--card-border);
 	background: var(--card);
-	margin-top: 8px;
 	text-decoration: none;
 	color: inherit;
 }
 
-.platform-row img {
-	width: 24px;
-	height: 24px;
-	object-fit: contain;
+/* Brand icon in a 44×44px circular tile (preview), logo 22×22px. */
+.platform-row .plat-icon {
 	flex: none;
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--bg-wash);
+	border: 1px solid var(--card-border);
+}
+
+.platform-row .plat-icon img,
+.platform-row .plat-icon svg {
+	width: 22px;
+	height: 22px;
+	object-fit: contain;
+}
+
+.platform-row .plat-text {
+	min-width: 0;
+	flex: 1;
 }
 
 .platform-row .plat-name {
-	font-weight: 600;
-	font-size: 14px;
+	font-weight: 700;
+	font-size: 15px;
 }
 
 .platform-row .plat-handle {
-	font-size: 12px;
+	font-size: 13px;
 	color: var(--ink-dim);
 }
 
@@ -2981,6 +3206,8 @@ textarea {
 	margin-left: auto;
 	color: var(--ink-dim);
 	flex: none;
+	font-size: 16px;
+	line-height: 1;
 }
 
 /* ---------- Contact form / modal ---------- */
