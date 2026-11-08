@@ -3,6 +3,39 @@
    Sections are big rounded glass cards in a centred column.
    Ported from the approved React preview design. */
 
+/* Li Ador Noirrit — Bangla webfont (user-supplied, self-hosted in
+   public/fonts/). Plus Jakarta Sans has no Bengali glyphs, so Bengali
+   text falls through to this font in the --font stack below; Latin text
+   stays in Plus Jakarta Sans. font-display: swap so text never blocks. */
+@font-face {
+	font-family: "Li Ador Noirrit";
+	src: url("/fonts/li-ador-noirrit-300.woff2") format("woff2");
+	font-weight: 300;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Li Ador Noirrit";
+	src: url("/fonts/li-ador-noirrit-400.woff2") format("woff2");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Li Ador Noirrit";
+	src: url("/fonts/li-ador-noirrit-600.woff2") format("woff2");
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Li Ador Noirrit";
+	src: url("/fonts/li-ador-noirrit-700.woff2") format("woff2");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
 :root {
 	--bg: #ffffff;
 	--bg-wash: #f2f7f5;
@@ -22,7 +55,7 @@
 	--radius-sm: 14px;
 	--radius-xs: 8px;
 	--max-col: 1120px;
-	--font: "Plus Jakarta Sans", system-ui, sans-serif;
+	--font: "Plus Jakarta Sans", "Li Ador Noirrit", system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
