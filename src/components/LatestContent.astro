@@ -1,0 +1,30 @@
+---
+import { getLiveCollection } from "astro:content";
+
+// "Latest" block for the homepage — static shell + live island (plan §4.3).
+// Rendered with server:defer, so the homepage itself stays a static file
+// while this block loads live at request time. Its response is tagged
+// "home:latest" so a publish event can purge just this block.
+// Empty when the API is unconnected — never fake content.
+const result = await getLiveCollection("posts");
+const entries = result?.entries ?? [];
+const latest = entries.slice(0, 3);
+
+Astro.cache.set({ tags: ["posts", "home:latest"] });
+---
+
+{
+	latest.length > 0 ? (
+		<ul style="margin:0;padding-left:20px;">
+			{latest.map((entry) => (
+				<li>
+					<a href={`/posts/${entry.id}`}>{entry.data.title}</a>
+				</li>
+			))}
+		</ul>
+	) : (
+		<p class="muted" style="margin:0;">
+			No posts published yet.
+		</p>
+	)
+}

@@ -1,0 +1,35 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { getLiveEntry } from "astro:content";
+
+// On-demand detail route — hybrid live-then-static (see posts/[slug].astro).
+export const prerender = false;
+
+const { slug } = Astro.params;
+const result = slug ? await getLiveEntry("releases", slug) : undefined;
+const entry = result?.entry;
+if (entry) Astro.cache.set(entry);
+---
+
+<Layout title={entry ? `${entry.data.title} — Mahmudul Hasan Riaz` : `${slug} — Mahmudul Hasan Riaz`}>
+	<section class="glass">
+		<p style="margin:0 0 8px;"><a href="/releases">← All releases</a></p>
+		{
+			entry ? (
+				<>
+					<h1 style="margin:0 0 8px;font-size:24px;">{entry.data.title}</h1>
+					{entry.data.description && <p class="muted">{entry.data.description}</p>}
+					{entry.data.content && <p>{entry.data.content}</p>}
+				</>
+			) : (
+				<>
+					<h1 style="margin:0 0 8px;font-size:24px;">Release: {slug}</h1>
+					<p class="muted" style="margin:0;">
+						This release is not published yet, or the Public Content API is not
+						connected. It will load live here the moment it is published.
+					</p>
+				</>
+			)
+		}
+	</section>
+</Layout>

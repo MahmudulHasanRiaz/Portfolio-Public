@@ -1,0 +1,40 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { getLiveEntry } from "astro:content";
+
+// On-demand detail route — hybrid live-then-static.
+// No static file exists yet for a new/updated slug, so the Worker falls
+// through to the live loader (Public Content API). The entry's cacheHint
+// (tags + lastModified) is applied to this response, so a publish event
+// can purge exactly this page by tag. After the next scheduled rebuild
+// the page becomes a static file and the Worker is not hit at all.
+export const prerender = false;
+
+const { slug } = Astro.params;
+const result = slug ? await getLiveEntry("posts", slug) : undefined;
+const entry = result?.entry;
+if (entry) Astro.cache.set(entry);
+---
+
+<Layout title={entry ? `${entry.data.title} — Mahmudul Hasan Riaz` : `${slug} — Mahmudul Hasan Riaz`}>
+	<section class="glass">
+		<p style="margin:0 0 8px;"><a href="/posts">← All posts</a></p>
+		{
+			entry ? (
+				<>
+					<h1 style="margin:0 0 8px;font-size:24px;">{entry.data.title}</h1>
+					{entry.data.description && <p class="muted">{entry.data.description}</p>}
+					{entry.data.content && <p>{entry.data.content}</p>}
+				</>
+			) : (
+				<>
+					<h1 style="margin:0 0 8px;font-size:24px;">Post: {slug}</h1>
+					<p class="muted" style="margin:0;">
+						This post is not published yet, or the Public Content API is not
+						connected. It will load live here the moment it is published.
+					</p>
+				</>
+			)
+		}
+	</section>
+</Layout>

@@ -1,0 +1,47 @@
+---
+import Layout from "../layouts/Layout.astro";
+import LatestContent from "../components/LatestContent.astro";
+
+// Skeleton homepage — proves the Astro + Cloudflare + React setup works.
+// Sections are ported from the React preview one by one; nothing here is
+// final content. All real content comes from the DB via the Public Content
+// API (see src/live.config.ts) — never hardcoded.
+---
+
+<Layout
+	title="Mahmudul Hasan Riaz — Software Engineer, Entrepreneur & Nasheed Artist"
+	description="Software Engineer, Entrepreneur and Nasheed Artist from Dhaka, Bangladesh. ERP, e-commerce and SaaS systems for businesses in Bangladesh and beyond."
+>
+	<section class="glass">
+		<h1 style="margin:0 0 8px;font-size:28px;line-height:1.25;">
+			Mahmudul Hasan Riaz
+		</h1>
+		<p class="accent" style="margin:0 0 12px;font-weight:600;">Software Engineer</p>
+		<p class="muted" style="margin:0;">
+			Public site, rebuilt in Astro. Sections are being ported from the approved
+			design preview — homepage, Know Me, projects, ventures, releases and posts.
+		</p>
+		<p style="margin:16px 0 0;display:flex;gap:12px;flex-wrap:wrap;">
+			<a class="btn" href="/know-me">Know Me</a>
+			<a class="btn btn-ghost" href="/projects">View my work</a>
+		</p>
+	</section>
+
+	<section class="glass" style="margin-top:16px;">
+		<h2 style="margin:0 0 8px;font-size:18px;">Latest</h2>
+		<!-- Static shell + live island (plan §4.3): this block loads live at
+		     request time while the rest of the page stays static. -->
+		<LatestContent server:defer>
+			<p class="muted" slot="fallback" style="margin:0;">Loading latest…</p>
+		</LatestContent>
+	</section>
+
+	<section class="glass" style="margin-top:16px;">
+		<h2 style="margin:0 0 8px;font-size:18px;">Scaffold status</h2>
+		<ul class="muted" style="margin:0;padding-left:20px;">
+			<li>Astro 7 + Cloudflare Workers (static assets) — this page is static.</li>
+			<li>Detail routes are on-demand (<code>prerender = false</code>) and fall back to the live loader.</li>
+			<li>Content loads from the read-only Public Content API once it exists — no static fallback.</li>
+		</ul>
+	</section>
+</Layout>

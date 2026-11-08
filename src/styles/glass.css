@@ -1,0 +1,133 @@
+/* Glass design tokens — day one.
+   Full-white light (#ffffff), full-dark dark (#050807), mint/teal accent.
+   Sections are big rounded glass cards in a centred column. */
+
+:root {
+	--bg: #ffffff;
+	--bg-wash: #f2f7f5;
+	--ink: #0c1a15;
+	--ink-dim: #5b6f67;
+	--card: rgba(255, 255, 255, 0.72);
+	--card-border: rgba(12, 26, 21, 0.08);
+	--accent: #0d9488;
+	--accent-strong: #0f766e;
+	--accent-soft: rgba(13, 148, 136, 0.1);
+	--shadow: 0 8px 32px rgba(12, 26, 21, 0.08);
+	--radius: 24px;
+	--max-col: 1120px;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #050807;
+		--bg-wash: #08110d;
+		--ink: #eef5f2;
+		--ink-dim: #93a89e;
+		--card: rgba(255, 255, 255, 0.06);
+		--card-border: rgba(255, 255, 255, 0.09);
+		--accent: #2dd4bf;
+		--accent-strong: #5eead4;
+		--accent-soft: rgba(45, 212, 191, 0.12);
+		--shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+	}
+}
+
+[data-theme="light"] {
+	--bg: #ffffff;
+	--bg-wash: #f2f7f5;
+	--ink: #0c1a15;
+	--ink-dim: #5b6f67;
+	--card: rgba(255, 255, 255, 0.72);
+	--card-border: rgba(12, 26, 21, 0.08);
+	--accent: #0d9488;
+	--accent-strong: #0f766e;
+	--accent-soft: rgba(13, 148, 136, 0.1);
+	--shadow: 0 8px 32px rgba(12, 26, 21, 0.08);
+}
+
+[data-theme="dark"] {
+	--bg: #050807;
+	--bg-wash: #08110d;
+	--ink: #eef5f2;
+	--ink-dim: #93a89e;
+	--card: rgba(255, 255, 255, 0.06);
+	--card-border: rgba(255, 255, 255, 0.09);
+	--accent: #2dd4bf;
+	--accent-strong: #5eead4;
+	--accent-soft: rgba(45, 212, 191, 0.12);
+	--shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html {
+	scroll-behavior: smooth;
+}
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--ink);
+	font-family:
+		system-ui,
+		-apple-system,
+		"Segoe UI",
+		Roboto,
+		sans-serif;
+	line-height: 1.6;
+	-webkit-font-smoothing: antialiased;
+}
+
+a {
+	color: var(--accent-strong);
+}
+
+.page {
+	max-width: var(--max-col);
+	margin: 0 auto;
+	padding: 16px;
+}
+
+.glass {
+	background: var(--card);
+	border: 1px solid var(--card-border);
+	border-radius: var(--radius);
+	box-shadow: var(--shadow);
+	backdrop-filter: blur(18px);
+	-webkit-backdrop-filter: blur(18px);
+	padding: 24px;
+}
+
+.muted {
+	color: var(--ink-dim);
+}
+
+.accent {
+	color: var(--accent-strong);
+}
+
+.btn {
+	display: inline-block;
+	border-radius: 13px;
+	padding: 8px 20px;
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none;
+	background: var(--accent);
+	color: #fff;
+	border: 1px solid transparent;
+}
+
+.btn-ghost {
+	background: transparent;
+	color: var(--ink);
+	border-color: var(--card-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+}
