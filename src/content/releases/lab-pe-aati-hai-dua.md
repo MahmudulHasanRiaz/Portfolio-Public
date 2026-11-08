@@ -7,6 +7,7 @@ platforms:
     url: "https://youtu.be/7OuutfZJL1s"
 youtubeId: "7OuutfZJL1s"
 publishedAt: "2023-06-05"
+description: "The beloved Urdu dua, rendered as a heartfelt naat — a prayer for a life of light, knowledge and service."
 ---
 
-A nasheed video — watch it here on the page, or on YouTube.
+The beloved Urdu dua, rendered as a heartfelt naat — a prayer for a life of light, knowledge and service.

@@ -6,6 +6,7 @@ platforms:
   - name: "Spotify"
     url: "https://open.spotify.com/track/7JTHMNqnpjucJxcLgqLUE8"
 publishedAt: "2021-01-01"
+description: "An Eid nasheed marking gratitude, victory and renewal."
 ---
 
-A nasheed single — listen on Spotify.
+An Eid nasheed marking gratitude, victory and renewal.

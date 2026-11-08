@@ -1,30 +1,56 @@
 ---
-import { getLiveCollection } from "astro:content";
+import { formatDate, getPosts, readingTimeFromText } from "../lib/content";
 
-// "Latest" block for the homepage — static shell + live island (plan §4.3).
-// Rendered with server:defer, so the homepage itself stays a static file
-// while this block loads live at request time. Its response is tagged
-// "home:latest" so a publish event can purge just this block.
-// Empty when the API is unconnected — never fake content.
-const result = await getLiveCollection("livePosts");
-const entries = result?.entries ?? [];
-const latest = entries.slice(0, 3);
-
-Astro.cache.set({ tags: ["posts", "home:latest"] });
+// "Latest" block — preview presentation: cards with thumbnail (or a
+// deliberate monogram tile when a post has none) + tag chip + title +
+// excerpt + "date · reading time". Reading time is computed from the
+// actual post text (body, then live API content), never the stored
+// value on its own — the API ships readingTime: 1 for every post.
+const posts = await getPosts();
+const latest = posts.slice(0, 3);
 ---
 
 {
-	latest.length > 0 ? (
-		<ul style="margin:0;padding-left:20px;">
-			{latest.map((entry) => (
-				<li>
-					<a href={`/posts/${entry.id}`}>{entry.data.title}</a>
-				</li>
-			))}
-		</ul>
+	latest.length === 0 ? (
+		<p class="empty-state">No posts published yet.</p>
 	) : (
-		<p class="muted" style="margin:0;">
-			No posts published yet.
-		</p>
+		<div class="card-grid">
+			{latest.map((post) => {
+				const postText =
+					post.body ?? (post.data as { content?: string }).content ?? "";
+				const readingTime =
+					readingTimeFromText(postText) ?? post.data.readingTime ?? undefined;
+				return (
+					<a class="grid-card" href={`/posts/${post.data.slug}`}>
+						<div class="grid-thumb">
+							{post.data.thumbnail ? (
+								<img
+									src={post.data.thumbnail}
+									alt={post.data.title}
+									loading="lazy"
+								/>
+							) : (
+								<span class="thumb-fallback" aria-hidden="true">
+									{post.data.title.charAt(0)}
+								</span>
+							)}
+						</div>
+						<div class="grid-body">
+							{post.data.tags?.[0] ? (
+								<div class="tag-row">
+									<span class="tag">{post.data.tags[0]}</span>
+								</div>
+							) : null}
+							<h3>{post.data.title}</h3>
+							{post.data.excerpt ? <p>{post.data.excerpt}</p> : null}
+							<p class="post-meta">
+								{formatDate(post.data.publishedAt)}
+								{readingTime ? ` · ${readingTime} min read` : ""}
+							</p>
+						</div>
+					</a>
+				);
+			})}
+		</div>
 	)
 }

@@ -52,6 +52,19 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 						: null;
 					const shownPlatforms = release.platforms.slice(0, 5);
 					const extra = release.platforms.length - shownPlatforms.length;
+					// The DB seed used 2021-01-01 as a placeholder date for the
+					// four audio-only singles, so all four render the identical
+					// "1 Jan 2021" — a placeholder shown as fact. Until the real
+					// Spotify release dates are known, omit it rather than
+					// display it. (Live API wins the merge, so editing the
+					// build-time .md dates alone would not fix the live site —
+					// the DB rows need the real dates.)
+					const PLACEHOLDER_DATE = "2021-01-01";
+					const shownDate =
+						release.publishedAt &&
+						!release.publishedAt.startsWith(PLACEHOLDER_DATE)
+							? formatDate(release.publishedAt)
+							: "";
 					// Audio-only releases link straight out to Spotify —
 					// the visitor should not have to open the detail page
 					// just to listen.
@@ -89,6 +102,7 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 												<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
 												<line x1="12" x2="12" y1="19" y2="22" />
 											</svg>
+											<span>Audio</span>
 										</span>
 									)}
 								</div>
@@ -105,10 +119,8 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 											{release.releaseType}
 										</span>
 									) : null}
-									{release.releaseType && release.publishedAt
-										? " · "
-										: null}
-									{formatDate(release.publishedAt)}
+									{release.releaseType && shownDate ? " · " : null}
+									{shownDate}
 								</p>
 								{release.description ? (
 									<p class="release-desc">
@@ -130,29 +142,31 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 										Listen on Spotify ↗
 									</a>
 								) : null}
-							</div>
-							<div class="release-platforms">
-								{shownPlatforms.map((p) => {
-									const icon =
-										RELEASE_PLATFORM_ICONS[p.name];
-									return icon ? (
-										<a
-											href={p.url}
-											target="_blank"
-											rel="noreferrer"
-											aria-label={`${release.title} on ${p.name}`}
-										>
-											<BrandIcon
-												icon={icon}
-												name={p.name}
-												size={20}
-											/>
-										</a>
-									) : null;
-								})}
-								{extra > 0 ? (
-									<span class="plat-more">+{extra}</span>
-								) : null}
+								{/* Platforms sit adjacent to the info, not stranded
+								    at the far right edge across an empty gap. */}
+								<div class="release-platforms">
+									{shownPlatforms.map((p) => {
+										const icon =
+											RELEASE_PLATFORM_ICONS[p.name];
+										return icon ? (
+											<a
+												href={p.url}
+												target="_blank"
+												rel="noreferrer"
+												aria-label={`${release.title} on ${p.name}`}
+											>
+												<BrandIcon
+													icon={icon}
+													name={p.name}
+													size={20}
+												/>
+											</a>
+										) : null;
+									})}
+									{extra > 0 ? (
+										<span class="plat-more">+{extra}</span>
+									) : null}
+								</div>
 							</div>
 						</article>
 					);

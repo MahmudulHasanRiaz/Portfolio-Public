@@ -5,6 +5,30 @@ import { getVentures } from "../lib/content";
 
 const ventures = await getVentures();
 const musicPlatforms = PLATFORMS.filter((p) => p.group === "music");
+// Preview mini-row copy (authorized preview content): SHORT one-line
+// descriptions that fit in full — the live API's long descriptions
+// get cut off mid-sentence here. Long descriptions stay on the
+// venture detail pages; only the mini-row uses the short one.
+const VENTURE_SHORT: Record<string, string> = {
+	hisabkit: "Accounting toolkit for small Bangladeshi businesses.",
+	clouddesk: "Remote-work tools for distributed teams.",
+	skillbridge: "Connecting skilled freelancers with local businesses.",
+};
+// Preview order: HisabKit, CloudDesk, SkillBridge (live API sorts
+// newest-first, which renders them reversed).
+const VENTURE_ORDER = ["hisabkit", "clouddesk", "skillbridge"];
+const orderedVentures = [...ventures].sort((a, b) => {
+	const ai = VENTURE_ORDER.indexOf(a.data.slug);
+	const bi = VENTURE_ORDER.indexOf(b.data.slug);
+	return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+});
+// Real venture thumbnails from the preview assets (local files, never
+// a bare letter tile while a photo exists).
+const VENTURE_FALLBACK_THUMB: Record<string, string> = {
+	hisabkit: "/ventures/hisabkit.jpg",
+	clouddesk: "/ventures/clouddesk.jpg",
+	skillbridge: "/ventures/skillbridge.jpg",
+};
 // Short artist points, verbatim from the React preview.
 const artistShortPoints = [
 	"Nasheed, tilawat, podcast and lecture releases",
@@ -49,20 +73,26 @@ const artistShortPoints = [
 				work and technology.
 			</p>
 			{
-				ventures.length === 0 ? (
+				orderedVentures.length === 0 ? (
 					<p class="muted" style="margin:0;font-size:14px;">
 						Ventures will appear here when published.
 					</p>
 				) : (
-					ventures.map((venture) => (
+					orderedVentures.map((venture) => (
 						<a
 							class="mini-row"
 							href={`/ventures/${venture.data.slug}`}
 						>
 							<span class="mini-thumb">
-								{venture.data.thumbnail ? (
+								{venture.data.thumbnail ||
+								VENTURE_FALLBACK_THUMB[venture.data.slug] ? (
 									<img
-										src={venture.data.thumbnail}
+										src={
+											venture.data.thumbnail ??
+											VENTURE_FALLBACK_THUMB[
+												venture.data.slug
+											]
+										}
 										alt=""
 										loading="lazy"
 									/>
@@ -77,15 +107,26 @@ const artistShortPoints = [
 							</span>
 							<span class="mini-text">
 								<b>{venture.data.title}</b>
-								{venture.data.description ? (
-									<span>{venture.data.description}</span>
+								{VENTURE_SHORT[venture.data.slug] ??
+								venture.data.description ? (
+									<span>
+										{VENTURE_SHORT[venture.data.slug] ??
+											venture.data.description}
+									</span>
 								) : null}
+							</span>
+							<span
+								class="mini-arrow"
+								style="margin-left:auto;flex:none;color:var(--accent-strong);font-weight:700;"
+								aria-hidden="true"
+							>
+								→
 							</span>
 						</a>
 					))
 				)
 			}
-			<p style="margin:14px 0 0;">
+			<p style="margin:14px 0 0;text-align:right;">
 				<a class="view-all" href="/ventures">
 					View all ventures →
 				</a>
@@ -133,7 +174,6 @@ const artistShortPoints = [
 	<div class="combined-cta">
 		<p>
 			<strong>Want the whole picture?</strong>
-			<br />
 			Every venture and every release, in full — on the Know Me page.
 		</p>
 		<a class="btn" href="/know-me">Know Me →</a>

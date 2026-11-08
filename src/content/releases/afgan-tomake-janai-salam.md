@@ -6,6 +6,7 @@ platforms:
   - name: "Spotify"
     url: "https://open.spotify.com/track/4oVaaEgB6u5pvJ1uqu4Aku"
 publishedAt: "2021-01-01"
+description: "A salute to the resilience and faith of the Afghan people."
 ---
 
-A nasheed single — listen on Spotify.
+A salute to the resilience and faith of the Afghan people.

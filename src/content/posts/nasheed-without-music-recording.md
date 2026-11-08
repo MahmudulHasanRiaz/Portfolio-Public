@@ -1,13 +1,23 @@
 ---
 title: "Nasheed Without Music: How I Record and Share"
 slug: "nasheed-without-music-recording"
-excerpt: "No instruments, no backing track — just voice, lyrics and meaning. How I record nasheed at home and share it with listeners."
-tags: ["Nasheed"]
-thumbnail: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1200&q=80&auto=format&fit=crop"
+excerpt: "No instruments, no arrangement — how a nasheed goes from a quiet room and a single voice to YouTube and Spotify."
+tags: ["Nasheed", "Recording"]
+thumbnail: "/posts/nasheed-post.jpg"
 thumbnailType: "image"
 gallery:
-  - "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1200&q=80&auto=format&fit=crop"
-publishedAt: "2024-01-01"
+  - "/posts/nasheed-post.jpg"
+publishedAt: "2025-10-26"
 ---
 
-No instruments, no backing track — just voice, lyrics and meaning. That is the whole point of the nasheed I perform, and it shapes every recording decision I make.
+People sometimes ask how a nasheed gets made without music. The honest answer is that it starts quieter than most recordings: a room, a microphone, and a voice that has to carry everything an arrangement usually would.
+
+## Recording with the voice alone
+
+There are no instruments in my nasheeds — that is the point of the form, and the discipline of it. Every layer you hear in a release like Madina Jabo is a voice: the lead, and the harmonies built from it. What an instrument would normally fill, breath and timing have to.
+
+Recording at home keeps it simple. I record in a quiet setup, take by take, until the rendition feels honest rather than performed — a nasheed is closer to a dua than to a performance, and the recording should sound like it.
+
+## Sharing it
+
+Finished nasheeds go where people already listen: the videos on YouTube, the singles on Spotify. Keeping the releases free of instruments is also what lets them sit comfortably anywhere — a family gathering, a madrasa, a long drive — without anyone having to think twice.

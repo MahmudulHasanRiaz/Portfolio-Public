@@ -203,6 +203,9 @@ textarea {
 /* ---------- Section scaffolding ---------- */
 .section {
 	margin-top: 16px;
+	/* Anchor jumps (header nav, #contact) must land below the sticky
+	   pill instead of sliding the heading underneath it. */
+	scroll-margin-top: 96px;
 }
 
 .section-head {
@@ -290,6 +293,21 @@ textarea {
 	font-size: 13px;
 	font-weight: 600;
 	transition: background-color 200ms ease;
+	/* No browser-default (blue) focus outline on the corner buttons —
+	   the moon button showed a blue ring in the live screenshot. */
+	outline: none;
+}
+
+.corner-btn:focus {
+	outline: none;
+}
+
+/* Keyboard focus still gets a visible ring — teal, never blue. */
+.corner-btn:focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 2px var(--bg),
+		0 0 0 4px var(--accent);
 }
 
 /* Desktop corner buttons are 40x64px at sm+ (the 32px top row grows
@@ -353,7 +371,11 @@ textarea {
 	padding: 0 10px;
 	border-radius: var(--radius-sm);
 	background: var(--card);
-	border: 1px solid var(--card-border);
+	/* Single luminous teal border (NOT a double border): the border
+	   itself is teal-tinted; there is no extra box-shadow ring. The
+	   luminous detail comes from ::before (top edge) + ::after (bottom
+	   segment) + the inset highlight + the outer glow. */
+	border: 1px solid var(--border-glow-soft);
 	box-shadow: var(--shadow);
 	backdrop-filter: blur(18px) saturate(1.4);
 	-webkit-backdrop-filter: blur(18px) saturate(1.4);
@@ -417,7 +439,6 @@ textarea {
 	animation-play-state: paused;
 	box-shadow:
 		var(--shadow),
-		0 0 0 1px rgba(13, 148, 136, 0.7),
 		inset 0 1px 0 rgba(45, 212, 191, 0.85),
 		0 0 26px rgba(13, 148, 136, 0.35);
 	filter: drop-shadow(0 0 26px rgba(13, 148, 136, 0.35));
@@ -428,14 +449,12 @@ textarea {
 	100% {
 		box-shadow:
 			var(--shadow),
-			0 0 0 1px rgba(13, 148, 136, 0.35),
 			inset 0 1px 0 rgba(45, 212, 191, 0.5),
 			0 0 12px rgba(13, 148, 136, 0.14);
 	}
 	50% {
 		box-shadow:
 			var(--shadow),
-			0 0 0 1px rgba(13, 148, 136, 0.7),
 			inset 0 1px 0 rgba(45, 212, 191, 0.85),
 			0 0 22px rgba(13, 148, 136, 0.35);
 	}
@@ -485,18 +504,18 @@ textarea {
 .header-arcs .arc-base {
 	fill: none;
 	stroke: var(--accent);
-	stroke-opacity: 0.16;
-	stroke-width: 1.5;
+	stroke-opacity: 0.12;
+	stroke-width: 1.25;
 }
 
 .header-arcs .arc-flow {
 	fill: none;
 	stroke: var(--accent);
-	stroke-opacity: 0.55;
-	stroke-width: 2.5;
+	stroke-opacity: 0.45;
+	stroke-width: 2;
 	stroke-linecap: round;
 	stroke-dasharray: 64 336;
-	filter: drop-shadow(0 0 6px var(--accent));
+	filter: drop-shadow(0 0 4px var(--accent));
 	animation: arc-flow 4s linear infinite;
 }
 
@@ -643,8 +662,11 @@ textarea {
 
 /* ---------- Hero ---------- */
 .hero {
+	position: relative;
 	display: grid;
-	gap: 20px;
+	/* Mobile: photo above the copy, generous gap so the designation
+	   badge (which hangs 16px below the photo) never crowds the name. */
+	gap: 36px;
 	/* Mobile text is centered; left-aligned from lg. */
 	text-align: center;
 }
@@ -655,11 +677,20 @@ textarea {
 	}
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
 	.hero {
 		grid-template-columns: 5fr 7fr;
-		align-items: start;
+		/* Vertically centered (preview): top-aligned copy left a large
+		   dead white void below the CTAs on desktop. */
+		align-items: center;
+		gap: 44px;
 	}
+}
+
+/* The copy column must be allowed to shrink inside the grid, or the
+   nowrap hero name can blow the grid out and unbalance the card. */
+.hero-copy {
+	min-width: 0;
 }
 
 .hero-photo-wrap {
@@ -669,18 +700,30 @@ textarea {
 	width: 100%;
 }
 
+/* Desktop: the photo takes the full 5fr column (preview lg:max-w-none). */
+@media (min-width: 1024px) {
+	.hero-photo-wrap {
+		max-width: none;
+	}
+}
+
 .hero-photo-frame {
 	position: relative;
 	aspect-ratio: 4 / 5;
 	overflow: visible;
 }
 
+/* Preview: the portrait is (nearly) SQUARE-cornered — sharp sides, at
+   most a tiny radius. The old 28px radius is gone. object-position
+   favors the speaker's face/upper body so the podium bar at the bottom
+   of the photo does not dominate. */
 .hero-photo-frame img {
 	display: block;
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
-	border-radius: 28px;
+	object-position: 50% 20%;
+	border-radius: 4px;
 	border: 1px solid var(--card-border);
 	box-shadow:
 		0 0 0 1px rgba(255, 255, 255, 0.14),
@@ -688,19 +731,24 @@ textarea {
 		0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
-/* Bottom gradient overlay inside the photo frame. */
+/* Bottom gradient overlay inside the photo frame (preview: black/25). */
 .hero-photo-gradient {
 	position: absolute;
 	left: 0;
 	right: 0;
 	bottom: 0;
 	height: 42%;
-	background: linear-gradient(to top, rgba(0, 0, 0, 0.45), transparent);
-	border-radius: 0 0 28px 28px;
+	background: linear-gradient(to top, rgba(0, 0, 0, 0.25), transparent);
+	border-radius: 0 0 4px 4px;
 	pointer-events: none;
 }
 
-/* Desktop floating stat cards over/near the photo — hidden on mobile. */
+/* Floating stat chips — positioned against the HERO CARD (the .hero
+   section, position:relative), NOT the photo: top-right and
+   bottom-right corners of the card, overlapping its edge slightly,
+   fully visible (the card has no overflow clipping). Solid opaque
+   pills, dark bold number + smaller grey label, like the preview.
+   Hidden on mobile (preview: hidden below md) — shown from lg. */
 .hero-photo-float {
 	display: none;
 }
@@ -716,58 +764,83 @@ textarea {
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
-		padding: 10px 14px;
-		border-radius: var(--radius-sm);
-		background: var(--card);
+		padding: 10px 16px;
+		border-radius: 16px;
+		background: #ffffff;
 		border: 1px solid var(--card-border);
-		box-shadow: var(--shadow);
-		backdrop-filter: blur(18px);
-		-webkit-backdrop-filter: blur(18px);
+		box-shadow:
+			0 18px 45px rgba(13, 60, 50, 0.12),
+			0 2px 8px rgba(13, 60, 50, 0.06);
 	}
 
 	.hero-photo-float-card:first-child {
-		top: 28px;
-		right: -12px;
+		top: -20px;
+		right: 24px;
+		animation: hero-float 5s ease-in-out infinite;
 	}
 
 	.hero-photo-float-card:last-child {
-		bottom: 56px;
-		left: -12px;
+		bottom: -20px;
+		right: 40px;
+		animation: hero-float 7s ease-in-out infinite;
 	}
 
 	.hero-photo-float-card strong {
-		font-size: 17px;
+		font-size: 18px;
 		line-height: 1.1;
-		color: var(--accent-strong);
+		color: var(--ink);
 		white-space: nowrap;
 	}
 
 	.hero-photo-float-card span {
 		font-size: 11px;
+		font-weight: 600;
 		color: var(--ink-dim);
 		white-space: nowrap;
 	}
 }
 
+/* Dark mode: the chips stay solid and opaque — dark surface, not white. */
+[data-theme="dark"] .hero-photo-float-card {
+	background: #101815;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) .hero-photo-float-card {
+		background: #101815;
+	}
+}
+
+@keyframes hero-float {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-7px);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.hero-photo-float-card {
+		animation: none;
+	}
+}
+
 /* The rotating-designation badge hangs off the photo's bottom edge —
-   half on the photo, half below it. */
+   half on the photo, half below it. z-index above the runlight trace
+   (whose bottom edge passes behind the badge) and above the photo, so
+   no decorative line can ever cross the badge text. The badge itself
+   is fully opaque, so the trace stays hidden behind it. */
 .hero-badge-anchor {
 	position: absolute;
 	left: 50%;
 	bottom: -16px;
 	transform: translateX(-50%);
-	z-index: 2;
+	z-index: 4;
 	display: flex;
 	justify-content: center;
 	pointer-events: none;
-}
-
-.hero-badge-anchor .hero-badge {
-	white-space: nowrap;
-	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.6),
-		0 6px 18px rgba(13, 148, 136, 0.28),
-		var(--shadow-soft);
 }
 
 .hero-runlight {
@@ -776,47 +849,65 @@ textarea {
 	pointer-events: none;
 }
 
+/* Faint CONTINUOUS perimeter trace only — the old moving dash segment
+   rendered as a stray teal line on the photo's edge, so it is gone
+   (see Hero.astro: the glow rect was removed). */
 .hero-runlight .trace-base {
 	fill: none;
-	stroke: var(--ink-dim);
-	stroke-opacity: 0.1;
-	stroke-width: 1;
-}
-
-.hero-runlight .trace-glow {
-	fill: none;
 	stroke: var(--accent);
-	stroke-opacity: 0.38;
-	stroke-width: 2;
-	stroke-linecap: round;
-	filter: drop-shadow(0 0 3px var(--accent));
-	animation: runlight 7s linear infinite;
+	stroke-opacity: 0.1;
+	stroke-width: 1.5;
 }
 
-@keyframes runlight {
-	to {
-		stroke-dashoffset: -400;
-	}
-}
-
+/* Designation badge — a SOLID TEAL pill (preview ground truth): opaque
+   teal fill, white uppercase bold text, white icon, white blinking
+   cursor. NOT a glass/outline pill: the old translucent accent-wash
+   background let the runlight trace show through the text and made
+   the pill unreadable. Single fine light rim + inset top highlight +
+   soft teal drop shadow. */
 .hero-badge {
 	position: relative;
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
 	min-height: 32px;
-	padding: 4px 12px;
+	padding: 6px 16px;
 	border-radius: 999px;
-	border: 1px solid rgba(255, 255, 255, 0.65);
-	background: var(--accent-wash);
-	color: var(--accent-strong);
+	border: 1px solid rgba(255, 255, 255, 0.28);
+	background: var(--accent);
+	color: #ffffff;
 	font-size: 11px;
 	font-weight: 700;
-	letter-spacing: 0.04em;
+	letter-spacing: 0.12em;
 	text-transform: uppercase;
+	white-space: nowrap;
+	/* Clips the typing letters' rise-in so none ever spills outside
+	   the pill (preview's badge row is overflow-hidden too). */
+	overflow: hidden;
 	box-shadow:
-		inset 0 1px 0 rgba(255, 255, 255, 0.6),
-		0 6px 18px rgba(13, 148, 136, 0.28);
+		inset 0 1px 0 rgba(255, 255, 255, 0.35),
+		inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+		0 12px 28px rgba(13, 148, 136, 0.35),
+		0 3px 8px rgba(13, 60, 50, 0.18);
+}
+
+@media (min-width: 640px) {
+	.hero-badge {
+		padding: 8px 16px;
+		font-size: 13px;
+	}
+}
+
+/* Dark mode: the pill is the bright teal, so the text goes dark (same
+   as the preview) to stay readable — white on bright teal is not. */
+[data-theme="dark"] .hero-badge {
+	color: #03211c;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) .hero-badge {
+		color: #03211c;
+	}
 }
 
 /* Width sizer: the longest designation (+ cursor replica), invisible,
@@ -840,14 +931,18 @@ textarea {
 
 .hero-badge .badge-icon {
 	display: inline-flex;
-	color: var(--accent);
+	/* White like the text (preview) — the old teal icon vanished
+	   against the teal pill. */
+	color: inherit;
 }
 
 .hero-badge .badge-cursor {
 	display: inline-block;
 	width: 2px;
 	height: 14px;
-	background: var(--accent);
+	/* White like the text — the old teal cursor was invisible on
+	   the teal pill. */
+	background: currentColor;
 	animation: blink 1.06s ease-in-out infinite;
 	vertical-align: middle;
 }
@@ -1003,14 +1098,22 @@ textarea {
 	.services-grid {
 		grid-template-columns: repeat(6, 1fr);
 	}
-	.services-grid .service-card:nth-child(1),
-	.services-grid .service-card:nth-child(2),
-	.services-grid .service-card:nth-child(3) {
-		grid-column: span 2;
+	/* Explicit line placement (not span-only): row 1 is 3 × 2 cols,
+	   row 2 is 2 × 3 cols — the 3+2 fills the grid with no empty cell. */
+	.services-grid .service-card:nth-child(1) {
+		grid-column: 1 / span 2;
 	}
-	.services-grid .service-card:nth-child(4),
+	.services-grid .service-card:nth-child(2) {
+		grid-column: 3 / span 2;
+	}
+	.services-grid .service-card:nth-child(3) {
+		grid-column: 5 / span 2;
+	}
+	.services-grid .service-card:nth-child(4) {
+		grid-column: 1 / span 3;
+	}
 	.services-grid .service-card:nth-child(5) {
-		grid-column: span 3;
+		grid-column: 4 / span 3;
 	}
 }
 
@@ -1042,16 +1145,18 @@ textarea {
 	flex: none;
 	width: 48px;
 	height: 48px;
-	border-radius: 12px;
+	border-radius: 16px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	background: var(--accent-soft);
 	color: var(--accent-strong);
+	/* Frosted teal tile: visible glowing ring + inset top highlight,
+	   so the icon reads clearly instead of washing out. */
+	border: 1px solid var(--border-glow-soft);
 	box-shadow:
-		0 0 0 1px var(--accent-soft),
-		inset 0 1px 0 rgba(255, 255, 255, 0.5),
-		0 0 16px var(--accent-soft);
+		inset 0 1px 0 rgba(255, 255, 255, 0.6),
+		0 0 18px rgba(13, 148, 136, 0.28);
 }
 
 .service-icon img {
@@ -1064,6 +1169,8 @@ textarea {
 	margin: 0;
 	font-size: 15px;
 	line-height: 1.4;
+	/* Long titles (WordPress…) wrap cleanly instead of awkward breaks. */
+	overflow-wrap: break-word;
 }
 
 .service-card p {
@@ -1136,12 +1243,9 @@ textarea {
 }
 
 /* ---------- Projects carousel (stacked deck) ---------- */
-.flip-row {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-bottom: 12px;
-}
+/* The chevron buttons live at the RIGHT BOTTOM of the carousel, in the
+   indicator row — never in a top row above the deck. The left-top
+   button position was a mistake, removed. */
 
 .chev-btn {
 	width: 36px;
@@ -1158,15 +1262,30 @@ textarea {
 	transition: background-color 200ms ease;
 }
 
+.chev-btn:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.chev-btn:focus-visible,
+.deck-dot:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
 @media (hover: hover) and (pointer: fine) {
-	.chev-btn:hover {
+	.chev-btn:hover:not(:disabled) {
 		background: var(--accent-wash);
 	}
 }
 
+/* The deck reserves room on the right and below for the page stack:
+   the deepest peek steps 60px right and 27px down, so the peek edges
+   never cross the indicator row or the counter text below. */
 .deck {
 	position: relative;
 	perspective: 1200px;
+	margin: 4px 60px 52px 4px;
 }
 
 .deck-card {
@@ -1178,6 +1297,8 @@ textarea {
 	text-decoration: none;
 	color: inherit;
 	display: block;
+	box-shadow: var(--shadow);
+	will-change: transform, opacity;
 }
 
 .deck-card .deck-thumb {
@@ -1221,39 +1342,117 @@ textarea {
 	color: var(--ink-dim);
 }
 
+/* Stacked pages: solid paper cards behind the main card, pivoting on
+   the LEFT edge (the spine) and fanning RIGHT — a deliberate deck, not
+   a sliver. The next project's thumbnail shows faintly (muted under a
+   paper wash) on the page's top band, with title/text lines below it.
+   While the main card is flipping, the peeks fade almost out so the
+   turning card can never double-expose against a second image. */
 .deck-peek {
 	position: absolute;
 	inset: 0;
 	border-radius: var(--radius-sm);
 	border: 1px solid var(--card-border);
 	background: var(--card);
+	box-shadow: var(--shadow-soft);
+	overflow: hidden;
 	pointer-events: none;
+	transition: opacity 250ms ease;
 }
 
+.deck--flipping .deck-peek {
+	opacity: 0.06 !important;
+}
+
+.deck-peek .deck-peek-thumb {
+	height: 42%;
+	background-size: cover;
+	background-position: center;
+	opacity: 0.45;
+}
+
+.deck-peek .deck-peek-thumb--empty {
+	background: var(--accent-wash);
+	opacity: 1;
+}
+
+.deck-peek .deck-peek-lines {
+	padding: 12px 14px;
+	display: grid;
+	gap: 8px;
+}
+
+.deck-peek .deck-peek-line {
+	display: block;
+	height: 8px;
+	border-radius: 4px;
+	background: var(--ink-faint);
+	opacity: 0.35;
+}
+
+.deck-peek .deck-peek-line--title {
+	height: 11px;
+	width: 55%;
+	opacity: 0.5;
+}
+
+.deck-peek .deck-peek-line--short {
+	width: 40%;
+}
+
+/* Bottom indicator row: dots + counter centred, chevrons at right
+   bottom (the original preview position). The spacer balances the
+   chevron group so the centre group is truly centred. */
 .deck-indicator {
+	display: grid;
+	grid-template-columns: 1fr auto 1fr;
+	align-items: center;
+	gap: 12px;
+	margin-top: 14px;
+}
+
+.deck-indicator-spacer {
+	min-width: 0;
+}
+
+.deck-indicator-center {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 10px;
-	margin-top: 14px;
+	flex-wrap: wrap;
+	min-width: 0;
+}
+
+.deck-nav {
+	display: flex;
+	gap: 8px;
+	justify-self: end;
 }
 
 .deck-dots {
 	display: flex;
-	gap: 6px;
+	align-items: center;
+	gap: 8px;
 }
 
 .deck-dot {
-	width: 7px;
-	height: 7px;
+	width: 10px;
+	height: 10px;
 	border-radius: 50%;
 	border: 0;
 	padding: 0;
-	background: var(--ink-faint);
-	opacity: 0.5;
+	background: var(--ink-dim);
+	opacity: 0.55;
+	transition:
+		width 200ms ease,
+		background-color 200ms ease,
+		opacity 200ms ease;
 }
 
 .deck-dot.active {
+	width: 24px;
+	border-radius: 999px;
 	background: var(--accent);
 	opacity: 1;
 }
@@ -1262,6 +1461,54 @@ textarea {
 	font-size: 13px;
 	color: var(--ink-dim);
 	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 44vw;
+}
+
+/* ---------- Projects grid (desktop, >= 1024px) ---------- */
+/* Desktop is NOT one-at-a-time: all projects in a 3-per-row grid with
+   a staggered fade+rise reveal on load and a hover lift. The carousel
+   (dots, chevrons, flip) is mobile-only and hidden at desktop widths. */
+.projects-grid {
+	display: grid;
+	gap: 16px;
+}
+
+@media (min-width: 640px) {
+	.projects-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (min-width: 1024px) {
+	.projects-grid {
+		grid-template-columns: repeat(3, 1fr);
+	}
+	.projects-carousel {
+		display: none;
+	}
+}
+
+.projects-grid-card {
+	animation: grid-rise 0.55s cubic-bezier(0.22, 0.8, 0.3, 1) both;
+}
+
+@keyframes grid-rise {
+	from {
+		opacity: 0;
+		transform: translateY(18px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.projects-grid-card {
+		animation: none;
+	}
 }
 
 .tag-row {
@@ -1568,6 +1815,18 @@ textarea {
 }
 
 /* ---------- Stack globe ---------- */
+/* Preview heading: large, bold, left-aligned, sub-heading below it
+   (the h2 + p sit in an inner div, Services-style, not side-by-side). */
+#stack .section-head h2 {
+	font-size: 28px;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+}
+
+#stack .section-head p {
+	color: var(--ink-dim);
+}
+
 .globe-wrap {
 	position: relative;
 	display: flex;
@@ -1587,27 +1846,101 @@ textarea {
 	position: absolute;
 	inset: 0;
 	border-radius: 50%;
-	/* Top-left light + teal core glow: a real sphere, not a flat disc. */
+	/* Top-left light + teal core glow: a real sphere, not a flat disc.
+	   Stronger shading than before so the ball's edge is unmistakable
+	   against the white card — a pale wash hid it entirely. */
 	background:
 		radial-gradient(
 			circle at 32% 26%,
-			rgba(255, 255, 255, 0.6) 0%,
-			transparent 52%
+			rgba(255, 255, 255, 0.85) 0%,
+			rgba(255, 255, 255, 0.25) 32%,
+			transparent 55%
 		),
 		radial-gradient(
-			circle at 50% 55%,
-			var(--accent-soft) 0%,
+			circle at 50% 58%,
+			rgba(13, 148, 136, 0.22) 0%,
+			rgba(13, 148, 136, 0.08) 48%,
 			transparent 72%
 		),
-		var(--card);
-	border: 1px solid var(--card-border);
+		radial-gradient(
+			circle at 50% 50%,
+			transparent 58%,
+			rgba(12, 26, 21, 0.1) 88%,
+			rgba(12, 26, 21, 0.14) 100%
+		),
+		#eef6f3;
+	border: 1px solid rgba(13, 148, 136, 0.32);
 	box-shadow:
-		inset 0 0 55px rgba(45, 212, 191, 0.14),
-		inset -18px -22px 45px rgba(0, 0, 0, 0.08),
-		var(--shadow);
+		inset 0 0 60px rgba(13, 148, 136, 0.2),
+		inset -24px -28px 60px rgba(12, 26, 21, 0.12),
+		inset 18px 20px 40px rgba(255, 255, 255, 0.55),
+		0 0 44px rgba(13, 148, 136, 0.1),
+		0 18px 45px rgba(12, 26, 21, 0.1);
 	backdrop-filter: blur(18px) saturate(1.4);
 	-webkit-backdrop-filter: blur(18px) saturate(1.4);
 	overflow: hidden;
+}
+
+/* Dark mode: the sphere needs its own stronger shading — the light
+   teal-on-white values wash out completely on a dark card. */
+[data-theme="dark"] .globe-ball {
+	background:
+		radial-gradient(
+			circle at 32% 26%,
+			rgba(255, 255, 255, 0.28) 0%,
+			rgba(255, 255, 255, 0.08) 32%,
+			transparent 55%
+		),
+		radial-gradient(
+			circle at 50% 58%,
+			rgba(45, 212, 191, 0.28) 0%,
+			rgba(45, 212, 191, 0.1) 48%,
+			transparent 72%
+		),
+		radial-gradient(
+			circle at 50% 50%,
+			transparent 58%,
+			rgba(0, 0, 0, 0.35) 88%,
+			rgba(0, 0, 0, 0.5) 100%
+		),
+		#0a1a15;
+	border-color: rgba(45, 212, 191, 0.55);
+	box-shadow:
+		inset 0 0 60px rgba(45, 212, 191, 0.25),
+		inset -24px -28px 60px rgba(0, 0, 0, 0.5),
+		inset 18px 20px 40px rgba(255, 255, 255, 0.12),
+		0 18px 45px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) .globe-ball {
+		background:
+			radial-gradient(
+				circle at 32% 26%,
+				rgba(255, 255, 255, 0.28) 0%,
+				rgba(255, 255, 255, 0.08) 32%,
+				transparent 55%
+			),
+			radial-gradient(
+				circle at 50% 58%,
+				rgba(45, 212, 191, 0.28) 0%,
+				rgba(45, 212, 191, 0.1) 48%,
+				transparent 72%
+			),
+			radial-gradient(
+				circle at 50% 50%,
+				transparent 58%,
+				rgba(0, 0, 0, 0.35) 88%,
+				rgba(0, 0, 0, 0.5) 100%
+			),
+			#0a1a15;
+		border-color: rgba(45, 212, 191, 0.55);
+		box-shadow:
+			inset 0 0 60px rgba(45, 212, 191, 0.25),
+			inset -24px -28px 60px rgba(0, 0, 0, 0.5),
+			inset 18px 20px 40px rgba(255, 255, 255, 0.12),
+			0 18px 45px rgba(0, 0, 0, 0.5);
+	}
 }
 
 .globe-orbit {
@@ -1672,37 +2005,67 @@ textarea {
 	left: 50%;
 	top: 50%;
 	transform: translate(-50%, -50%);
-	display: flex;
+	display: inline-flex;
 	align-items: center;
-	gap: 3px;
-	padding: 2px 6px;
+	gap: 4px;
+	padding: 3px 7px;
 	border-radius: 999px;
-	background: var(--card);
+	/* Opaque background: the old translucent card let the pale sphere
+	   show through, which is what made back tags grey smudges. */
+	background: var(--bg);
+	color: var(--ink);
 	border: 1px solid var(--card-border);
+	box-shadow: 0 2px 8px rgba(12, 26, 21, 0.1);
 	font-size: 10px;
 	font-weight: 600;
+	line-height: 1.2;
 	white-space: nowrap;
 	cursor: pointer;
 	will-change: transform, opacity;
+	overflow: visible;
+}
+
+/* Logos + names must fit inside the pill, never clip at its edges. */
+.globe-tag img,
+.globe-tag svg {
+	flex: none;
+	flex-shrink: 0;
+	display: block;
+}
+
+/* Category color dot on every tag — the family marker (and the only
+   marker on plain name chips with no logo, e.g. BullMQ, OAuth). */
+.globe-tag-dot {
+	width: 6px;
+	height: 6px;
+	flex: none;
+	flex-shrink: 0;
+	border-radius: 50%;
 }
 
 .globe-tag img {
-	width: 11px;
-	height: 11px;
+	width: 12px;
+	height: 12px;
 	object-fit: contain;
 }
 
 .globe-tag.front {
 	font-weight: 700;
-	border-color: var(--accent);
-	/* Glowing teal border + halo on the front (spotlight) tag. */
+	/* Preview spotlight: subtle border + soft halo, NOT a strong teal
+	   border. The front tag reads larger/bolder with a prominent dot. */
+	border-color: rgba(12, 26, 21, 0.16);
 	box-shadow:
-		0 0 22px rgba(45, 212, 191, 0.45),
-		0 6px 18px rgba(13, 60, 50, 0.16);
+		0 0 24px rgba(13, 148, 136, 0.28),
+		0 8px 20px rgba(12, 26, 21, 0.14);
+}
+
+.globe-tag.front .globe-tag-dot {
+	width: 8px;
+	height: 8px;
 }
 
 .globe-tag.dimmed {
-	opacity: 0.35;
+	opacity: 0.55;
 }
 
 .globe-now {
@@ -1762,24 +2125,90 @@ textarea {
 	color: var(--ink-dim);
 }
 
-.globe-controls {
+/* Filter row — TOP, below the sub-heading, centered (preview). It is
+   NOT in the bottom area any more. Compact pills; wraps cleanly to two
+   rows on mobile. */
+.globe-filters {
+	justify-content: center;
+	gap: 6px;
+	row-gap: 8px;
+	width: 100%;
+	margin-bottom: 16px;
+}
+
+.globe-filters .chip {
+	display: inline-flex;
+	align-items: center;
+	flex: none;
+	white-space: nowrap;
+	padding: 5px 12px;
+	font-size: 12px;
+}
+
+/* Preview active chip: a LIGHT pill (light grey/white, dark text,
+   subtle border) — NOT solid teal. Globe-scoped so the global
+   .chip.active used by other sections' filters is untouched. */
+.globe-filters .chip.active {
+	background: var(--bg-wash);
+	color: var(--ink);
+	border-color: rgba(12, 26, 21, 0.14);
+	font-weight: 600;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.globe-filters .chip.active:hover {
+		background: var(--bg-wash);
+	}
+}
+
+/* "Now:" + Spin together on one centered line below the globe. */
+.globe-now-row {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 12px;
 	margin-top: 14px;
 }
 
+.globe-now-row .globe-now {
+	margin-top: 0;
+}
+
+/* Preview Spin: a WHITE pill with a teal rotate icon + "Spin" text —
+   not a solid-teal button, not a filter pill. */
 .spin-btn {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
 	border-radius: 999px;
 	border: 1px solid var(--card-border);
-	background: var(--card);
-	color: var(--ink);
-	padding: 7px 14px;
+	background: var(--bg);
+	color: var(--accent-strong);
+	padding: 7px 16px;
 	font-size: 13px;
 	font-weight: 600;
+	box-shadow: 0 2px 10px rgba(12, 26, 21, 0.08);
+	transition:
+		background-color 200ms ease,
+		transform 200ms ease,
+		box-shadow 200ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.spin-btn:hover {
+		background: var(--accent-wash);
+		transform: translateY(-1px);
+		box-shadow: 0 4px 14px rgba(12, 26, 21, 0.12);
+	}
+}
+
+/* Footer line below the Now/Spin row (preview). */
+.globe-hint {
+	margin: 14px 0 0;
+	font-size: 13px;
+	color: var(--ink-dim);
+	text-align: center;
 }
 
 /* Dark-mode logo treatment: dark logos render white in dark mode only. */
@@ -1794,10 +2223,19 @@ textarea {
 }
 
 /* ---------- Combined section ---------- */
+/* The two halves live in ONE framed panel (rounded border, no gap):
+   left half on a light grey/mint tint, right half on the card's own
+   surface, with a clear divider between them — two callings, not one
+   jammed block. The closing band joins the frame at the bottom. */
 .combined-grid {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
-	gap: 16px;
+	gap: 0;
+	border: 1px solid var(--card-border);
+	border-bottom: 0;
+	border-radius: 24px 24px 0 0;
+	overflow: hidden;
+	background: var(--card);
 }
 
 @media (min-width: 640px) {
@@ -1808,6 +2246,27 @@ textarea {
 
 .combined-half {
 	min-width: 0;
+	padding: 20px;
+	background: var(--bg-wash);
+}
+
+@media (min-width: 640px) {
+	.combined-half {
+		padding: 24px;
+	}
+}
+
+/* Second half: white/very-light surface + the vertical divider. */
+.combined-half + .combined-half {
+	background: transparent;
+	border-top: 1px solid var(--card-border);
+}
+
+@media (min-width: 640px) {
+	.combined-half + .combined-half {
+		border-top: 0;
+		border-left: 1px solid var(--card-border);
+	}
 }
 
 .combined-half h3 {
@@ -1866,24 +2325,32 @@ textarea {
 .mini-row {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: 12px;
 	width: 100%;
 	min-width: 0;
 	padding: 10px 12px;
-	border-radius: var(--radius-xs);
+	border-radius: 14px;
 	border: 1px solid var(--card-border);
-	background: transparent;
+	/* Clean white card (not a plain text row) on the tinted half. */
+	background: var(--bg);
 	color: inherit;
 	text-decoration: none;
 	text-align: left;
 	margin-top: 8px;
+	transition: background-color 200ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.mini-row:hover {
+		background: var(--accent-wash);
+	}
 }
 
 .mini-row .mini-thumb {
 	flex: none;
-	width: 44px;
-	height: 44px;
-	border-radius: var(--radius-xs);
+	width: 64px;
+	height: 48px;
+	border-radius: 12px;
 	overflow: hidden;
 	background: var(--bg-wash);
 }
@@ -1912,6 +2379,8 @@ textarea {
 	display: block;
 	font-size: 12px;
 	color: var(--ink-dim);
+	/* Short preview descriptions fit on one line; the ellipsis is
+	   only a safety net, never a mid-sentence cut. */
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -1920,7 +2389,7 @@ textarea {
 .platform-chips {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
+	gap: 10px;
 	margin-top: 12px;
 }
 
@@ -1945,22 +2414,48 @@ textarea {
 }
 
 .combined-cta {
-	margin-top: 20px;
-	text-align: center;
+	/* Mint closing band: full width of the frame, text left, the
+	   teal Know Me button right — a horizontal band, not a centred
+	   stack. */
+	margin-top: 0;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 16px;
+	text-align: left;
+	padding: 20px 24px;
+	border: 1px solid var(--card-border);
+	border-radius: 0 0 24px 24px;
+	background: var(--accent-soft);
 }
 
 .combined-cta p {
-	margin: 0 0 12px;
+	margin: 0;
 	font-size: 14px;
 	color: var(--ink-dim);
+}
+
+.combined-cta p strong {
+	display: block;
+	font-size: 15px;
+	color: var(--ink);
+}
+
+.combined-cta .btn {
+	flex: none;
+	border-radius: 999px;
+	padding: 12px 24px;
 }
 
 /* ---------- Releases ---------- */
 .release-card {
 	display: flex;
 	gap: 12px;
-	align-items: center;
-	padding: 14px 16px;
+	/* Top-aligned: the platform row now lives inside .release-info, so a
+	   vertically centered layout left a tall empty band beside short info. */
+	align-items: flex-start;
+	padding: 16px;
 	border-radius: var(--radius-sm);
 	border: 1px solid var(--card-border);
 	background: var(--card);
@@ -1971,8 +2466,8 @@ textarea {
 
 .release-thumb {
 	flex: none;
-	width: 64px;
-	height: 64px;
+	width: 72px;
+	height: 72px;
 	border-radius: var(--radius-xs);
 	overflow: hidden;
 	background: var(--bg-wash);
@@ -1986,15 +2481,27 @@ textarea {
 	display: block;
 }
 
+/* Audio-only releases get a designed tile — deep teal gradient, white mic
+   + "Audio" label — not a bare pale square with a lone icon. */
 .release-thumb .audio-mark {
 	width: 100%;
 	height: 100%;
 	display: flex;
+	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	background: var(--accent-wash);
-	color: var(--accent-strong);
+	gap: 3px;
+	background: linear-gradient(135deg, var(--accent) 0%, #0f766e 100%);
+	color: #fff;
 	font-size: 22px;
+}
+
+.release-thumb .audio-mark span {
+	font-size: 9px;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.85);
 }
 
 .release-info {
@@ -2023,13 +2530,21 @@ textarea {
 	border-radius: 999px;
 	background: var(--accent-wash);
 	color: var(--accent-strong);
+	/* Solid chip: no decorative line may cross this text. (The line seen
+	   in the audit is the sticky header's arc graphic passing over the
+	   page while scrolling — a header issue, not this badge.) */
+	text-decoration: none;
+	white-space: nowrap;
 }
 
+/* Platforms sit in the info flow, adjacent to the content — not stranded
+   in a far-right column across a huge empty gap. */
 .release-platforms {
-	flex: none;
 	display: flex;
-	gap: 4px;
+	flex-wrap: wrap;
+	gap: 8px;
 	align-items: center;
+	margin-top: 10px;
 }
 
 .release-platforms img {
@@ -2057,7 +2572,7 @@ textarea {
 }
 
 .release-desc {
-	margin: 4px 0 0;
+	margin: 6px 0 0;
 	font-size: 13px;
 	line-height: 1.5;
 	color: var(--ink-dim);
@@ -2180,9 +2695,12 @@ textarea {
 }
 
 /* ---------- Clients wall ---------- */
+/* Always a compact 2-column grid (2–4 clients) — never one-per-row,
+   never an empty cell. Cells are sized to the wordmark, not huge
+   empty boxes; the wordmark is large, at 75% opacity, full on hover. */
 .clients-grid {
 	display: grid;
-	grid-template-columns: repeat(2, 1fr);
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: 12px;
 }
 
@@ -2190,14 +2708,20 @@ textarea {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	min-height: 72px;
-	padding: 16px;
-	border-radius: var(--radius-sm);
+	min-height: 0;
+	padding: 32px 20px;
+	border-radius: 24px;
 	border: 1px solid var(--card-border);
 	background: var(--card);
 	transition:
 		transform 200ms ease,
 		box-shadow 200ms ease;
+}
+
+@media (min-width: 640px) {
+	.client-cell {
+		padding: 36px 32px;
+	}
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -2214,10 +2738,26 @@ textarea {
 }
 
 .client-wordmark {
-	font-size: 18px;
+	font-size: 20px;
 	font-weight: 800;
 	letter-spacing: -0.01em;
 	color: var(--ink);
+	text-align: center;
+	overflow-wrap: break-word;
+	opacity: 0.75;
+	transition: opacity 200ms ease;
+}
+
+@media (min-width: 640px) {
+	.client-wordmark {
+		font-size: 26px;
+	}
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.client-cell:hover .client-wordmark {
+		opacity: 1;
+	}
 }
 
 /* ---------- Know Me ---------- */
@@ -2230,6 +2770,29 @@ textarea {
 @media (min-width: 640px) {
 	.identity-grid {
 		grid-template-columns: repeat(2, 1fr);
+	}
+	/* No empty slot: the last card spans the full row. This serves both
+	   grids that use .identity-grid — the 5 identity cards (2,2,1-full)
+	   and the 3 public-figure cards (2,1-full). */
+	.identity-grid .identity-cell:last-child {
+		grid-column: 1 / -1;
+	}
+}
+
+@media (min-width: 1024px) {
+	/* Same 3+2 arrangement as the services grid: 5 cards lay out 3+2,
+	   3 cards lay out 3 across — never an empty slot. */
+	.identity-grid {
+		grid-template-columns: repeat(6, 1fr);
+	}
+	.identity-grid .identity-cell:nth-child(1),
+	.identity-grid .identity-cell:nth-child(2),
+	.identity-grid .identity-cell:nth-child(3) {
+		grid-column: span 2;
+	}
+	.identity-grid .identity-cell:nth-child(4),
+	.identity-grid .identity-cell:nth-child(5) {
+		grid-column: span 3;
 	}
 }
 
@@ -2305,14 +2868,25 @@ textarea {
 }
 
 .footer-socials a {
-	width: 40px;
-	height: 40px;
+	width: 44px;
+	height: 44px;
 	border-radius: 50%;
 	border: 1px solid var(--card-border);
 	background: var(--card);
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	color: var(--ink);
+	transition:
+		transform 200ms ease,
+		background-color 200ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.footer-socials a:hover {
+		transform: scale(1.05);
+		background: var(--accent-wash);
+	}
 }
 
 .footer-socials a img {
@@ -2323,6 +2897,9 @@ textarea {
 
 .footer-links {
 	margin-top: 16px;
+	padding-top: 16px;
+	/* Divider between the top row and the bottom row. */
+	border-top: 1px solid var(--card-border);
 	font-size: 13px;
 	justify-content: space-between;
 }
@@ -2330,6 +2907,34 @@ textarea {
 .footer-links a {
 	font-weight: 600;
 	text-decoration: none;
+}
+
+/* Bottom-row text link (footer "Contact me" opens the modal). */
+.footer-text-link {
+	background: none;
+	border: 0;
+	padding: 0;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--ink-dim);
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+	text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.footer-text-link:hover {
+		color: var(--accent-strong);
+	}
+}
+
+.footer-copyright {
+	margin: 16px 0 0;
+	font-size: 12px;
+	color: var(--ink-faint);
+	text-align: center;
 }
 
 /* ---------- All platforms ---------- */
@@ -2455,11 +3060,35 @@ textarea {
 .form-field select,
 .form-field textarea {
 	width: 100%;
-	padding: 10px 12px;
-	border-radius: var(--radius-xs);
+	padding: 12px 16px;
+	border-radius: 12px;
 	border: 1px solid var(--card-border);
 	background: var(--card);
 	outline: none;
+}
+
+/* Email + Phone side by side (preview form): stacked on narrow
+   screens, two columns from 480px up. */
+.form-row-2 {
+	display: grid;
+	gap: 0 12px;
+	grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 480px) {
+	.form-row-2 {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	}
+}
+
+/* Big full-width teal "Send message" button (preview form). */
+.btn-submit-full {
+	width: 100%;
+	border-radius: 999px;
+	padding: 14px 24px;
+	font-size: 15px;
+	font-weight: 700;
+	text-align: center;
 }
 
 .form-field input:focus,
@@ -2483,6 +3112,7 @@ textarea {
 	margin: 16px 0 0;
 	font-size: 13px;
 	color: var(--ink-dim);
+	text-align: center;
 }
 
 .form-prefer-email a {
@@ -2562,7 +3192,6 @@ textarea {
 	html {
 		scroll-behavior: auto;
 	}
-	.hero-runlight .trace-glow,
 	.hero-badge .badge-cursor,
 	.header-arcs .arc-flow,
 	.sticky-pill {

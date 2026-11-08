@@ -27,6 +27,9 @@ const isKnowMe = profile === "knowme";
 				preserveAspectRatio="none"
 				aria-hidden="true"
 			>
+				{/* Faint continuous perimeter trace only — no moving dash
+				    segment: the dash rendered as a stray teal line across
+				    the photo edge (and through the badge). */}
 				<rect
 					class="trace-base"
 					x="0.5"
@@ -35,33 +38,13 @@ const isKnowMe = profile === "knowme";
 					height="124"
 					vector-effect="non-scaling-stroke"
 				/>
-				<rect
-					class="trace-glow"
-					x="0.5"
-					y="0.5"
-					width="99"
-					height="124"
-					pathLength="400"
-					stroke-dasharray="56 344"
-					vector-effect="non-scaling-stroke"
-				/>
 			</svg>
 		</div>
 		<div class="hero-badge-anchor">
 			<HeroDesignation profile={profile} client:load />
 		</div>
-		<div class="hero-photo-float" aria-hidden="true">
-			<div class="hero-photo-float-card">
-				<strong>80+</strong>
-				<span>Projects shipped</span>
-			</div>
-			<div class="hero-photo-float-card">
-				<strong>2,000–5,000</strong>
-				<span>Orders handled daily</span>
-			</div>
-		</div>
 	</div>
-	<div>
+	<div class="hero-copy">
 		<h1 class="hero-name">{PROFILE.name}</h1>
 		{
 			isKnowMe ? (
@@ -113,6 +96,19 @@ const isKnowMe = profile === "knowme";
 				</>
 			)
 		}
+	</div>
+	{/* Floating stat chips — direct children of the hero CARD (not the
+	    photo): top-right and bottom-right corners of the card, fully
+	    visible, overlapping the card edge slightly like the preview. */}
+	<div class="hero-photo-float" aria-hidden="true">
+		<div class="hero-photo-float-card">
+			<strong>80+</strong>
+			<span>Projects shipped</span>
+		</div>
+		<div class="hero-photo-float-card">
+			<strong>2,000–5,000</strong>
+			<span>Orders handled daily</span>
+		</div>
 	</div>
 </section>
 

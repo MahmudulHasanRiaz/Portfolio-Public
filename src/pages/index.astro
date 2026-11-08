@@ -143,21 +143,36 @@ const personJsonLd = {
 		) : (
 			<div class="card-grid">
 				{posts.slice(0, 3).map((post) => {
+					// Reading time is COMPUTED from the actual post text —
+					// build-time markdown body first, live API `content`
+					// second — never the stored value on its own. The API
+					// ships readingTime: 1 for every post, so trusting the
+					// stored value is what made every card say "1 min read".
+					// The stored value is only a fallback when no text
+					// exists at all.
+					const postText =
+						post.body ??
+						(post.data as { content?: string }).content ??
+						"";
 					const readingTime =
+						readingTimeFromText(postText) ??
 						post.data.readingTime ??
-						readingTimeFromText(post.body) ??
 						undefined;
 					return (
 						<a class="grid-card" href={`/posts/${post.data.slug}`}>
-							{post.data.thumbnail ? (
-								<div class="grid-thumb">
+							<div class="grid-thumb">
+								{post.data.thumbnail ? (
 									<img
 										src={post.data.thumbnail}
 										alt={post.data.title}
 										loading="lazy"
 									/>
-								</div>
-							) : null}
+								) : (
+									<span class="thumb-fallback" aria-hidden="true">
+										{post.data.title.charAt(0)}
+									</span>
+								)}
+							</div>
 							<div class="grid-body">
 								{post.data.tags?.[0] ? (
 									<div class="tag-row">
@@ -179,22 +194,19 @@ const personJsonLd = {
 	</section>
 
 	<section class="glass section" id="contact">
-		<div class="section-head">
-			<h2>Have a project in mind?</h2>
+		<div style="text-align:center;">
+			<h2 style="margin:0;font-size:24px;line-height:1.3;letter-spacing:-0.01em;">
+				Have a project in mind?
+			</h2>
+			<p
+				class="muted"
+				style="margin:8px auto 0;max-width:520px;font-size:15px;"
+			>
+				Tell me what you are building — I reply personally, usually within a day.
+			</p>
 		</div>
-		<p class="muted" style="margin:0 0 8px;">
-			Tell me what you are building — I reply personally, usually within a day.
-		</p>
-		<div class="contact-info">
-			<div class="info-row">
-				<span>✉️</span>
-				<a href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
-			</div>
-			<div class="info-row">
-				<span>📍</span>
-				<span>{PROFILE.location}</span>
-			</div>
+		<div style="max-width:520px;margin:24px auto 0;">
+			<ContactForm source="homepage-contact" client:load />
 		</div>
-		<ContactForm source="homepage-contact" client:load />
 	</section>
 </Layout>

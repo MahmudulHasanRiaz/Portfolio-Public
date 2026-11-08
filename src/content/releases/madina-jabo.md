@@ -7,6 +7,7 @@ platforms:
     url: "https://youtu.be/9qAfJ7XLRZA"
 youtubeId: "9qAfJ7XLRZA"
 publishedAt: "2023-06-28"
+description: "A nasheed of longing for Madina — the yearning to visit the Prophet's city, sung with devotion and without instruments."
 ---
 
-A nasheed video — watch it here on the page, or on YouTube.
+A nasheed of longing for Madina — the yearning to visit the Prophet's city, sung with devotion and without instruments.

@@ -24,8 +24,8 @@ import BrandIcon from "./BrandIcon.astro";
 						<BrandIcon icon={service.icon} name={service.name} size={26} />
 					) : service.lucide === "Database" ? (
 						<svg
-							width="24"
-							height="24"
+							width="26"
+							height="26"
 							viewBox="0 0 24 24"
 							fill="none"
 							stroke="currentColor"
@@ -40,8 +40,8 @@ import BrandIcon from "./BrandIcon.astro";
 						</svg>
 					) : service.lucide === "Code" ? (
 						<svg
-							width="24"
-							height="24"
+							width="26"
+							height="26"
 							viewBox="0 0 24 24"
 							fill="none"
 							stroke="currentColor"
@@ -55,8 +55,8 @@ import BrandIcon from "./BrandIcon.astro";
 						</svg>
 					) : (
 						<svg
-							width="24"
-							height="24"
+							width="26"
+							height="26"
 							viewBox="0 0 24 24"
 							fill="none"
 							stroke="currentColor"
@@ -70,7 +70,7 @@ import BrandIcon from "./BrandIcon.astro";
 						</svg>
 					)}
 				</span>
-				<span>
+				<span style="min-width:0;flex:1;">
 					<h3>{service.name}</h3>
 					<p>{service.description}</p>
 					<span class="service-cue">Contact about this service

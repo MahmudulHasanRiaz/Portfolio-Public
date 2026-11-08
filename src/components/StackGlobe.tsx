@@ -124,6 +124,9 @@ const LINE_PAIRS: Array<[number, number]> = CONSTELLATION_PAIRS.flatMap(
 // Filter cluster: matching techs gather on a small sphere in front.
 const CLUSTER_CENTER: Vec = { x: 0, y: 0, z: 0.62 };
 const CLUSTER_RADIUS = 0.38;
+// Tag spread: % of the stage half-width a sphere unit maps to. 40 (was
+// 38) pushes tags further apart so centre neighbours collide less.
+const SPREAD = 40;
 const LANDING_MS = 1600;
 const MAX_VEL = 0.12;
 const INERTIA_DECAY = 0.9;
@@ -179,6 +182,7 @@ export default function StackGlobe() {
 	const [reduced, setReduced] = useState(false);
 
 	const tagRefs = useRef<Array<HTMLButtonElement | null>>([]);
+	const stageRef = useRef<HTMLDivElement | null>(null);
 	const lineRefs = useRef<Array<SVGLineElement | null>>([]);
 	const rotRef = useRef({ x: 0.25, y: 0 });
 	const velRef = useRef({ x: 0, y: 0 });
@@ -330,6 +334,9 @@ export default function StackGlobe() {
 			const clusterAngle = clusterAngleRef.current;
 			const cur = curRef.current;
 
+			// Pass 1: settle positions and find the front (spotlight) tag.
+			// The front tag is only known after the whole sphere is
+			// evaluated — it must not be decided mid-loop.
 			let frontIdx = 0;
 			let frontZ = -Infinity;
 
@@ -361,19 +368,121 @@ export default function StackGlobe() {
 					frontZ = p.z;
 					frontIdx = i;
 				}
+			}
 
+			// Pass 2 — collision avoidance in the 2D projection. The
+			// Fibonacci sphere puts several tags at nearly the same
+			// (x, y) with different z, so centre tags stacked on each
+			// other. After positions are known, nudge overlapping tags
+			// apart (a few relaxation passes, using each tag's real
+			// measured size × its scale). The front tag never moves —
+			// neighbours move away from it — so the spotlight tag is
+			// always clearly readable and never overlapped. Back tags
+			// move more than front ones. Offsets are small and clamped,
+			// so tags stay on the sphere; no tech is ever removed.
+			const stageW =
+				stageRef.current?.clientWidth || 440;
+			const stageH = stageW; // the stage is square
+			const scales: number[] = new Array(STACK.length);
+			const depths: number[] = new Array(STACK.length);
+			const posX: number[] = new Array(STACK.length);
+			const posY: number[] = new Array(STACK.length);
+			const offX: number[] = new Array(STACK.length).fill(0);
+			const offY: number[] = new Array(STACK.length).fill(0);
+			for (let i = 0; i < STACK.length; i++) {
+				const p = cur[i];
+				const depth = (p.z + 1) / 2;
+				depths[i] = depth;
+				// Back tags stay legible: scale floor 0.72 (was 0.6).
+				let scale = 0.72 + 0.28 * depth;
+				if (i === frontIdx) scale *= 1.35;
+				scales[i] = scale;
+				posX[i] = 50 + p.x * SPREAD;
+				posY[i] = 50 + p.y * SPREAD;
+			}
+			for (let pass = 0; pass < 4; pass++) {
+				for (let i = 0; i < STACK.length; i++) {
+					for (let j = i + 1; j < STACK.length; j++) {
+						const elI = tagRefs.current[i];
+						const elJ = tagRefs.current[j];
+						const wI =
+							(elI?.offsetWidth || 64) * scales[i];
+						const wJ =
+							(elJ?.offsetWidth || 64) * scales[j];
+						const hI =
+							(elI?.offsetHeight || 18) * scales[i];
+						const hJ =
+							(elJ?.offsetHeight || 18) * scales[j];
+						// 0.92 leaves a hair of breathing room instead of
+						// demanding a full gap (tags may sit close, never
+						// on top of each other).
+						const minDx =
+							((wI + wJ) / 2 / stageW) * 100 * 0.92;
+						const minDy =
+							((hI + hJ) / 2 / stageH) * 100 * 0.92;
+						const dx =
+							posX[j] + offX[j] - (posX[i] + offX[i]);
+						const dy =
+							posY[j] + offY[j] - (posY[i] + offY[i]);
+						if (
+							Math.abs(dx) < minDx &&
+							Math.abs(dy) < minDy
+						) {
+							const overlapX = minDx - Math.abs(dx);
+							const overlapY = minDy - Math.abs(dy);
+							// Push along the axis of least penetration.
+							const pushX = overlapX <= overlapY;
+							const wi =
+								i === frontIdx
+									? 0
+									: 0.6 + 0.4 * (1 - depths[i]);
+							const wj =
+								j === frontIdx
+									? 0
+									: 0.6 + 0.4 * (1 - depths[j]);
+							const wSum = wi + wj || 1;
+							const push =
+								(pushX ? overlapX : overlapY) + 0.4;
+							const dirX = dx === 0 ? (i % 2 ? 1 : -1) : Math.sign(dx);
+							const dirY = dy === 0 ? (j % 2 ? 1 : -1) : Math.sign(dy);
+							if (pushX) {
+								offX[i] -= dirX * push * (wi / wSum);
+								offX[j] += dirX * push * (wj / wSum);
+							} else {
+								offY[i] -= dirY * push * (wi / wSum);
+								offY[j] += dirY * push * (wj / wSum);
+							}
+						}
+					}
+				}
+			}
+			for (let i = 0; i < STACK.length; i++) {
+				offX[i] = Math.max(-14, Math.min(14, offX[i]));
+				offY[i] = Math.max(-10, Math.min(10, offY[i]));
+				posX[i] += offX[i];
+				posY[i] += offY[i];
+			}
+
+			// Pass 3: apply positions, scale, opacity and z-order.
+			for (let i = 0; i < STACK.length; i++) {
 				const el = tagRefs.current[i];
 				if (el) {
-					const depth = (p.z + 1) / 2;
+					const depth = depths[i];
 					const dimmed = filterActive && !matchingSet.has(i);
-					// The front tag reads ~24% larger (preview spotlight).
-					let scale = 0.6 + 0.4 * depth;
-					if (i === frontIdx) scale *= 1.24;
-					el.style.left = `${50 + p.x * 38}%`;
-					el.style.top = `${50 + p.y * 38}%`;
+					// The front tag reads ~35% larger (preview spotlight).
+					const scale = scales[i];
+					el.style.left = `${posX[i]}%`;
+					el.style.top = `${posY[i]}%`;
 					el.style.transform = `translate(-50%, -50%) scale(${scale})`;
-					el.style.zIndex = String(Math.round(depth * 100));
-					el.style.opacity = dimmed ? "" : String(0.3 + 0.7 * depth);
+					// Front tag sits above everything; nothing may cover it.
+					el.style.zIndex =
+						i === frontIdx
+							? "200"
+							: String(Math.round(depth * 100));
+					// Back tags stay legible: opacity floor 0.55 (was 0.3).
+					el.style.opacity = dimmed
+						? ""
+						: String(0.55 + 0.45 * depth);
 					el.classList.toggle("front", i === frontIdx);
 					el.classList.toggle("dimmed", dimmed);
 				}
@@ -385,18 +494,19 @@ export default function StackGlobe() {
 				setFrontName(STACK[frontIdx].name);
 			}
 
-			// Constellation lines follow their tags, fading with depth
-			// (never brighter than 0.32) and with a non-matching filter.
+			// Constellation lines follow their tags' final (post-nudge)
+			// positions, fading with depth (never brighter than 0.32)
+			// and with a non-matching filter.
 			for (let k = 0; k < LINE_PAIRS.length; k++) {
 				const line = lineRefs.current[k];
 				if (!line) continue;
 				const [a, b] = LINE_PAIRS[k];
 				const pa = cur[a];
 				const pb = cur[b];
-				line.setAttribute("x1", String(50 + pa.x * 38));
-				line.setAttribute("y1", String(50 + pa.y * 38));
-				line.setAttribute("x2", String(50 + pb.x * 38));
-				line.setAttribute("y2", String(50 + pb.y * 38));
+				line.setAttribute("x1", String(posX[a]));
+				line.setAttribute("y1", String(posY[a]));
+				line.setAttribute("x2", String(posX[b]));
+				line.setAttribute("y2", String(posY[b]));
 				const minDepth = (Math.min(pa.z, pb.z) + 1) / 2;
 				let lineOp = 0.32 * Math.pow(Math.max(0, minDepth), 1.4);
 				if (
@@ -425,6 +535,10 @@ export default function StackGlobe() {
 		const tech = STACK[index];
 		selectedRef.current = tech;
 		setSelected(tech);
+		// Kill any leftover drag velocity at once: the globe must hold
+		// still while a detail card is open, never keep spinning.
+		velRef.current = { x: 0, y: 0 };
+		snapAfterInertiaRef.current = false;
 		if (!reducedRef.current) {
 			flyToRef.current = index;
 		}
@@ -433,6 +547,9 @@ export default function StackGlobe() {
 	const closeCard = () => {
 		selectedRef.current = null;
 		setSelected(null);
+		// No leftover velocity: rotation resumes cleanly, from rest.
+		velRef.current = { x: 0, y: 0 };
+		flyToRef.current = null;
 		// Rotation resumes within ~2s of closing.
 		resumeAtRef.current = performance.now() + 900;
 	};
@@ -565,15 +682,56 @@ export default function StackGlobe() {
 	return (
 		<section className="glass section" id="stack">
 			<div className="section-head">
-				<h2>Stack</h2>
-				<p>
-					The tools behind the products above — drag the globe to
-					explore them all.
-				</p>
+				<div>
+					<h2>The stack I work in</h2>
+					<p>
+						The tools behind the products above — drag the globe
+						to explore them all.
+					</p>
+				</div>
 			</div>
 			<div className="globe-wrap">
 				<div
+					className="chip-row globe-filters"
+					role="group"
+					aria-label="Filter stack by category"
+				>
+					<button
+						type="button"
+						className={filter === "All" ? "chip active" : "chip"}
+						onClick={() => applyFilter("All")}
+					>
+						All
+					</button>
+					{STACK_CATEGORIES.map((cat) => (
+						<button
+							key={cat}
+							type="button"
+							className={
+								filter === cat ? "chip active" : "chip"
+							}
+							onClick={() => applyFilter(cat)}
+						>
+							<span
+								aria-hidden="true"
+								style={{
+									display: "inline-block",
+									width: 6,
+									height: 6,
+									flex: "none",
+									borderRadius: "50%",
+									background: CATEGORY_COLORS[cat],
+									marginRight: 6,
+									verticalAlign: "1px",
+								}}
+							/>
+							{cat}
+						</button>
+					))}
+				</div>
+				<div
 					className="globe-stage"
+					ref={stageRef}
 					onPointerDown={onPointerDown}
 					onPointerMove={onPointerMove}
 					onPointerUp={onPointerUp}
@@ -652,24 +810,44 @@ export default function StackGlobe() {
 							}}
 							aria-label={`${tech.name} — ${tech.category}`}
 						>
+							<span
+								aria-hidden="true"
+								className="globe-tag-dot"
+								style={{
+									background:
+										CATEGORY_COLORS[tech.category] ??
+										"var(--accent)",
+								}}
+							/>
 							<TechLogo tech={tech} />
 							{tech.name}
 						</button>
 					))}
 				</div>
-				<p className="globe-now">
-					<span
-						aria-hidden="true"
-						className="globe-now-dot"
-						style={{
-							background:
-								(frontTech
-									? CATEGORY_COLORS[frontTech.category]
-									: undefined) ?? "var(--accent)",
-						}}
-					/>
-					Now: <b>{frontName}</b>
-				</p>
+				<div className="globe-now-row">
+					<p className="globe-now">
+						<span
+							aria-hidden="true"
+							className="globe-now-dot"
+							style={{
+								background:
+									(frontTech
+										? CATEGORY_COLORS[frontTech.category]
+										: undefined) ?? "var(--accent)",
+							}}
+						/>
+						Now: <b>{frontName}</b>
+					</p>
+					<button
+						type="button"
+						className="spin-btn"
+						onClick={spin}
+						aria-label="Spin the globe to a random technology"
+					>
+						<RotateCw size={15} />
+						Spin
+					</button>
+				</div>
 				{selected ? (
 					<div className="globe-card">
 						<button
@@ -696,57 +874,10 @@ export default function StackGlobe() {
 						) : null}
 					</div>
 				) : null}
-				<div
-					className="globe-controls"
-					style={{ flexWrap: "wrap", justifyContent: "center" }}
-				>
-					<div
-						className="chip-row"
-						role="group"
-						aria-label="Filter stack by category"
-					>
-						<button
-							type="button"
-							className={filter === "All" ? "chip active" : "chip"}
-							onClick={() => applyFilter("All")}
-						>
-							All
-						</button>
-						{STACK_CATEGORIES.map((cat) => (
-							<button
-								key={cat}
-								type="button"
-								className={
-									filter === cat ? "chip active" : "chip"
-								}
-								onClick={() => applyFilter(cat)}
-							>
-								<span
-									aria-hidden="true"
-									style={{
-										display: "inline-block",
-										width: 6,
-										height: 6,
-										flex: "none",
-										borderRadius: "50%",
-										background: CATEGORY_COLORS[cat],
-										marginRight: 6,
-										verticalAlign: "1px",
-									}}
-								/>
-								{cat}
-							</button>
-						))}
-					</div>
-					<button
-						type="button"
-						className="spin-btn"
-						onClick={spin}
-					>
-						<RotateCw size={16} />
-						Spin
-					</button>
-				</div>
+				<p className="globe-hint">
+					Drag to spin · tap a tech for details — all 44
+					technologies are on the globe.
+				</p>
 			</div>
 		</section>
 	);

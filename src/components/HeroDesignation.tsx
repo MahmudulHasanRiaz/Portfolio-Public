@@ -35,7 +35,10 @@ export default function HeroDesignation({
 	profile: "se" | "knowme";
 }) {
 	const [index, setIndex] = useState(0);
-	const [shown, setShown] = useState(0);
+	// First paint shows the FULL first designation (SSR HTML contains the
+	// complete word) — never an empty pill with just an icon + cursor.
+	// The typing cycle still runs for every word after the first hold.
+	const [shown, setShown] = useState(DESIGNATIONS[0].length);
 	const [exiting, setExiting] = useState(false);
 	const [reduced, setReduced] = useState(false);
 
