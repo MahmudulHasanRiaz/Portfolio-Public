@@ -234,16 +234,16 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 			preserveAspectRatio="none"
 			aria-hidden="true"
 		>
-			<path className="arc-base" d="M 2 2 Q 60 26 100 26" />
-			<path className="arc-base" d="M 198 2 Q 140 26 100 26" />
+			<path className="arc-base" d="M 2 26 Q 50 2 100 26" />
+			<path className="arc-base" d="M 198 26 Q 150 2 100 26" />
 			<path
 				className="arc-flow"
-				d="M 2 2 Q 60 26 100 26"
+				d="M 2 26 Q 50 2 100 26"
 				pathLength={110}
 			/>
 			<path
 				className="arc-flow"
-				d="M 198 2 Q 140 26 100 26"
+				d="M 198 26 Q 150 2 100 26"
 				pathLength={110}
 			/>
 		</svg>

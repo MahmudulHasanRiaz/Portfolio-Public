@@ -322,13 +322,16 @@ textarea {
 	100% {
 		box-shadow:
 			var(--shadow),
-			0 0 0 1px rgba(13, 148, 136, 0.2);
+			0 0 0 1px rgba(13, 148, 136, 0.35),
+			inset 0 1px 0 rgba(45, 212, 191, 0.5),
+			0 0 12px rgba(13, 148, 136, 0.14);
 	}
 	50% {
 		box-shadow:
 			var(--shadow),
-			0 0 0 1px rgba(13, 148, 136, 0.5),
-			0 0 18px rgba(13, 148, 136, 0.25);
+			0 0 0 1px rgba(13, 148, 136, 0.7),
+			inset 0 1px 0 rgba(45, 212, 191, 0.85),
+			0 0 22px rgba(13, 148, 136, 0.35);
 	}
 }
 
@@ -376,18 +379,18 @@ textarea {
 .header-arcs .arc-base {
 	fill: none;
 	stroke: var(--accent);
-	stroke-opacity: 0.22;
-	stroke-width: 1;
+	stroke-opacity: 0.45;
+	stroke-width: 1.5;
 }
 
 .header-arcs .arc-flow {
 	fill: none;
 	stroke: var(--accent);
-	stroke-opacity: 0.85;
-	stroke-width: 1.5;
+	stroke-opacity: 1;
+	stroke-width: 2.5;
 	stroke-linecap: round;
-	stroke-dasharray: 12 98;
-	filter: drop-shadow(0 0 3px var(--accent));
+	stroke-dasharray: 20 90;
+	filter: drop-shadow(0 0 6px var(--accent));
 	animation: arc-flow 4s linear infinite;
 }
 
