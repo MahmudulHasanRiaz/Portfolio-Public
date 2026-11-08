@@ -1,0 +1,212 @@
+---
+// Detail-page media — gallery + videos, count-adaptive tiers.
+// Gallery: 0 = nothing · 1 = single large figure · 2 = side-by-side
+// · 3–6 = grid · 7+ = slider. Videos: 0 = nothing · 1 = one large player
+// · 2–3 = grid of players · 4+ = slider. Sliders are plain client-side
+// state in the inline script below (no framework).
+// A video caption shows the video's own title when one exists — never a
+// hardcoded "Demo video" label; there is no demo flag in the data.
+interface VideoItem {
+	url: string;
+	title?: string;
+}
+
+interface Props {
+	gallery?: string[];
+	videos?: VideoItem[];
+}
+
+const { gallery = [], videos = [] } = Astro.props;
+const gallerySlider = gallery.length >= 7;
+const videoSlider = videos.length >= 4;
+const galleryGridClass =
+	gallery.length === 1 ? "cols-1" : gallery.length === 2 ? "cols-2" : "cols-3";
+const videoGridClass =
+	videos.length === 1 ? "cols-1" : videos.length === 2 ? "cols-2" : "cols-3";
+const sliderFigureStyle =
+	"margin:0;border-radius:var(--radius-sm);overflow:hidden;";
+const sliderMediaStyle = "width:100%;display:block;aspect-ratio:16 / 10;object-fit:cover;";
+---
+
+{
+	(gallery.length > 0 || videos.length > 0) && (
+		<div>
+			{gallery.length > 0 &&
+				(gallerySlider ? (
+					<div data-media-slider style="margin-top:16px;">
+						{gallery.map((src, i) => (
+							<figure data-slide hidden={i !== 0} style={sliderFigureStyle}>
+								<img
+									src={src}
+									alt={`Gallery image ${i + 1} of ${gallery.length}`}
+									loading="lazy"
+									style={sliderMediaStyle}
+								/>
+							</figure>
+						))}
+						<div
+							style="display:flex;align-items:center;gap:10px;margin-top:10px;"
+						>
+							<button
+								type="button"
+								class="chev-btn"
+								data-slider-prev
+								aria-label="Previous image"
+							>
+								‹
+							</button>
+							<div
+								style="flex:1;height:4px;border-radius:999px;background:var(--card-border);overflow:hidden;"
+								aria-hidden="true"
+							>
+								<div
+									data-slider-progress
+									style={`height:100%;width:${100 / gallery.length}%;background:var(--accent);`}
+								/>
+							</div>
+							<button
+								type="button"
+								class="chev-btn"
+								data-slider-next
+								aria-label="Next image"
+							>
+								›
+							</button>
+							<span
+								data-slider-counter
+								style="font-size:13px;color:var(--ink-dim);white-space:nowrap;"
+							>
+								1 of {gallery.length}
+							</span>
+						</div>
+					</div>
+				) : (
+					<div class={`media-grid ${galleryGridClass}`}>
+						{gallery.map((src, i) => (
+							<figure>
+								<img
+									src={src}
+									alt={`Gallery image ${i + 1} of ${gallery.length}`}
+									loading="lazy"
+								/>
+							</figure>
+						))}
+					</div>
+				))}
+
+			{videos.length > 0 &&
+				(videoSlider ? (
+					<div data-media-slider style="margin-top:16px;">
+						{videos.map((video, i) => (
+							<figure data-slide hidden={i !== 0} style={sliderFigureStyle}>
+								<video
+									src={video.url}
+									controls
+									preload="metadata"
+									style={sliderMediaStyle}
+								/>
+								{video.title && (
+									<figcaption
+										style="font-size:13px;color:var(--ink-dim);padding:8px 2px 0;"
+									>
+										{video.title}
+									</figcaption>
+								)}
+							</figure>
+						))}
+						<div
+							style="display:flex;align-items:center;gap:10px;margin-top:10px;"
+						>
+							<button
+								type="button"
+								class="chev-btn"
+								data-slider-prev
+								aria-label="Previous video"
+							>
+								‹
+							</button>
+							<div
+								style="flex:1;height:4px;border-radius:999px;background:var(--card-border);overflow:hidden;"
+								aria-hidden="true"
+							>
+								<div
+									data-slider-progress
+									style={`height:100%;width:${100 / videos.length}%;background:var(--accent);`}
+								/>
+							</div>
+							<button
+								type="button"
+								class="chev-btn"
+								data-slider-next
+								aria-label="Next video"
+							>
+								›
+							</button>
+							<span
+								data-slider-counter
+								style="font-size:13px;color:var(--ink-dim);white-space:nowrap;"
+							>
+								1 of {videos.length}
+							</span>
+						</div>
+					</div>
+				) : (
+					<div class={`media-grid ${videoGridClass}`}>
+						{videos.map((video) => (
+							<figure>
+								<video src={video.url} controls preload="metadata" />
+								{video.title && (
+									<figcaption
+										style="font-size:13px;color:var(--ink-dim);padding:8px 2px 0;"
+									>
+										{video.title}
+									</figcaption>
+								)}
+							</figure>
+						))}
+					</div>
+				))}
+		</div>
+	)
+}
+
+<script>
+	// Media slider wiring (DetailMedia): prev/next + counter + progress bar.
+	// Runs once per slider; the wired flag keeps duplicate component
+	// instances on one page from double-binding.
+	(function () {
+		function setup(slider: HTMLElement) {
+			if (slider.dataset.wired) return;
+			slider.dataset.wired = "true";
+			const slides = Array.from(
+				slider.querySelectorAll("[data-slide]"),
+			) as HTMLElement[];
+			if (slides.length <= 1) return;
+			const counter = slider.querySelector("[data-slider-counter]");
+			const progress = slider.querySelector("[data-slider-progress]") as HTMLElement | null;
+			const prev = slider.querySelector("[data-slider-prev]");
+			const next = slider.querySelector("[data-slider-next]");
+			let current = 0;
+			function show(i: number) {
+				current = (i + slides.length) % slides.length;
+				slides.forEach(function (slide, idx) {
+					slide.hidden = idx !== current;
+					const video = slide.querySelector("video");
+					if (video) video.pause();
+				});
+				if (counter) counter.textContent = current + 1 + " of " + slides.length;
+				if (progress)
+					progress.style.width = ((current + 1) / slides.length) * 100 + "%";
+			}
+			if (prev) prev.addEventListener("click", function () {
+				show(current - 1);
+			});
+			if (next) next.addEventListener("click", function () {
+				show(current + 1);
+			});
+		}
+		document.querySelectorAll("[data-media-slider]").forEach(function (el) {
+			setup(el as HTMLElement);
+		});
+	})();
+</script>

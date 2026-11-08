@@ -1,35 +1,253 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { getLiveEntry } from "astro:content";
+import { getEntry, getLiveEntry, render } from "astro:content";
+import BrandIcon from "../../components/BrandIcon.astro";
+import DetailCta from "../../components/DetailCta.astro";
+import DetailMedia from "../../components/DetailMedia.astro";
+import PrevNext from "../../components/PrevNext.astro";
+import { formatDate, getProjects } from "../../lib/content";
 
-// On-demand detail route — hybrid live-then-static (see posts/[slug].astro).
+// On-demand detail route — hybrid live-then-static: the live collection
+// first (instant when a project is newly published), then the build-time
+// collection as fallback, then a 404. Route caching is in astro.config.mjs.
 export const prerender = false;
 
 const { slug } = Astro.params;
-const result = slug ? await getLiveEntry("projects", slug) : undefined;
-const entry = result?.entry;
-if (entry) Astro.cache.set(entry);
+const liveResult = slug
+	? await getLiveEntry("liveProjects", slug).catch(() => undefined)
+	: undefined;
+const liveEntry = liveResult?.entry;
+if (liveEntry) Astro.cache.set(liveEntry);
+const buildEntry =
+	!liveEntry && slug
+		? await getEntry("projects", slug)
+		: undefined;
+const entry = liveEntry ?? buildEntry;
+if (!entry) Astro.response.status = 404;
+
+// Build-time entries render their markdown body; live entries carry the
+// body as a plain `content` string, rendered as paragraphs below.
+const rendered = buildEntry ? await render(buildEntry) : undefined;
+const Content = rendered?.Content;
+
+interface ProjectData {
+	title: string;
+	description?: string;
+	content?: string;
+	tags?: string[];
+	techs?: string[];
+	publishedAt?: string;
+	thumbnail?: string;
+	thumbnailType?: "image" | "video";
+	gallery?: string[];
+	videos?: { url: string; title?: string }[];
+}
+
+const d = entry?.data as unknown as ProjectData | undefined;
+const liveParagraphs =
+	liveEntry && d?.content
+		? d.content
+				.split(/\n\s*\n/)
+				.map((s) => s.trim())
+				.filter(Boolean)
+		: [];
+const bodyParagraphs =
+	liveParagraphs.length > 0
+		? liveParagraphs
+		: !Content && d?.description
+			? [d.description]
+			: [];
+
+const metaParts: string[] = [];
+if (d?.tags?.length) metaParts.push(d.tags.join(", "));
+const dateText = formatDate(d?.publishedAt);
+if (dateText) metaParts.push(dateText);
+
+// Tech name -> Simple Icons slug ("woocommerce-w" = the WooCommerce W mark).
+// Unknown techs get a plain text chip via BrandIcon (never a fake logo).
+const TECH_ICONS: Record<string, string> = {
+	"Next.js": "nextdotjs",
+	React: "react",
+	TypeScript: "typescript",
+	PostgreSQL: "postgresql",
+	WooCommerce: "woocommerce-w",
+	WordPress: "wordpress",
+	PHP: "php",
+	Docker: "docker",
+};
+
+// Prev/next by date order (newest first): prev = older, next = newer.
+const allProjects = await getProjects();
+const currentIndex = allProjects.findIndex((p) => p.data.slug === slug);
+const prevProject =
+	currentIndex >= 0 ? allProjects[currentIndex + 1] : undefined;
+const nextProject =
+	currentIndex > 0 ? allProjects[currentIndex - 1] : undefined;
+
+const siteUrl = "https://riaz.com.bd";
+const pageUrl = `${siteUrl}/projects/${slug}`;
+const jsonLd = d
+	? {
+			"@context": "https://schema.org",
+			"@graph": [
+				{
+					"@type": "SoftwareApplication",
+					name: d.title,
+					description: d.description,
+					applicationCategory: "BusinessApplication",
+					url: pageUrl,
+					author: {
+						"@type": "Person",
+						name: "Mahmudul Hasan Riaz",
+						url: siteUrl,
+					},
+					...(d.publishedAt ? { datePublished: d.publishedAt } : {}),
+				},
+				{
+					"@type": "BreadcrumbList",
+					itemListElement: [
+						{
+							"@type": "ListItem",
+							position: 1,
+							name: "Home",
+							item: siteUrl,
+						},
+						{
+							"@type": "ListItem",
+							position: 2,
+							name: "Projects",
+							item: `${siteUrl}/projects`,
+						},
+						{
+							"@type": "ListItem",
+							position: 3,
+							name: d.title,
+							item: pageUrl,
+						},
+					],
+				},
+			],
+		}
+	: null;
 ---
 
-<Layout title={entry ? `${entry.data.title} — Mahmudul Hasan Riaz` : `${slug} — Mahmudul Hasan Riaz`}>
-	<section class="glass">
-		<p style="margin:0 0 8px;"><a href="/projects">← All projects</a></p>
-		{
-			entry ? (
-				<>
-					<h1 style="margin:0 0 8px;font-size:24px;">{entry.data.title}</h1>
-					{entry.data.description && <p class="muted">{entry.data.description}</p>}
-					{entry.data.content && <p>{entry.data.content}</p>}
-				</>
-			) : (
-				<>
-					<h1 style="margin:0 0 8px;font-size:24px;">Project: {slug}</h1>
-					<p class="muted" style="margin:0;">
-						This project is not published yet, or the Public Content API is not
-						connected. It will load live here the moment it is published.
-					</p>
-				</>
-			)
-		}
-	</section>
+<Layout
+	title={
+		d ? `${d.title} — Mahmudul Hasan Riaz` : "Project not found — Mahmudul Hasan Riaz"
+	}
+	description={
+		d?.description ??
+		"A project by Mahmudul Hasan Riaz — ERP, SaaS and e-commerce systems for businesses in Bangladesh and beyond."
+	}
+	ogType="website"
+	ogImage={
+		d?.thumbnailType !== "video" && d?.thumbnail ? d.thumbnail : undefined
+	}
+>
+	{
+		entry && d ? (
+			<section class="glass">
+				{/* JSON-LD is valid in the body. OG tags live in <head> via Layout. */}
+				{jsonLd && (
+					<script
+						type="application/ld+json"
+						set:html={JSON.stringify(jsonLd)}
+					/>
+				)}
+
+				<a class="back-link" href="/projects">
+					← All projects
+				</a>
+				{d.thumbnail && (
+					<div class="detail-hero">
+						{d.thumbnailType === "video" ? (
+							<video
+								src={d.thumbnail}
+								controls
+								autoplay
+								muted
+								loop
+								playsinline
+							/>
+						) : (
+							<img src={d.thumbnail} alt={d.title} />
+						)}
+					</div>
+				)}
+				<h1 class="detail-title">{d.title}</h1>
+				{metaParts.length > 0 && (
+					<p class="detail-meta">{metaParts.join(" · ")}</p>
+				)}
+				{(d.techs?.length || d.tags?.length) && (
+					<div class="key-strip">
+						{d.techs?.length ? (
+							<span>
+								<b>Built with:</b> {d.techs.join(", ")}
+							</span>
+						) : null}
+						{d.tags?.length ? (
+							<span>
+								<b>Tags:</b> {d.tags.join(", ")}
+							</span>
+						) : null}
+					</div>
+				)}
+				{d.techs?.length ? (
+					<div class="tag-row" style="margin-top:16px;">
+						{d.techs.map((tech) => {
+							const icon = TECH_ICONS[tech] ?? null;
+							return (
+								<span
+									class="tag"
+									style="display:inline-flex;align-items:center;gap:6px;"
+								>
+									<BrandIcon icon={icon} name={tech} size={14} />
+									{icon ? tech : null}
+								</span>
+							);
+						})}
+					</div>
+				) : null}
+				<div class="detail-body">
+					{Content ? (
+						<Content />
+					) : (
+						bodyParagraphs.map((para) => <p>{para}</p>)
+					)}
+				</div>
+				<DetailMedia gallery={d.gallery ?? []} videos={d.videos ?? []} />
+				<DetailCta
+					title={`Want a system like ${d.title}?`}
+					text="Tell me what you are building — I will reply within a day."
+					source="project-detail"
+				/>
+				<PrevNext
+					prev={
+						prevProject
+							? {
+									href: `/projects/${prevProject.data.slug}`,
+									title: prevProject.data.title,
+								}
+							: null
+					}
+					next={
+						nextProject
+							? {
+									href: `/projects/${nextProject.data.slug}`,
+									title: nextProject.data.title,
+								}
+							: null
+					}
+				/>
+			</section>
+		) : (
+			<section class="glass">
+				<a class="back-link" href="/projects">
+					← All projects
+				</a>
+				<h1 class="detail-title">Project not found</h1>
+				<p class="empty-state">This project is not published yet.</p>
+			</section>
+		)
+	}
 </Layout>

@@ -1,0 +1,14 @@
+---
+import { STATS } from "../data/site";
+---
+
+<section class="glass section" id="stats">
+	<div class="proof-strip">
+		{STATS.map((stat) => (
+			<div class="proof-cell">
+				<div class="proof-num">{stat.value}</div>
+				<div class="proof-label">{stat.label}</div>
+			</div>
+		))}
+	</div>
+</section>

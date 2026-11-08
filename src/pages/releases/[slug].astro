@@ -1,35 +1,234 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { getLiveEntry } from "astro:content";
+import BrandIcon from "../../components/BrandIcon.astro";
+import ReleasePlayer from "../../components/ReleasePlayer";
+import { getEntry, getLiveEntry, render } from "astro:content";
+import { getReleases, formatDate } from "../../lib/content";
+import { youtubeEmbed, youtubeThumb } from "../../lib/youtube";
+import { WIKIMEDIA_LOGOS } from "../../data/site";
 
-// On-demand detail route — hybrid live-then-static (see posts/[slug].astro).
+// On-demand detail route — hybrid live-then-static.
+// Live entry first (Public Content API), then the build-time collection
+// entry. After the next scheduled rebuild the page becomes a static file.
 export const prerender = false;
 
 const { slug } = Astro.params;
-const result = slug ? await getLiveEntry("releases", slug) : undefined;
-const entry = result?.entry;
-if (entry) Astro.cache.set(entry);
+if (!slug) Astro.response.status = 404;
+
+const liveResult = slug
+	? await getLiveEntry("liveReleases", slug).catch(() => undefined)
+	: undefined;
+const liveEntry = liveResult?.entry;
+if (liveEntry) Astro.cache.set(liveEntry);
+const buildEntry =
+	!liveEntry && slug
+		? await getEntry("releases", slug)
+		: undefined;
+
+const entry = liveEntry ?? buildEntry;
+if (!entry) Astro.response.status = 404;
+
+const data = entry?.data as
+	| {
+			title?: string;
+			description?: string;
+			content?: string;
+			releaseType?: string;
+			publishedAt?: string;
+			youtubeId?: string;
+			platforms?: Array<{ name: string; url: string }>;
+			tune?: string;
+			lyricist?: string;
+	  }
+	| undefined;
+
+// Build-time entries render markdown; live entries carry a content string.
+const rendered = buildEntry ? await render(buildEntry) : undefined;
+const Content = rendered?.Content;
+const bodyText = data?.content;
+
+const releases = await getReleases();
+const idx = slug ? releases.findIndex((r) => r.data.slug === slug) : -1;
+const prev = idx > 0 ? releases[idx - 1] : undefined;
+const next =
+	idx >= 0 && idx < releases.length - 1 ? releases[idx + 1] : undefined;
+
+const title = data?.title ?? "Release not published yet";
+const description =
+	data?.description ?? "A release by Mahmudul Hasan Riaz.";
+const youtubeId = data?.youtubeId ?? null;
+const platforms = data?.platforms ?? [];
+const hasYouTube = platforms.some((p) => p.name === "YouTube");
+const isVideo = Boolean(youtubeId) && hasYouTube;
+
+const RELEASE_PLATFORM_ICONS: Record<string, string> = {
+	YouTube: "youtube",
+	Spotify: "spotify",
+	"Apple Music": "applemusic",
+	Deezer: "deezer",
+	Boomplay: `wikimedia:${WIKIMEDIA_LOGOS.boomplay}`,
+	JioSaavn: `wikimedia:${WIKIMEDIA_LOGOS.jiosaavn}`,
+	SoundCloud: "soundcloud",
+};
+
+const jsonLd = data
+	? isVideo && youtubeId
+		? {
+				"@context": "https://schema.org",
+				"@type": "VideoObject",
+				name: title,
+				description,
+				thumbnailUrl: youtubeThumb(youtubeId),
+				uploadDate: data.publishedAt,
+				embedUrl: youtubeEmbed(youtubeId),
+			}
+		: {
+				"@context": "https://schema.org",
+				"@type": "CreativeWork",
+				name: title,
+				description,
+				datePublished: data.publishedAt,
+			}
+	: null;
+const breadcrumb = {
+	"@context": "https://schema.org",
+	"@type": "BreadcrumbList",
+	itemListElement: [
+		{ "@type": "ListItem", position: 1, name: "Home", item: "https://riaz.com.bd/" },
+		{ "@type": "ListItem", position: 2, name: "Releases", item: "https://riaz.com.bd/releases" },
+		{ "@type": "ListItem", position: 3, name: title },
+	],
+};
 ---
 
-<Layout title={entry ? `${entry.data.title} — Mahmudul Hasan Riaz` : `${slug} — Mahmudul Hasan Riaz`}>
-	<section class="glass">
-		<p style="margin:0 0 8px;"><a href="/releases">← All releases</a></p>
-		{
-			entry ? (
-				<>
-					<h1 style="margin:0 0 8px;font-size:24px;">{entry.data.title}</h1>
-					{entry.data.description && <p class="muted">{entry.data.description}</p>}
-					{entry.data.content && <p>{entry.data.content}</p>}
-				</>
+<Layout title={`${title} — Mahmudul Hasan Riaz`} description={description}>
+	{jsonLd ? (
+		<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+	) : null}
+	<script type="application/ld+json" set:html={JSON.stringify(breadcrumb)} />
+
+	<p>
+		<a href="/releases" class="back-link">← All releases</a>
+	</p>
+
+	{!entry || !data ? (
+		<section class="glass section">
+			<p class="empty-state">This release is not published yet.</p>
+		</section>
+	) : (
+		<article>
+			{isVideo && youtubeId ? (
+				<ReleasePlayer
+					client:load
+					youtubeId={youtubeId}
+					title={title}
+				/>
 			) : (
-				<>
-					<h1 style="margin:0 0 8px;font-size:24px;">Release: {slug}</h1>
-					<p class="muted" style="margin:0;">
-						This release is not published yet, or the Public Content API is not
-						connected. It will load live here the moment it is published.
-					</p>
-				</>
-			)
-		}
-	</section>
+				<div
+					class="detail-hero"
+					style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;background:var(--accent-wash);color:var(--accent-strong);"
+				>
+					<svg
+						width="44"
+						height="44"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
+						<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+						<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+						<line x1="12" x2="12" y1="19" y2="22" />
+					</svg>
+				</div>
+			)}
+			<h1 class="detail-title">{title}</h1>
+			<p class="detail-meta">
+				{data.releaseType ? (
+					<span class="type-tag">{data.releaseType}</span>
+				) : null}
+				{data.releaseType && data.publishedAt ? " · " : null}
+				{formatDate(data.publishedAt)}
+			</p>
+			{!isVideo ? (
+				<p style="margin:12px 0 0;">
+					<span class="audio-badge">
+						Audio only — not on YouTube
+					</span>
+				</p>
+			) : null}
+
+			{platforms.length > 0 ? (
+				<div class="platform-links">
+					{platforms.map((p) => {
+						const icon = RELEASE_PLATFORM_ICONS[p.name];
+						return (
+							<a
+								class="platform-chip"
+								href={p.url}
+								target="_blank"
+								rel="noreferrer"
+							>
+								{icon ? (
+									<BrandIcon
+										icon={icon}
+										name={p.name}
+										size={16}
+									/>
+								) : null}
+								{p.name}
+							</a>
+						);
+					})}
+				</div>
+			) : null}
+
+			<div class="credits-grid">
+				<div class="credit">
+					<div class="credit-label">Tune</div>
+					<div class="credit-value">{data.tune ?? "—"}</div>
+				</div>
+				<div class="credit">
+					<div class="credit-label">Lyricist</div>
+					<div class="credit-value">{data.lyricist ?? "—"}</div>
+				</div>
+				<div class="credit">
+					<div class="credit-label">Description</div>
+					<div class="credit-value">{data.description ?? "—"}</div>
+				</div>
+			</div>
+
+			<div class="detail-body">
+				{Content ? (
+					<Content />
+				) : bodyText ? (
+					bodyText.split(/\n\s*\n/).map((para) => <p>{para}</p>)
+				) : description ? (
+					<p>{description}</p>
+				) : null}
+			</div>
+
+			<nav class="prev-next" aria-label="Release navigation">
+				{prev ? (
+					<a href={`/releases/${prev.data.slug}`}>
+						<span class="pn-label">← Previous</span>
+						<span class="pn-title">{prev.data.title}</span>
+					</a>
+				) : (
+					<span />
+				)}
+				{next ? (
+					<a class="next" href={`/releases/${next.data.slug}`}>
+						<span class="pn-label">Next →</span>
+						<span class="pn-title">{next.data.title}</span>
+					</a>
+				) : (
+					<span />
+				)}
+			</nav>
+		</article>
+	)}
 </Layout>

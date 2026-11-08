@@ -1,22 +1,264 @@
 ---
-import Layout from "../layouts/Layout.astro";
-
 // Know Me — the whole person (all identities, one detailed page).
-// Skeleton: real content is ported from the React preview next.
+// FAN-FIRST order: Hero → Stats → "The whole person" → Releases →
+// Public figure & community → Ventures → Services + Selected projects →
+// Clients → Latest posts → Contact → Footer.
+// NO Testimonials section — no real testimonial quotes exist; never invent one.
+// All copy below is built ONLY from established facts — no invented
+// biography, timeline, or claims.
+import Layout from "../layouts/Layout.astro";
+import Hero from "../components/Hero.astro";
+import Stats from "../components/Stats.astro";
+import Services from "../components/Services.astro";
+import ClientsWall from "../components/ClientsWall.astro";
+import Releases from "../components/Releases.astro";
+import Ventures from "../components/Ventures.astro";
+import ContactForm from "../components/ContactForm";
+import BrandIcon from "../components/BrandIcon.astro";
+import { PLATFORMS, PROFILE, PUBLIC_FIGURE_POINTS } from "../data/site";
+import { formatDate, getPosts, getProjects, getReleases } from "../lib/content";
+
+const releases = (await getReleases()).map((r) => ({
+	slug: r.data.slug,
+	title: r.data.title,
+	releaseType: r.data.releaseType,
+	publishedAt: r.data.publishedAt,
+	youtubeId: r.data.youtubeId,
+	platforms: r.data.platforms ?? [],
+}));
+const projects = (await getProjects()).slice(0, 3);
+const posts = await getPosts();
+
+const socialPlatforms = PLATFORMS.filter((p) => p.group === "social");
+const musicPlatforms = PLATFORMS.filter((p) => p.group === "music");
 ---
 
 <Layout
 	title="Know Me — Mahmudul Hasan Riaz"
 	description="The whole person: Software Engineer, Entrepreneur, Nasheed Artist, Hafiz-Alem and Public Figure."
+	profile="knowme"
 >
-	<section class="glass">
-		<h1 style="margin:0 0 8px;font-size:28px;line-height:1.25;">Know Me</h1>
-		<p class="muted" style="margin:0;">
-			Software engineer, entrepreneur and nasheed artist — one person, five
-			callings. This page is being ported from the approved design preview.
-		</p>
-		<p style="margin:16px 0 0;">
-			<a class="btn btn-ghost" href="/">← Back to home</a>
-		</p>
+	<Hero profile="knowme" />
+
+	<Stats />
+
+	<section class="glass section">
+		<div class="section-head">
+			<h2>The whole person</h2>
+		</div>
+		<div class="about-text">
+			<p>
+				Mahmudul Hasan Riaz is a software engineer from Dhaka, Bangladesh. He
+				builds ERP, e-commerce and SaaS systems for businesses in Bangladesh
+				and beyond.
+			</p>
+			<p>
+				He is also an entrepreneur and a public figure — building companies
+				that solve real problems for Bangladeshi businesses, and speaking,
+				teaching and sharing, in person and online.
+			</p>
+			<p>
+				As a nasheed artist and Hafiz-Alem, he records nasheed without music —
+				just voice, lyrics and meaning.
+			</p>
+		</div>
+		<div class="identity-grid">
+			<div class="identity-cell">
+				<h3>
+					<span class="id-icon">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
+					</span>
+					Software Engineer
+				</h3>
+				<p>
+					Builds ERP, e-commerce and SaaS systems for businesses in
+					Bangladesh and beyond.
+				</p>
+			</div>
+			<div class="identity-cell">
+				<h3>
+					<span class="id-icon">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
+					</span>
+					Entrepreneur
+				</h3>
+				<p>
+					Building companies that solve real problems for Bangladeshi
+					businesses.
+				</p>
+			</div>
+			<div class="identity-cell">
+				<h3>
+					<span class="id-icon">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" x2="12" y1="19" y2="22" /></svg>
+					</span>
+					Nasheed Artist
+				</h3>
+				<p>Records nasheed without music — just voice, lyrics and meaning.</p>
+			</div>
+			<div class="identity-cell">
+				<h3>
+					<span class="id-icon">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
+					</span>
+					Hafiz-Alem
+				</h3>
+				<p>Hafiz of the Qur&rsquo;an, trained as an Alem.</p>
+			</div>
+			<div class="identity-cell">
+				<h3>
+					<span class="id-icon">
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
+					</span>
+					Public Figure
+				</h3>
+				<p>Speaking, teaching and sharing — in person and online.</p>
+			</div>
+		</div>
+		<div class="contact-info">
+			<div class="info-row">
+				<span>Dhaka, Bangladesh</span>
+			</div>
+			<div class="info-row">
+				<a href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
+			</div>
+		</div>
+	</section>
+
+	<Releases releases={releases} />
+
+	<section class="glass section" id="follow-connect">
+		<div class="section-head">
+			<h2>Public figure &amp; community</h2>
+		</div>
+		<div class="identity-grid">
+			{
+				PUBLIC_FIGURE_POINTS.map((point) => (
+					<div class="identity-cell">
+						<h3>{point.title}</h3>
+						<p>{point.text}</p>
+					</div>
+				))
+			}
+		</div>
+		<h3 style="margin:20px 0 0;font-size:15px;">Find him on social media</h3>
+		<div class="platform-chips">
+			{
+				socialPlatforms.map((platform) => (
+					<a
+						class="platform-chip"
+						href={platform.url}
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						<BrandIcon icon={platform.icon} name={platform.name} size={16} />
+						{platform.name}
+						{platform.note ? ` (${platform.note})` : ""}
+					</a>
+				))
+			}
+		</div>
+		<h3 style="margin:20px 0 0;font-size:15px;">Listen to his nasheed</h3>
+		<div class="platform-chips">
+			{
+				musicPlatforms.map((platform) => (
+					<a
+						class="platform-chip"
+						href={platform.url}
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						<BrandIcon icon={platform.icon} name={platform.name} size={16} />
+						{platform.name}
+					</a>
+				))
+			}
+		</div>
+	</section>
+
+	<Ventures />
+
+	<Services />
+
+	<section class="glass section">
+		<div class="section-head">
+			<h2>Selected projects</h2>
+			<a class="view-all" href="/projects">View all projects →</a>
+		</div>
+		{
+			projects.length > 0 ? (
+				<div class="card-grid">
+					{projects.map((project) => (
+						<a class="grid-card" href={`/projects/${project.data.slug}`}>
+							<div class="grid-thumb">
+								{project.data.thumbnail ? (
+									<img
+										src={project.data.thumbnail}
+										alt={project.data.title}
+										loading="lazy"
+									/>
+								) : (
+									<div class="thumb-fallback">
+										{project.data.title.charAt(0)}
+									</div>
+								)}
+							</div>
+							<div class="grid-body">
+								<h3>{project.data.title}</h3>
+								{project.data.description && <p>{project.data.description}</p>}
+							</div>
+						</a>
+					))}
+				</div>
+			) : (
+				<p class="empty-state">No projects published yet.</p>
+			)
+		}
+	</section>
+
+	<ClientsWall />
+
+	<section class="glass section">
+		<div class="section-head">
+			<h2>Latest posts</h2>
+			<a class="view-all" href="/posts">View all posts →</a>
+		</div>
+		{
+			posts.length > 0 ? (
+				<div class="card-grid">
+					{posts.map((post) => (
+						<a class="grid-card" href={`/posts/${post.data.slug}`}>
+							<div class="grid-thumb">
+								{post.data.thumbnail ? (
+									<img
+										src={post.data.thumbnail}
+										alt={post.data.title}
+										loading="lazy"
+									/>
+								) : (
+									<div class="thumb-fallback">{post.data.title.charAt(0)}</div>
+								)}
+							</div>
+							<div class="grid-body">
+								<h3>{post.data.title}</h3>
+								{post.data.excerpt && <p>{post.data.excerpt}</p>}
+								{post.data.publishedAt && (
+									<p class="post-meta">{formatDate(post.data.publishedAt)}</p>
+								)}
+							</div>
+						</a>
+					))}
+				</div>
+			) : (
+				<p class="empty-state">No posts published yet.</p>
+			)
+		}
+	</section>
+
+	<section class="glass section" id="contact">
+		<div class="section-head">
+			<h2>Reach out — for work, an event, or just to say salaam.</h2>
+		</div>
+		<ContactForm client:load inline source="know-me-contact" />
 	</section>
 </Layout>

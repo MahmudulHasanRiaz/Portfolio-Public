@@ -1,0 +1,51 @@
+---
+import { getVentures } from "../lib/content";
+
+const ventures = await getVentures();
+---
+
+<section class="glass section" id="ventures">
+	<div class="section-head">
+		<h2>Ventures</h2>
+		<a class="view-all" href="/ventures">View all ventures →</a>
+	</div>
+	{
+		ventures.length === 0 ? (
+			<p class="empty-state">No ventures published yet.</p>
+		) : (
+			<div class="card-grid">
+				{ventures.map((venture) => (
+					<a class="grid-card" href={`/ventures/${venture.data.slug}`}>
+						<div class="grid-thumb">
+							{venture.data.thumbnailType === "video" &&
+							venture.data.thumbnail ? (
+								<video
+									src={venture.data.thumbnail}
+									muted
+									playsinline
+									preload="metadata"
+								/>
+							) : venture.data.thumbnail ? (
+								<img
+									src={venture.data.thumbnail}
+									alt={venture.data.title}
+									loading="lazy"
+								/>
+							) : (
+								<div class="thumb-fallback">
+									{venture.data.title.charAt(0)}
+								</div>
+							)}
+						</div>
+						<div class="grid-body">
+							<h3>{venture.data.title}</h3>
+							{venture.data.description ? (
+								<p>{venture.data.description}</p>
+							) : null}
+						</div>
+					</a>
+				))}
+			</div>
+		)
+	}
+</section>

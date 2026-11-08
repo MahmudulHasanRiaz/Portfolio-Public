@@ -1,0 +1,75 @@
+---
+// Brand logo — original logos only, never hand-drawn.
+// - Simple Icons slug  -> CDN image (https://cdn.simpleicons.org/<slug>)
+// - "wikimedia:<url>"  -> real official logo from Wikimedia Commons
+// - "woocommerce-w"    -> the latest WooCommerce "W" lettermark (inline SVG)
+// - null               -> honest plain name chip, never a fake logo
+// Dark logos render white in dark mode only (class logo-dark-invert).
+import { WOOCOMMERCE_W_PATH, simpleIconsUrl } from "../data/site";
+
+interface Props {
+	icon: string | null;
+	name: string;
+	size?: number;
+	darkInvert?: boolean;
+	class?: string;
+}
+
+const { icon, name, size = 20, darkInvert = false, class: cls = "" } = Astro.props;
+
+// Logos that are dark-on-transparent and need inverting in dark mode.
+export const DARK_INVERT_SLUGS = new Set([
+	"nextdotjs",
+	"express",
+	"fastify",
+	"rust",
+	"vercel",
+	"prisma",
+	"mysql",
+	"css",
+	"wordpress",
+	"github",
+	"tiktok",
+	"threads",
+]);
+
+const invert = darkInvert || (icon !== null && DARK_INVERT_SLUGS.has(icon));
+const imgClass = `${invert ? "logo-dark-invert" : ""} ${cls}`.trim();
+---
+
+{
+	icon === "woocommerce-w" ? (
+		<svg
+			viewBox="0 0 88 47.5"
+			width={size}
+			height={size}
+			role="img"
+			aria-label={name}
+			class={cls}
+		>
+			<path d={WOOCOMMERCE_W_PATH} fill="#873EFF" />
+		</svg>
+	) : icon !== null && icon.startsWith("wikimedia:") ? (
+		<img
+			src={icon.slice("wikimedia:".length)}
+			alt={name}
+			width={size}
+			height={size}
+			loading="lazy"
+			class={imgClass}
+		/>
+	) : icon !== null ? (
+		<img
+			src={simpleIconsUrl(icon)}
+			alt={name}
+			width={size}
+			height={size}
+			loading="lazy"
+			class={imgClass}
+		/>
+	) : (
+		<span class={cls} style={`font-size:${Math.max(11, size - 6)}px;font-weight:700;`}>
+			{name}
+		</span>
+	)
+}

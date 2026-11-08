@@ -1,0 +1,90 @@
+---
+import BrandIcon from "./BrandIcon.astro";
+import { PLATFORMS, PUBLIC_FIGURE_POINTS } from "../data/site";
+import { getVentures } from "../lib/content";
+
+const ventures = await getVentures();
+const musicPlatforms = PLATFORMS.filter((p) => p.group === "music");
+const venturesLine =
+	PUBLIC_FIGURE_POINTS.find((p) => p.title === "Ventures")?.text ?? "";
+---
+
+<section class="glass section" id="beyond">
+	<div class="section-head">
+		<h2>Beyond the code</h2>
+	</div>
+	<p class="muted" style="margin:0 0 16px;font-size:14px;">
+		One person, two more callings — building companies, and recording
+		nasheeds.
+	</p>
+	<div class="combined-grid">
+		<div class="combined-half">
+			<h3>Entrepreneur</h3>
+			<p>{venturesLine}</p>
+			{
+				ventures.length === 0 ? (
+					<p class="muted" style="margin:0;font-size:14px;">
+						Ventures will appear here when published.
+					</p>
+				) : (
+					ventures.map((venture) => (
+						<a
+							class="mini-row"
+							href={`/ventures/${venture.data.slug}`}
+						>
+							<span class="mini-thumb">
+								{venture.data.thumbnail ? (
+									<img
+										src={venture.data.thumbnail}
+										alt=""
+										loading="lazy"
+									/>
+								) : (
+									<span
+										style="display:flex;width:100%;height:100%;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--accent);background:var(--accent-wash);"
+										aria-hidden="true"
+									>
+										{venture.data.title.charAt(0)}
+									</span>
+								)}
+							</span>
+							<span class="mini-text">
+								<b>{venture.data.title}</b>
+								{venture.data.description ? (
+									<span>{venture.data.description}</span>
+								) : null}
+							</span>
+						</a>
+					))
+				)
+			}
+			<p style="margin:14px 0 0;">
+				<a class="view-all" href="/ventures">
+					View all ventures →
+				</a>
+			</p>
+		</div>
+		<div class="combined-half">
+			<h3>Islamic Artist</h3>
+			<p>
+				Nasheed releases on every major streaming platform.
+			</p>
+			<div class="platform-chips">
+				{musicPlatforms.map((platform) => (
+					<a class="platform-chip" href={platform.url}>
+						<BrandIcon
+							icon={platform.icon}
+							name={platform.name}
+							size={16}
+						/>
+						{platform.name}
+					</a>
+				))}
+			</div>
+		</div>
+	</div>
+	<div class="combined-cta">
+		<p>Want the full picture?</p>
+		<a class="btn" href="/know-me">Know Me →</a>
+	</div>
+</section>

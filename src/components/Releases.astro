@@ -1,0 +1,124 @@
+---
+import BrandIcon from "./BrandIcon.astro";
+import { WIKIMEDIA_LOGOS } from "../data/site";
+import { formatDate } from "../lib/content";
+import { youtubeThumb } from "../lib/youtube";
+
+export interface ReleaseCardItem {
+	slug: string;
+	title: string;
+	releaseType?: string;
+	publishedAt?: string;
+	youtubeId?: string;
+	platforms: Array<{ name: string; url: string }>;
+}
+
+interface Props {
+	releases: ReleaseCardItem[];
+}
+
+const { releases } = Astro.props;
+
+// Platform name -> BrandIcon icon value (Simple Icons slug, or a real
+// Wikimedia logo). Unknown names render no icon, never a fake one.
+const RELEASE_PLATFORM_ICONS: Record<string, string> = {
+	YouTube: "youtube",
+	Spotify: "spotify",
+	"Apple Music": "applemusic",
+	Deezer: "deezer",
+	Boomplay: `wikimedia:${WIKIMEDIA_LOGOS.boomplay}`,
+	JioSaavn: `wikimedia:${WIKIMEDIA_LOGOS.jiosaavn}`,
+	SoundCloud: "soundcloud",
+};
+---
+
+<section class="glass section" id="releases">
+	<div class="section-head">
+		<h2>Releases</h2>
+		<a class="view-all" href="/releases">View all releases →</a>
+	</div>
+	{
+		releases.length === 0 ? (
+			<p class="empty-state">No releases published yet.</p>
+		) : (
+			<div>
+				{releases.map((release) => {
+					const hasYouTube = release.platforms.some(
+						(p) => p.name === "YouTube",
+					);
+					const thumb = release.youtubeId
+						? youtubeThumb(release.youtubeId)
+						: null;
+					const shownPlatforms = release.platforms.slice(0, 5);
+					const extra = release.platforms.length - shownPlatforms.length;
+					return (
+						<a class="release-card" href={`/releases/${release.slug}`}>
+							<div class="release-thumb">
+								{thumb ? (
+									<img
+										src={thumb}
+										alt={release.title}
+										loading="lazy"
+									/>
+								) : (
+									<span class="audio-mark" aria-hidden="true">
+										<svg
+											width="22"
+											height="22"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											aria-hidden="true"
+										>
+											<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+											<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+											<line x1="12" x2="12" y1="19" y2="22" />
+										</svg>
+									</span>
+								)}
+							</div>
+							<div class="release-info">
+								<h3>{release.title}</h3>
+								<p class="release-meta">
+									{release.releaseType ? (
+										<span class="type-tag">
+											{release.releaseType}
+										</span>
+									) : null}
+									{release.releaseType && release.publishedAt
+										? " · "
+										: null}
+									{formatDate(release.publishedAt)}
+								</p>
+								{!hasYouTube ? (
+									<span class="audio-badge">
+										Audio only — not on YouTube
+									</span>
+								) : null}
+							</div>
+							<div class="release-platforms">
+								{shownPlatforms.map((p) => {
+									const icon =
+										RELEASE_PLATFORM_ICONS[p.name];
+									return icon ? (
+										<BrandIcon
+											icon={icon}
+											name={p.name}
+											size={20}
+										/>
+									) : null;
+								})}
+								{extra > 0 ? (
+									<span class="plat-more">+{extra}</span>
+								) : null}
+							</div>
+						</a>
+					);
+				})}
+			</div>
+		)
+	}
+</section>

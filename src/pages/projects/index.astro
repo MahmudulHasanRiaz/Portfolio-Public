@@ -1,14 +1,90 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import ProjectCard from "../../components/ProjectCard.astro";
+import { getProjects } from "../../lib/content";
+
+// Static archive — filters are client-side, driven by the tags on the
+// cards themselves (no framework, tiny inline script below).
+const projects = await getProjects();
+const tags = [...new Set(projects.flatMap((p) => p.data.tags))].sort((a, b) =>
+	a.localeCompare(b),
+);
+const total = projects.length;
 ---
 
-<Layout title="All projects — Mahmudul Hasan Riaz">
+<Layout
+	title="All projects — Mahmudul Hasan Riaz"
+	description="All projects by Mahmudul Hasan Riaz — ERP, SaaS and e-commerce systems for businesses in Bangladesh and beyond."
+>
 	<section class="glass">
-		<p style="margin:0 0 8px;"><a href="/">← Back to home</a></p>
-		<h1 style="margin:0 0 8px;font-size:24px;">All projects</h1>
-		<p class="muted" style="margin:0;">
-			No projects published yet in this skeleton. The archive fills from the
-			Public Content API once the content port lands.
+		<p style="margin:0 0 8px;">
+			<a class="back-link" href="/">← Back to home</a>
 		</p>
+		<h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;">All projects</h1>
+		{
+			projects.length === 0 ? (
+				<p class="empty-state">No projects published yet.</p>
+			) : (
+				<>
+					<div class="chip-row" data-filter-row>
+						<button type="button" class="chip active" data-filter="all">
+							All
+						</button>
+						{tags.map((tag) => (
+							<button type="button" class="chip" data-filter={tag}>
+								{tag}
+							</button>
+						))}
+					</div>
+					<p class="count-line" data-count-line>
+						Showing {total} of {total} projects
+					</p>
+					<div class="card-grid" data-project-grid style="margin-top:16px;">
+						{projects.map((p) => (
+							<ProjectCard
+								project={{
+									slug: p.data.slug,
+									title: p.data.title,
+									description: p.data.description ?? "",
+									tags: p.data.tags,
+									thumbnail: p.data.thumbnail ?? null,
+								}}
+							/>
+						))}
+					</div>
+				</>
+			)
+		}
 	</section>
 </Layout>
+
+<script>
+	// Archive filtering: chips toggle cards by the .tag chips on each card.
+	(function () {
+		const row = document.querySelector("[data-filter-row]");
+		const grid = document.querySelector("[data-project-grid]");
+		const countLine = document.querySelector("[data-count-line]");
+		if (!row || !grid || !countLine) return;
+		const total = grid.querySelectorAll(".grid-card").length;
+		row.addEventListener("click", function (event) {
+			const target = event.target;
+			if (!(target instanceof HTMLElement)) return;
+			const chip = target.closest("[data-filter]");
+			if (!chip) return;
+			const filter = chip.getAttribute("data-filter") ?? "all";
+			row.querySelectorAll(".chip").forEach(function (c) {
+				c.classList.toggle("active", c === chip);
+			});
+			let visible = 0;
+			grid.querySelectorAll(".grid-card").forEach(function (card) {
+				const tags = Array.from(card.querySelectorAll(".tag")).map(function (t) {
+					return (t.textContent ?? "").trim();
+				});
+				const show = filter === "all" || tags.includes(filter);
+				(card as HTMLElement).style.display = show ? "" : "none";
+				if (show) visible += 1;
+			});
+			countLine.textContent = "Showing " + visible + " of " + total + " projects";
+		});
+	})();
+</script>

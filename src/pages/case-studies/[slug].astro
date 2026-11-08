@@ -1,35 +1,239 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { getLiveEntry } from "astro:content";
+import { getEntry, getLiveEntry, render } from "astro:content";
+import DetailCta from "../../components/DetailCta.astro";
+import DetailMedia from "../../components/DetailMedia.astro";
+import PrevNext from "../../components/PrevNext.astro";
+import { formatDate, getCaseStudies } from "../../lib/content";
 
-// On-demand detail route — hybrid live-then-static (see posts/[slug].astro).
+// On-demand detail route — hybrid live-then-static: the live collection
+// first (instant when a case study is newly published), then the build-time
+// collection as fallback, then a 404. Route caching is in astro.config.mjs.
 export const prerender = false;
 
 const { slug } = Astro.params;
-const result = slug ? await getLiveEntry("caseStudies", slug) : undefined;
-const entry = result?.entry;
-if (entry) Astro.cache.set(entry);
+const liveResult = slug
+	? await getLiveEntry("liveCaseStudies", slug).catch(() => undefined)
+	: undefined;
+const liveEntry = liveResult?.entry;
+if (liveEntry) Astro.cache.set(liveEntry);
+const buildEntry =
+	!liveEntry && slug
+		? await getEntry("caseStudies", slug)
+		: undefined;
+const entry = liveEntry ?? buildEntry;
+if (!entry) Astro.response.status = 404;
+
+// Build-time entries render their markdown body; live entries carry the
+// body as a plain `content` string, rendered as paragraphs below.
+const rendered = buildEntry ? await render(buildEntry) : undefined;
+const Content = rendered?.Content;
+
+interface CaseStudyData {
+	title: string;
+	description?: string;
+	content?: string;
+	tags?: string[];
+	publishedAt?: string;
+	thumbnail?: string;
+	thumbnailType?: "image" | "video";
+	problem?: string;
+	fix?: string;
+	result?: string;
+	projectSlug?: string;
+	gallery?: string[];
+	videos?: { url: string; title?: string }[];
+}
+
+const d = entry?.data as unknown as CaseStudyData | undefined;
+const liveParagraphs =
+	liveEntry && d?.content
+		? d.content
+				.split(/\n\s*\n/)
+				.map((s) => s.trim())
+				.filter(Boolean)
+		: [];
+const bodyParagraphs =
+	liveParagraphs.length > 0
+		? liveParagraphs
+		: !Content && d?.description
+			? [d.description]
+			: [];
+
+const metaParts: string[] = [];
+if (d?.tags?.length) metaParts.push(d.tags.join(", "));
+const dateText = formatDate(d?.publishedAt);
+if (dateText) metaParts.push(dateText);
+
+// Prev/next by date order (newest first): prev = older, next = newer.
+const allStudies = await getCaseStudies();
+const currentIndex = allStudies.findIndex((s) => s.data.slug === slug);
+const prevStudy = currentIndex >= 0 ? allStudies[currentIndex + 1] : undefined;
+const nextStudy = currentIndex > 0 ? allStudies[currentIndex - 1] : undefined;
+
+const siteUrl = "https://riaz.com.bd";
+const pageUrl = `${siteUrl}/case-studies/${slug}`;
+const jsonLd = d
+	? {
+			"@context": "https://schema.org",
+			"@graph": [
+				{
+					"@type": "Article",
+					headline: d.title,
+					description: d.description,
+					author: {
+						"@type": "Person",
+						name: "Mahmudul Hasan Riaz",
+						url: siteUrl,
+					},
+					mainEntityOfPage: pageUrl,
+				},
+				{
+					"@type": "BreadcrumbList",
+					itemListElement: [
+						{
+							"@type": "ListItem",
+							position: 1,
+							name: "Home",
+							item: siteUrl,
+						},
+						{
+							"@type": "ListItem",
+							position: 2,
+							name: "Case Studies",
+							item: `${siteUrl}/case-studies`,
+						},
+						{
+							"@type": "ListItem",
+							position: 3,
+							name: d.title,
+							item: pageUrl,
+						},
+					],
+				},
+			],
+		}
+	: null;
 ---
 
-<Layout title={entry ? `${entry.data.title} — Mahmudul Hasan Riaz` : `${slug} — Mahmudul Hasan Riaz`}>
-	<section class="glass">
-		<p style="margin:0 0 8px;"><a href="/case-studies">← All case studies</a></p>
-		{
-			entry ? (
-				<>
-					<h1 style="margin:0 0 8px;font-size:24px;">{entry.data.title}</h1>
-					{entry.data.description && <p class="muted">{entry.data.description}</p>}
-					{entry.data.content && <p>{entry.data.content}</p>}
-				</>
-			) : (
-				<>
-					<h1 style="margin:0 0 8px;font-size:24px;">Case study: {slug}</h1>
-					<p class="muted" style="margin:0;">
-						This case study is not published yet, or the Public Content API is
-						not connected. It will load live here the moment it is published.
+<Layout
+	title={
+		d
+			? `${d.title} — Mahmudul Hasan Riaz`
+			: "Case study not found — Mahmudul Hasan Riaz"
+	}
+	description={
+		d?.description ??
+		"A case study by Mahmudul Hasan Riaz — how the system was built and what it changed."
+	}
+	ogType="article"
+	ogImage={
+		d?.thumbnailType !== "video" && d?.thumbnail ? d.thumbnail : undefined
+	}
+>
+	{
+		entry && d ? (
+			<section class="glass">
+				{/* JSON-LD is valid in the body. OG tags live in <head> via Layout. */}
+				{jsonLd && (
+					<script
+						type="application/ld+json"
+						set:html={JSON.stringify(jsonLd)}
+					/>
+				)}
+
+				<a class="back-link" href="/case-studies">
+					← All case studies
+				</a>
+				{d.thumbnail && (
+					<div class="detail-hero">
+						{d.thumbnailType === "video" ? (
+							<video
+								src={d.thumbnail}
+								controls
+								autoplay
+								muted
+								loop
+								playsinline
+							/>
+						) : (
+							<img src={d.thumbnail} alt={d.title} />
+						)}
+					</div>
+				)}
+				<h1 class="detail-title">{d.title}</h1>
+				{metaParts.length > 0 && (
+					<p class="detail-meta">{metaParts.join(" · ")}</p>
+				)}
+				{(d.problem || d.fix || d.result) && (
+					<div class="problem-fix-result">
+						{d.problem && (
+							<div class="pfr">
+								<h3>Problem</h3>
+								<p>{d.problem}</p>
+							</div>
+						)}
+						{d.fix && (
+							<div class="pfr">
+								<h3>Fix</h3>
+								<p>{d.fix}</p>
+							</div>
+						)}
+						{d.result && (
+							<div class="pfr">
+								<h3>Result</h3>
+								<p>{d.result}</p>
+							</div>
+						)}
+					</div>
+				)}
+				<div class="detail-body">
+					{Content ? (
+						<Content />
+					) : (
+						bodyParagraphs.map((para) => <p>{para}</p>)
+					)}
+				</div>
+				<DetailMedia gallery={d.gallery ?? []} videos={d.videos ?? []} />
+				{d.projectSlug && (
+					<p style="margin-top:16px;">
+						<a class="btn btn-ghost" href={`/projects/${d.projectSlug}`}>
+							View the project →
+						</a>
 					</p>
-				</>
-			)
-		}
-	</section>
+				)}
+				<DetailCta
+					title="Want a system like this?"
+					text="Tell me what you are building — I will reply within a day."
+					source="case-study-detail"
+				/>
+				<PrevNext
+					prev={
+						prevStudy
+							? {
+									href: `/case-studies/${prevStudy.data.slug}`,
+									title: prevStudy.data.title,
+								}
+							: null
+					}
+					next={
+						nextStudy
+							? {
+									href: `/case-studies/${nextStudy.data.slug}`,
+									title: nextStudy.data.title,
+								}
+							: null
+					}
+				/>
+			</section>
+		) : (
+			<section class="glass">
+				<a class="back-link" href="/case-studies">
+					← All case studies
+				</a>
+				<h1 class="detail-title">Case study not found</h1>
+				<p class="empty-state">This case study is not published yet.</p>
+			</section>
+		)
+	}
 </Layout>

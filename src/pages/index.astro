@@ -1,47 +1,148 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import LatestContent from "../components/LatestContent.astro";
+import Hero from "../components/Hero.astro";
+import Stats from "../components/Stats.astro";
+import Services from "../components/Services.astro";
+import ProjectsCarousel from "../components/ProjectsCarousel";
+import StackGlobe from "../components/StackGlobe";
+import Combined from "../components/Combined.astro";
+import ClientsWall from "../components/ClientsWall.astro";
+import ContactForm from "../components/ContactForm";
+import { getProjects, getCaseStudies, getPosts, formatDate } from "../lib/content";
+import { PROFILE } from "../data/site";
 
-// Skeleton homepage — proves the Astro + Cloudflare + React setup works.
-// Sections are ported from the React preview one by one; nothing here is
-// final content. All real content comes from the DB via the Public Content
-// API (see src/live.config.ts) — never hardcoded.
+// Software Engineer profile — the conversion-focused homepage.
+// Order: Hero → Stats → Services → Projects → Case studies → Stack →
+// Combined "Beyond the code" → Clients → Latest posts → Contact → Footer.
+// (There is no separate Ventures or Releases section here — both live
+// inside Combined as mini-rows/chips, and in full on the Know Me page.)
+const projects = await getProjects();
+const caseStudies = await getCaseStudies();
+const posts = await getPosts();
+
+const carouselProjects = projects.map((p) => ({
+	slug: p.data.slug,
+	title: p.data.title,
+	description: p.data.description ?? "",
+	tags: p.data.tags ?? [],
+	techs: p.data.techs ?? [],
+	thumbnail: p.data.thumbnail ?? null,
+	thumbnailType: p.data.thumbnailType ?? null,
+}));
+
+const personJsonLd = {
+	"@context": "https://schema.org",
+	"@type": "Person",
+	name: PROFILE.name,
+	jobTitle: PROFILE.designations,
+	url: "https://riaz.com.bd/",
+	email: PROFILE.email,
+	address: { "@type": "PostalAddress", addressLocality: "Dhaka", addressCountry: "BD" },
+};
 ---
 
 <Layout
 	title="Mahmudul Hasan Riaz — Software Engineer, Entrepreneur & Nasheed Artist"
 	description="Software Engineer, Entrepreneur and Nasheed Artist from Dhaka, Bangladesh. ERP, e-commerce and SaaS systems for businesses in Bangladesh and beyond."
+	profile="se"
 >
-	<section class="glass">
-		<h1 style="margin:0 0 8px;font-size:28px;line-height:1.25;">
-			Mahmudul Hasan Riaz
-		</h1>
-		<p class="accent" style="margin:0 0 12px;font-weight:600;">Software Engineer</p>
-		<p class="muted" style="margin:0;">
-			Public site, rebuilt in Astro. Sections are being ported from the approved
-			design preview — homepage, Know Me, projects, ventures, releases and posts.
-		</p>
-		<p style="margin:16px 0 0;display:flex;gap:12px;flex-wrap:wrap;">
-			<a class="btn" href="/know-me">Know Me</a>
-			<a class="btn btn-ghost" href="/projects">View my work</a>
-		</p>
+	<script type="application/ld+json" set:html={JSON.stringify(personJsonLd)} />
+
+	<Hero profile="se" />
+
+	<Stats />
+
+	<Services />
+
+	<section class="glass section" id="projects">
+		<div class="section-head">
+			<h2>Projects</h2>
+			<a class="view-all" href="/projects">View all projects →</a>
+		</div>
+		{projects.length === 0 ? (
+			<p class="empty-state">No projects published yet.</p>
+		) : (
+			<ProjectsCarousel projects={carouselProjects} client:load />
+		)}
 	</section>
 
-	<section class="glass" style="margin-top:16px;">
-		<h2 style="margin:0 0 8px;font-size:18px;">Latest</h2>
-		<!-- Static shell + live island (plan §4.3): this block loads live at
-		     request time while the rest of the page stays static. -->
-		<LatestContent server:defer>
-			<p class="muted" slot="fallback" style="margin:0;">Loading latest…</p>
-		</LatestContent>
+	{
+		caseStudies.length > 0 ? (
+			<section class="glass section" id="case-studies">
+				<div class="section-head">
+					<h2>Case studies</h2>
+					<a class="view-all" href="/case-studies">
+						View all case studies →
+					</a>
+				</div>
+				<div class="card-grid">
+					{caseStudies.map((cs) => (
+						<a class="grid-card" href={`/case-studies/${cs.data.slug}`}>
+							<div class="grid-body">
+								<h3>{cs.data.title}</h3>
+								{cs.data.description ? <p>{cs.data.description}</p> : null}
+							</div>
+						</a>
+					))}
+				</div>
+			</section>
+		) : null
+	}
+
+	<StackGlobe client:load />
+
+	<Combined />
+
+	<ClientsWall />
+
+	<section class="glass section" id="posts">
+		<div class="section-head">
+			<h2>Latest posts</h2>
+			<a class="view-all" href="/posts">View all posts →</a>
+		</div>
+		{posts.length === 0 ? (
+			<p class="empty-state">No posts published yet.</p>
+		) : (
+			<div class="card-grid">
+				{posts.slice(0, 3).map((post) => (
+					<a class="grid-card" href={`/posts/${post.data.slug}`}>
+						{post.data.thumbnail ? (
+							<div class="grid-thumb">
+								<img
+									src={post.data.thumbnail}
+									alt={post.data.title}
+									loading="lazy"
+								/>
+							</div>
+						) : null}
+						<div class="grid-body">
+							<h3>{post.data.title}</h3>
+							{post.data.excerpt ? <p>{post.data.excerpt}</p> : null}
+							<p class="grid-meta">{formatDate(post.data.publishedAt)}</p>
+						</div>
+					</a>
+				))}
+			</div>
+		)}
 	</section>
 
-	<section class="glass" style="margin-top:16px;">
-		<h2 style="margin:0 0 8px;font-size:18px;">Scaffold status</h2>
-		<ul class="muted" style="margin:0;padding-left:20px;">
-			<li>Astro 7 + Cloudflare Workers (static assets) — this page is static.</li>
-			<li>Detail routes are on-demand (<code>prerender = false</code>) and fall back to the live loader.</li>
-			<li>Content loads from the read-only Public Content API once it exists — no static fallback.</li>
-		</ul>
+	<section class="glass section" id="contact">
+		<div class="section-head">
+			<h2>Have a project in mind?</h2>
+		</div>
+		<p class="muted" style="margin:0 0 8px;">
+			Tell me what you are building — I reply personally to every message.
+		</p>
+		<div class="contact-info">
+			<div class="info-row">
+				<span>✉️</span>
+				<a href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
+			</div>
+			<div class="info-row">
+				<span>📍</span>
+				<span>{PROFILE.location}</span>
+			</div>
+		</div>
+		<ContactForm source="homepage-contact" client:load />
 	</section>
 </Layout>

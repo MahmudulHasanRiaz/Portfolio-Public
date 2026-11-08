@@ -1,14 +1,51 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { getCaseStudies } from "../../lib/content";
+
+// Static archive — no filters (one case study now); grid of cards with
+// title + one-line hook, linking to the case-study detail page.
+const studies = await getCaseStudies();
 ---
 
-<Layout title="All case studies — Mahmudul Hasan Riaz">
+<Layout
+	title="All case studies — Mahmudul Hasan Riaz"
+	description="Case studies by Mahmudul Hasan Riaz — how the systems were built and what they changed."
+>
 	<section class="glass">
-		<p style="margin:0 0 8px;"><a href="/">← Back to home</a></p>
-		<h1 style="margin:0 0 8px;font-size:24px;">All case studies</h1>
-		<p class="muted" style="margin:0;">
-			No case studies published yet in this skeleton. The archive fills from the
-			Public Content API once the content port lands.
+		<p style="margin:0 0 8px;">
+			<a class="back-link" href="/">← Back to home</a>
 		</p>
+		<h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;">
+			All case studies
+		</h1>
+		{
+			studies.length === 0 ? (
+				<p class="empty-state">No case studies published yet.</p>
+			) : (
+				<div class="card-grid">
+					{studies.map((s) => (
+						<a class="grid-card" href={`/case-studies/${s.data.slug}`}>
+							<div class="grid-thumb">
+								{s.data.thumbnail ? (
+									<img
+										src={s.data.thumbnail}
+										alt={s.data.title}
+										loading="lazy"
+									/>
+								) : (
+									<span class="thumb-fallback" aria-hidden="true">
+										{s.data.title.charAt(0)}
+									</span>
+								)}
+							</div>
+							<div class="grid-body">
+								<h3>{s.data.title}</h3>
+								{s.data.description && <p>{s.data.description}</p>}
+							</div>
+						</a>
+					))}
+				</div>
+			)
+		}
 	</section>
 </Layout>

@@ -1,0 +1,33 @@
+---
+// Previous / next detail navigation. Renders only the sides that exist;
+// an empty span holds the grid column so a lone "Next" still sits right.
+interface Props {
+	prev?: { href: string; title: string } | null;
+	next?: { href: string; title: string } | null;
+}
+
+const { prev = null, next = null } = Astro.props;
+---
+
+{
+	(prev || next) && (
+		<nav class="prev-next" aria-label="Previous and next">
+			{prev ? (
+				<a href={prev.href}>
+					<span class="pn-label">← Previous</span>
+					<span class="pn-title">{prev.title}</span>
+				</a>
+			) : (
+				<span />
+			)}
+			{next ? (
+				<a class="next" href={next.href}>
+					<span class="pn-label">Next →</span>
+					<span class="pn-title">{next.title}</span>
+				</a>
+			) : (
+				<span />
+			)}
+		</nav>
+	)
+}

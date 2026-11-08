@@ -1,14 +1,27 @@
 ---
 import "../styles/glass.css";
-import ThemeToggle from "../components/ThemeToggle";
+import SiteHeader from "../components/SiteHeader";
+import SiteFooter from "../components/SiteFooter.astro";
+import ContactModal from "../components/ContactModal";
 
 interface Props {
 	title?: string;
 	description?: string;
+	/** Which profile this page belongs to — drives the header switcher + footer line. */
+	profile?: "se" | "knowme";
+	/** Open Graph image (absolute URL). Defaults to the speaker photo. */
+	ogImage?: string;
+	/** Open Graph type. Defaults to "website" (detail pages use "article"). */
+	ogType?: string;
 }
 
-const { title = "Mahmudul Hasan Riaz", description = "Software Engineer, Entrepreneur and Nasheed Artist — Dhaka, Bangladesh." } =
-	Astro.props;
+const {
+	title = "Mahmudul Hasan Riaz",
+	description = "Software Engineer, Entrepreneur and Nasheed Artist — Dhaka, Bangladesh.",
+	profile = "se",
+	ogImage = "https://riaz.com.bd/speaker.jpg",
+	ogType = "website",
+} = Astro.props;
 ---
 
 <!doctype html>
@@ -17,6 +30,16 @@ const { title = "Mahmudul Hasan Riaz", description = "Software Engineer, Entrepr
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="description" content={description} />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:type" content={ogType} />
+		<meta property="og:url" content={Astro.url.href} />
+		<meta property="og:site_name" content="Mahmudul Hasan Riaz" />
+		<meta property="og:image" content={ogImage} />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		<meta name="twitter:image" content={ogImage} />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 		<script is:inline>
@@ -36,24 +59,14 @@ const { title = "Mahmudul Hasan Riaz", description = "Software Engineer, Entrepr
 		</script>
 	</head>
 	<body>
-		<div class="page">
-			<header
-				style="display:flex;justify-content:space-between;align-items:center;padding:8px 4px 16px;"
-			>
-				<a href="/" style="text-decoration:none;color:inherit;font-weight:700;">
-					Mahmudul Hasan Riaz
-				</a>
-				<ThemeToggle client:load />
-			</header>
+		{/* Bottom padding removed so the footer attaches flush to the page edge. */}
+		<div class="page" style="padding-bottom:0;">
+			<SiteHeader current={profile} client:load />
 			<main>
 				<slot />
 			</main>
-			<footer class="muted" style="padding:24px 4px 8px;font-size:13px;">
-				<p>
-					Mahmudul Hasan Riaz — Software Engineer · Entrepreneur · Nasheed Artist ·
-					Dhaka, Bangladesh
-				</p>
-			</footer>
+			<SiteFooter profile={profile} />
 		</div>
+		<ContactModal client:load />
 	</body>
 </html>

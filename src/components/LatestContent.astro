@@ -6,7 +6,7 @@ import { getLiveCollection } from "astro:content";
 // while this block loads live at request time. Its response is tagged
 // "home:latest" so a publish event can purge just this block.
 // Empty when the API is unconnected — never fake content.
-const result = await getLiveCollection("posts");
+const result = await getLiveCollection("livePosts");
 const entries = result?.entries ?? [];
 const latest = entries.slice(0, 3);
 

@@ -1,14 +1,189 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import BrandIcon from "../../components/BrandIcon.astro";
+import { WIKIMEDIA_LOGOS } from "../../data/site";
+import { getReleases, formatDate } from "../../lib/content";
+import { youtubeThumb } from "../../lib/youtube";
+
+const releases = await getReleases();
+
+// Filter chips by release type — only types that exist.
+const typeLabels: Record<string, string> = {
+	nasheed: "Nasheed",
+	tilawat: "Tilawat",
+	podcast: "Podcast",
+	lecture: "Lecture",
+	other: "Other",
+};
+const presentTypes = [
+	...new Set(
+		releases.map((r) => (r.data.releaseType ?? "other").toLowerCase()),
+	),
+].sort();
+
+const RELEASE_PLATFORM_ICONS: Record<string, string> = {
+	YouTube: "youtube",
+	Spotify: "spotify",
+	"Apple Music": "applemusic",
+	Deezer: "deezer",
+	Boomplay: `wikimedia:${WIKIMEDIA_LOGOS.boomplay}`,
+	JioSaavn: `wikimedia:${WIKIMEDIA_LOGOS.jiosaavn}`,
+	SoundCloud: "soundcloud",
+};
 ---
 
-<Layout title="All releases — Mahmudul Hasan Riaz">
-	<section class="glass">
-		<p style="margin:0 0 8px;"><a href="/">← Back to home</a></p>
-		<h1 style="margin:0 0 8px;font-size:24px;">All releases</h1>
-		<p class="muted" style="margin:0;">
-			No releases published yet in this skeleton. The archive fills from the
-			Public Content API once the content port lands.
-		</p>
-	</section>
+<Layout
+	title="All releases — Mahmudul Hasan Riaz"
+	description="Nasheed, tilawat, podcast and lecture releases by Mahmudul Hasan Riaz."
+>
+	<p>
+		<a href="/" class="back-link">← Back to home</a>
+	</p>
+	<h1 style="margin:0 0 8px;font-size:26px;line-height:1.25;">All releases</h1>
+
+	{
+		releases.length === 0 ? (
+			<section class="glass section">
+				<p class="empty-state">No releases published yet.</p>
+			</section>
+		) : (
+			<>
+				{presentTypes.length > 0 ? (
+					<div
+						class="chip-row"
+						id="release-filters"
+						style="margin-top:16px;"
+					>
+						<button type="button" class="chip active" data-type="all">
+							All
+						</button>
+						{presentTypes.map((t) => (
+							<button type="button" class="chip" data-type={t}>
+								{typeLabels[t] ?? t}
+							</button>
+						))}
+					</div>
+				) : null}
+				<p class="count-line" id="release-count">
+					Showing {releases.length} of {releases.length} releases
+				</p>
+				<div id="release-list">
+					{releases.map((release) => {
+						const type = (
+							release.data.releaseType ?? "other"
+						).toLowerCase();
+						const hasYouTube = release.data.platforms.some(
+							(p) => p.name === "YouTube",
+						);
+						const thumb = release.data.youtubeId
+							? youtubeThumb(release.data.youtubeId)
+							: null;
+						const shownPlatforms = release.data.platforms.slice(0, 5);
+						const extra =
+							release.data.platforms.length - shownPlatforms.length;
+						return (
+							<a
+								class="release-card"
+								href={`/releases/${release.data.slug}`}
+								data-type={type}
+							>
+								<div class="release-thumb">
+									{thumb ? (
+										<img
+											src={thumb}
+											alt={release.data.title}
+											loading="lazy"
+										/>
+									) : (
+										<span class="audio-mark" aria-hidden="true">
+											<svg
+												width="22"
+												height="22"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												aria-hidden="true"
+											>
+												<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+												<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+												<line
+													x1="12"
+													x2="12"
+													y1="19"
+													y2="22"
+												/>
+											</svg>
+										</span>
+									)}
+								</div>
+								<div class="release-info">
+									<h3>{release.data.title}</h3>
+									<p class="release-meta">
+										{release.data.releaseType ? (
+											<span class="type-tag">
+												{release.data.releaseType}
+											</span>
+										) : null}
+										{release.data.releaseType &&
+										release.data.publishedAt
+											? " · "
+											: null}
+										{formatDate(release.data.publishedAt)}
+									</p>
+									{!hasYouTube ? (
+										<span class="audio-badge">
+											Audio only — not on YouTube
+										</span>
+									) : null}
+								</div>
+								<div class="release-platforms">
+									{shownPlatforms.map((p) => {
+										const icon =
+											RELEASE_PLATFORM_ICONS[p.name];
+										return icon ? (
+											<BrandIcon
+												icon={icon}
+												name={p.name}
+												size={20}
+											/>
+										) : null;
+									})}
+									{extra > 0 ? (
+										<span class="plat-more">+{extra}</span>
+									) : null}
+								</div>
+							</a>
+						);
+					})}
+				</div>
+			</>
+		)
+	}
 </Layout>
+
+<script is:inline>
+	// Client-side type filter (no framework).
+	const chips = document.querySelectorAll("#release-filters .chip");
+	const cards = document.querySelectorAll("#release-list .release-card");
+	const count = document.getElementById("release-count");
+	const total = cards.length;
+	chips.forEach((chip) => {
+		chip.addEventListener("click", () => {
+			chips.forEach((c) => c.classList.remove("active"));
+			chip.classList.add("active");
+			const type = chip.getAttribute("data-type");
+			let shown = 0;
+			cards.forEach((card) => {
+				const show =
+					type === "all" || card.getAttribute("data-type") === type;
+				card.style.display = show ? "" : "none";
+				if (show) shown++;
+			});
+			if (count)
+				count.textContent = `Showing ${shown} of ${total} releases`;
+		});
+	});
+</script>

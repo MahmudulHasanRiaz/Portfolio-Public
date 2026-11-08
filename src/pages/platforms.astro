@@ -1,0 +1,71 @@
+---
+// All platforms — every verified profile, grouped, each a real link so
+// Google and other AIs can see which platforms he has and which is which.
+// Only confirmed URLs are listed — never invented. The Person JSON-LD
+// carries every URL in sameAs.
+import Layout from "../layouts/Layout.astro";
+import BrandIcon from "../components/BrandIcon.astro";
+import { PLATFORMS, PROFILE, type Platform } from "../data/site";
+
+const groups: { key: Platform["group"]; title: string }[] = [
+	{ key: "music", title: "Music & Streaming" },
+	{ key: "social", title: "Social Media" },
+	{ key: "professional", title: "Professional / Code" },
+];
+
+const sameAs = PLATFORMS.flatMap((p) => [p.url]);
+const jsonLd = {
+	"@context": "https://schema.org",
+	"@type": "Person",
+	name: PROFILE.name,
+	sameAs,
+};
+---
+
+<Layout
+	title="All platforms — Mahmudul Hasan Riaz"
+	description="Everywhere to find Mahmudul Hasan Riaz — streaming, social media and professional profiles."
+>
+	<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
+	<section class="glass">
+		<p style="margin:0 0 8px;"><a href="/">← Back to home</a></p>
+		<h1 style="margin:0 0 8px;font-size:24px;">All platforms</h1>
+		<p class="muted" style="margin:0;">
+			{PLATFORMS.length} profiles across {groups.length} groups
+		</p>
+	</section>
+
+	{
+		groups.map((group) => {
+			const rows = PLATFORMS.filter((p) => p.group === group.key);
+			return (
+				<section class="glass section platform-group">
+					<h3>{group.title}</h3>
+					{rows.map((platform) => (
+						<a
+							class="platform-row"
+							href={platform.url}
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							<BrandIcon icon={platform.icon} name={platform.name} size={24} />
+							<span>
+								<span class="plat-name">{platform.name}</span>
+								{(platform.handle ?? platform.note) && (
+									<span
+										class="plat-handle"
+										style="display:block;"
+									>
+										{platform.handle ?? platform.note}
+									</span>
+								)}
+							</span>
+							<span class="plat-arrow">→</span>
+						</a>
+					))}
+				</section>
+			);
+		})
+	}
+</Layout>

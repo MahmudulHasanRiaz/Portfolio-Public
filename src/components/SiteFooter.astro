@@ -1,0 +1,55 @@
+---
+// Site footer — flush to the bottom of the page (.site-footer has square
+// bottom corners and no bottom margin; the Layout removes the page
+// column's bottom padding). Only the 5 primary platforms here — every
+// platform lives on /platforms instead. NO Spotify in the primaries.
+import BrandIcon from "./BrandIcon.astro";
+import { FOOTER_PRIMARIES, PROFILE } from "../data/site";
+
+interface Props {
+	profile?: "se" | "knowme";
+}
+
+const { profile = "se" } = Astro.props;
+
+const sub =
+	profile === "knowme"
+		? "Software Engineer · Entrepreneur · Nasheed Artist · Hafiz-Alem · Public Figure — Dhaka, Bangladesh"
+		: "Software Engineer · Entrepreneur · Nasheed Artist — Dhaka, Bangladesh";
+---
+
+<footer class="site-footer">
+	<p class="footer-identity">{PROFILE.name}</p>
+	<p class="footer-sub">{sub}</p>
+	<div class="footer-socials">
+		{
+			FOOTER_PRIMARIES.map((platform) => (
+				<a
+					href={platform.url}
+					target="_blank"
+					rel="noopener noreferrer"
+					aria-label={platform.name}
+				>
+					<BrandIcon icon={platform.icon} name={platform.name} size={20} />
+				</a>
+			))
+		}
+	</div>
+	<div class="footer-links" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+		<a href="/platforms">All platforms →</a>
+		<button type="button" class="btn btn-ghost" data-open-contact>
+			Contact me
+		</button>
+	</div>
+</footer>
+
+<script>
+	// Footer "Contact me" opens the shared contact modal (see ContactModal).
+	document
+		.querySelector("[data-open-contact]")
+		?.addEventListener("click", () => {
+			window.dispatchEvent(
+				new CustomEvent("open-contact", { detail: { source: "footer" } }),
+			);
+		});
+</script>

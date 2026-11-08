@@ -1,40 +1,161 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { getLiveEntry } from "astro:content";
+import { getEntry, getLiveEntry, render } from "astro:content";
+import { getPosts, formatDate, readingTimeFromText } from "../../lib/content";
+import { PROFILE } from "../../data/site";
 
 // On-demand detail route — hybrid live-then-static.
-// No static file exists yet for a new/updated slug, so the Worker falls
-// through to the live loader (Public Content API). The entry's cacheHint
-// (tags + lastModified) is applied to this response, so a publish event
-// can purge exactly this page by tag. After the next scheduled rebuild
-// the page becomes a static file and the Worker is not hit at all.
+// Live entry first (Public Content API), then the build-time collection
+// entry. After the next scheduled rebuild the page becomes a static file.
 export const prerender = false;
 
 const { slug } = Astro.params;
-const result = slug ? await getLiveEntry("posts", slug) : undefined;
-const entry = result?.entry;
-if (entry) Astro.cache.set(entry);
+if (!slug) Astro.response.status = 404;
+
+const liveResult = slug ? await getLiveEntry("livePosts", slug).catch(() => undefined) : undefined;
+const liveEntry = liveResult?.entry;
+if (liveEntry) Astro.cache.set(liveEntry);
+const buildEntry = !liveEntry && slug ? await getEntry("posts", slug) : undefined;
+
+const entry = liveEntry ?? buildEntry;
+if (!entry) Astro.response.status = 404;
+
+const data = entry?.data as
+	| {
+			title?: string;
+			description?: string;
+			excerpt?: string;
+			content?: string;
+			tags?: string[];
+			publishedAt?: string;
+			thumbnail?: string;
+			readingTime?: number;
+	  }
+	| undefined;
+
+// Build-time entries render markdown; live entries carry a content string.
+const rendered = buildEntry ? await render(buildEntry) : undefined;
+const Content = rendered?.Content;
+const bodyText = data?.content;
+
+const posts = await getPosts();
+const idx = slug ? posts.findIndex((p) => p.data.slug === slug) : -1;
+const prev = idx > 0 ? posts[idx - 1] : undefined;
+const next = idx >= 0 && idx < posts.length - 1 ? posts[idx + 1] : undefined;
+const related = posts.filter((p) => p.data.slug !== slug).slice(0, 3);
+
+const title = data?.title ?? "Post not published yet";
+const description = data?.excerpt ?? data?.description ?? "A post by Mahmudul Hasan Riaz.";
+const readingTime = data?.readingTime ?? readingTimeFromText(bodyText) ?? undefined;
+const thumb = data?.thumbnail;
+const tags = data?.tags ?? [];
+
+const jsonLd = data
+	? {
+			"@context": "https://schema.org",
+			"@type": "BlogPosting",
+			headline: title,
+			description,
+			author: { "@type": "Person", name: PROFILE.name },
+			datePublished: data.publishedAt,
+			image: thumb ? [thumb] : undefined,
+		}
+	: null;
+const breadcrumb = {
+	"@context": "https://schema.org",
+	"@type": "BreadcrumbList",
+	itemListElement: [
+		{ "@type": "ListItem", position: 1, name: "Home", item: "https://riaz.com.bd/" },
+		{ "@type": "ListItem", position: 2, name: "Posts", item: "https://riaz.com.bd/posts" },
+		{ "@type": "ListItem", position: 3, name: title },
+	],
+};
 ---
 
-<Layout title={entry ? `${entry.data.title} — Mahmudul Hasan Riaz` : `${slug} — Mahmudul Hasan Riaz`}>
-	<section class="glass">
-		<p style="margin:0 0 8px;"><a href="/posts">← All posts</a></p>
-		{
-			entry ? (
-				<>
-					<h1 style="margin:0 0 8px;font-size:24px;">{entry.data.title}</h1>
-					{entry.data.description && <p class="muted">{entry.data.description}</p>}
-					{entry.data.content && <p>{entry.data.content}</p>}
-				</>
-			) : (
-				<>
-					<h1 style="margin:0 0 8px;font-size:24px;">Post: {slug}</h1>
-					<p class="muted" style="margin:0;">
-						This post is not published yet, or the Public Content API is not
-						connected. It will load live here the moment it is published.
-					</p>
-				</>
-			)
-		}
-	</section>
+<Layout title={`${title} — Mahmudul Hasan Riaz`} description={description}>
+	{jsonLd ? (
+		<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+	) : null}
+	<script type="application/ld+json" set:html={JSON.stringify(breadcrumb)} />
+
+	<p>
+		<a href="/posts" class="back-link">← All posts</a>
+	</p>
+
+	{!entry || !data ? (
+		<section class="glass section">
+			<p class="empty-state">This post is not published yet.</p>
+		</section>
+	) : (
+		<article>
+			{thumb ? (
+				<div class="detail-hero">
+					<img src={thumb} alt={title} />
+				</div>
+			) : null}
+			<h1 class="detail-title">{title}</h1>
+			<p class="detail-meta">
+				{formatDate(data.publishedAt)}
+				{readingTime ? ` · ${readingTime} min read` : ""}
+				{tags.length ? ` · ${tags.join(", ")}` : ""}
+			</p>
+
+			<div class="detail-body">
+				{Content ? (
+					<Content />
+				) : bodyText ? (
+					bodyText.split(/\n\s*\n/).map((para) => <p>{para}</p>)
+				) : description ? (
+					<p>{description}</p>
+				) : null}
+			</div>
+
+			<div
+				style="margin-top:24px;padding:16px;border-radius:14px;border:1px solid var(--card-border);background:var(--card);"
+			>
+				<p style="margin:0;font-size:14px;">
+					<strong>{PROFILE.name}</strong> — {PROFILE.designations.join(" · ")}
+				</p>
+				<p style="margin:6px 0 0;font-size:13px;color:var(--ink-dim);">
+					<a href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a> ·{" "}
+					{PROFILE.location}
+				</p>
+			</div>
+
+			{related.length > 0 ? (
+				<section class="section">
+					<h2 style="margin:0 0 12px;font-size:18px;">Related posts</h2>
+					<div class="card-grid">
+						{related.map((r) => (
+							<a class="grid-card" href={`/posts/${r.data.slug}`}>
+								<div class="grid-body">
+									<h3>{r.data.title}</h3>
+									<p class="grid-meta">{formatDate(r.data.publishedAt)}</p>
+								</div>
+							</a>
+						))}
+					</div>
+				</section>
+			) : null}
+
+			<nav class="prev-next" aria-label="Post navigation">
+				{prev ? (
+					<a href={`/posts/${prev.data.slug}`}>
+						<span class="pn-label">← Previous</span>
+						<span class="pn-title">{prev.data.title}</span>
+					</a>
+				) : (
+					<span />
+				)}
+				{next ? (
+					<a class="next" href={`/posts/${next.data.slug}`}>
+						<span class="pn-label">Next →</span>
+						<span class="pn-title">{next.data.title}</span>
+					</a>
+				) : (
+					<span />
+				)}
+			</nav>
+		</article>
+	)}
 </Layout>

@@ -1,0 +1,16 @@
+---
+import { CLIENTS } from "../data/site";
+---
+
+<section class="glass section" id="clients">
+	<div class="section-head">
+		<h2>Clients</h2>
+	</div>
+	<div class="clients-grid">
+		{CLIENTS.map((client) => (
+			<div class="client-cell">
+				<span class="client-wordmark">{client.name}</span>
+			</div>
+		))}
+	</div>
+</section>

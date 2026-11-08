@@ -1,0 +1,97 @@
+---
+import { SERVICES } from "../data/site";
+import BrandIcon from "./BrandIcon.astro";
+---
+
+<section class="glass section" id="services">
+	<div class="section-head">
+		<h2>Services</h2>
+	</div>
+	<div class="services-grid">
+		{SERVICES.map((service) => (
+			<button
+				type="button"
+				class="service-card"
+				style="text-align:left;"
+				data-service={service.name}
+				data-contact-source="services"
+			>
+				<span class="service-icon">
+					{service.icon ? (
+						<BrandIcon icon={service.icon} name={service.name} size={26} />
+					) : service.lucide === "Database" ? (
+						<svg
+							width="24"
+							height="24"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
+							<ellipse cx="12" cy="5" rx="9" ry="3" />
+							<path d="M3 5v14a9 3 0 0 0 18 0V5" />
+							<path d="M3 12a9 3 0 0 0 18 0" />
+						</svg>
+					) : service.lucide === "Code" ? (
+						<svg
+							width="24"
+							height="24"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
+							<polyline points="16 18 22 12 16 6" />
+							<polyline points="8 6 2 12 8 18" />
+						</svg>
+					) : (
+						<svg
+							width="24"
+							height="24"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
+							<polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+							<polyline points="16 7 22 7 22 13" />
+						</svg>
+					)}
+				</span>
+				<span>
+					<h3>{service.name}</h3>
+					<p>{service.description}</p>
+					<span class="service-cue">Contact about this service →</span>
+				</span>
+			</button>
+		))}
+	</div>
+</section>
+
+<script>
+	// Opens the contact modal (ContactModal island listens for "open-contact").
+	// Guarded against double-binding: Hero.astro runs the same script, so an
+	// element already bound by the other instance is skipped.
+	document
+		.querySelectorAll("[data-contact-source]:not([data-contact-bound])")
+		.forEach((el) => {
+			el.setAttribute("data-contact-bound", "");
+			el.addEventListener("click", () => {
+				const target = el as HTMLElement;
+				const detail: { service?: string; source?: string } = {};
+				if (target.dataset.service) detail.service = target.dataset.service;
+				if (target.dataset.contactSource)
+					detail.source = target.dataset.contactSource;
+				window.dispatchEvent(new CustomEvent("open-contact", { detail }));
+			});
+		});
+</script>
