@@ -237,19 +237,45 @@ textarea {
 
 /* ---------- Header ---------- */
 .site-header {
-	position: relative;
+	position: sticky;
+	top: 0;
+	z-index: 40;
+	padding-top: 8px;
+	pointer-events: none;
 }
 
 .header-top {
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
-	padding: 8px 4px 0;
+	height: 32px;
+	padding: 0 4px;
+	overflow: hidden;
+	transition:
+		height 350ms ease,
+		opacity 250ms ease;
+}
+
+.site-header.is-stuck .header-top {
+	height: 0;
+	opacity: 0;
+}
+
+.lang-hint {
+	text-align: center;
+	font-size: 12px;
+	color: var(--ink-dim);
+	margin: 4px 0 0;
+}
+
+.site-header.is-stuck .lang-hint {
+	display: none;
 }
 
 .corner-btn {
 	height: 32px;
 	width: 48px;
+	pointer-events: auto;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -268,14 +294,11 @@ textarea {
 	}
 }
 
-.sticky-pill-wrap {
-	position: sticky;
-	top: 8px;
-	z-index: 40;
+.pill-stack {
+	position: relative;
 	display: flex;
-	justify-content: center;
-	margin-top: 8px;
-	pointer-events: none;
+	flex-direction: column;
+	align-items: center;
 }
 
 .sticky-pill {
@@ -291,15 +314,22 @@ textarea {
 	box-shadow: var(--shadow);
 	backdrop-filter: blur(18px);
 	-webkit-backdrop-filter: blur(18px);
-	transition:
-		box-shadow 350ms ease,
-		background-color 350ms ease;
+	animation: pill-breathe 3s ease-in-out infinite;
 }
 
-.sticky-pill.is-stuck {
-	box-shadow:
-		0 10px 32px rgba(12, 26, 21, 0.14),
-		0 0 0 1px rgba(13, 148, 136, 0.18);
+@keyframes pill-breathe {
+	0%,
+	100% {
+		box-shadow:
+			var(--shadow),
+			0 0 0 1px rgba(13, 148, 136, 0.2);
+	}
+	50% {
+		box-shadow:
+			var(--shadow),
+			0 0 0 1px rgba(13, 148, 136, 0.5),
+			0 0 18px rgba(13, 148, 136, 0.25);
+	}
 }
 
 .sticky-pill .pill-icon {
@@ -337,13 +367,34 @@ textarea {
 }
 
 .header-arcs {
-	position: absolute;
-	left: 0;
-	right: 0;
-	top: 0;
-	height: 64px;
-	pointer-events: none;
+	width: 100%;
+	height: 26px;
 	overflow: visible;
+	pointer-events: none;
+}
+
+.header-arcs .arc-base {
+	fill: none;
+	stroke: var(--accent);
+	stroke-opacity: 0.22;
+	stroke-width: 1;
+}
+
+.header-arcs .arc-flow {
+	fill: none;
+	stroke: var(--accent);
+	stroke-opacity: 0.85;
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-dasharray: 12 98;
+	filter: drop-shadow(0 0 3px var(--accent));
+	animation: arc-flow 4s linear infinite;
+}
+
+@keyframes arc-flow {
+	to {
+		stroke-dashoffset: -110;
+	}
 }
 
 .header-picker {
@@ -353,14 +404,13 @@ textarea {
 	top: calc(100% + 8px);
 	width: 328px;
 	max-width: calc(100vw - 32px);
-	background: var(--card);
+	background: var(--bg);
 	border: 1px solid var(--card-border);
 	border-radius: var(--radius-sm);
 	box-shadow: var(--shadow);
-	backdrop-filter: blur(18px);
-	-webkit-backdrop-filter: blur(18px);
 	padding: 8px;
 	z-index: 50;
+	pointer-events: auto;
 }
 
 .header-picker .picker-row {
@@ -403,19 +453,31 @@ textarea {
 	text-align: center;
 }
 
-/* Stuck (scrolled) header row: one unified full-width row. */
-.stuck-row {
-	position: sticky;
+/* Stuck (scrolled) header: the two corner buttons flank the pill at the
+   same x positions as the top row. The pill itself stays in .pill-stack
+   (it glides up as .header-top collapses). */
+.stuck-corners {
+	position: absolute;
 	top: 8px;
-	z-index: 40;
+	left: 0;
+	right: 0;
 	display: flex;
-	align-items: center;
 	justify-content: space-between;
-	gap: 8px;
+	align-items: flex-start;
+	padding: 0 4px;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 250ms ease;
 }
 
-.stuck-row .corner-btn {
+.site-header.is-stuck .stuck-corners {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.stuck-corners .corner-btn {
 	flex: none;
+	pointer-events: auto;
 }
 
 /* Language button: mobile shows only the target language, desktop EN/BN. */
@@ -497,6 +559,24 @@ textarea {
 	height: 100%;
 	object-fit: cover;
 	border-radius: 0;
+}
+
+/* The rotating-designation badge hangs off the photo's bottom edge —
+   half on the photo, half below it. */
+.hero-badge-anchor {
+	position: absolute;
+	left: 50%;
+	bottom: -16px;
+	transform: translateX(-50%);
+	z-index: 2;
+	display: flex;
+	justify-content: center;
+	pointer-events: none;
+}
+
+.hero-badge-anchor .hero-badge {
+	white-space: nowrap;
+	box-shadow: var(--shadow-soft);
 }
 
 .hero-runlight {
@@ -809,6 +889,7 @@ textarea {
 
 .deck {
 	position: relative;
+	perspective: 1200px;
 }
 
 .deck-card {
@@ -1211,9 +1292,10 @@ textarea {
 
 .globe-stage {
 	position: relative;
-	width: min(340px, 88vw);
-	height: min(340px, 88vw);
+	width: min(400px, 92vw);
+	height: min(400px, 92vw);
 	margin: 0 auto;
+	touch-action: pan-y;
 }
 
 .globe-ball {
@@ -1242,12 +1324,12 @@ textarea {
 	transform: translate(-50%, -50%);
 	display: flex;
 	align-items: center;
-	gap: 5px;
-	padding: 3px 8px;
+	gap: 4px;
+	padding: 2px 7px;
 	border-radius: 999px;
 	background: var(--card);
 	border: 1px solid var(--card-border);
-	font-size: 12px;
+	font-size: 11px;
 	font-weight: 600;
 	white-space: nowrap;
 	cursor: pointer;
@@ -1255,13 +1337,14 @@ textarea {
 }
 
 .globe-tag img {
-	width: 14px;
-	height: 14px;
+	width: 12px;
+	height: 12px;
 	object-fit: contain;
 }
 
 .globe-tag.front {
 	font-weight: 700;
+	border-color: var(--accent);
 	box-shadow: var(--shadow-soft);
 }
 
@@ -1997,7 +2080,9 @@ textarea {
 		scroll-behavior: auto;
 	}
 	.hero-runlight .trace-glow,
-	.hero-badge .badge-cursor {
+	.hero-badge .badge-cursor,
+	.header-arcs .arc-flow,
+	.sticky-pill {
 		animation: none;
 	}
 	* {

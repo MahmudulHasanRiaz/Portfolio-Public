@@ -1,0 +1,3 @@
+# DEV ONLY — block indexing until launch. Remove at launch.
+User-agent: *
+Disallow: /

@@ -125,7 +125,7 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 	);
 
 	const pill = (
-		<div className={`sticky-pill${stuck ? " is-stuck" : ""}`}>
+		<div className="sticky-pill">
 			<button
 				type="button"
 				className="pill-menu-btn"
@@ -182,6 +182,7 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 					<a
 						key={p.id}
 						href={p.href}
+						onClick={() => setPickerOpen(false)}
 						className={`picker-row${active ? " active" : ""}`}
 						role="menuitem"
 						aria-current={active ? "true" : undefined}
@@ -213,7 +214,13 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 				}}
 			/>
 			{NAV_LINKS.map((l) => (
-				<a key={l.label} href={l.href} className="picker-row" role="menuitem">
+				<a
+					key={l.label}
+					href={l.href}
+					onClick={() => setPickerOpen(false)}
+					className="picker-row"
+					role="menuitem"
+				>
 					<span>{l.label}</span>
 				</a>
 			))}
@@ -223,64 +230,49 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 	const arcs = (
 		<svg
 			className="header-arcs"
-			viewBox="0 0 100 64"
+			viewBox="0 0 200 28"
 			preserveAspectRatio="none"
 			aria-hidden="true"
 		>
+			<path className="arc-base" d="M 2 2 Q 60 26 100 26" />
+			<path className="arc-base" d="M 198 2 Q 140 26 100 26" />
 			<path
-				d="M 4 2 Q 28 44 50 48"
-				fill="none"
-				stroke="var(--accent)"
-				strokeOpacity="0.35"
-				strokeWidth="1"
+				className="arc-flow"
+				d="M 2 2 Q 60 26 100 26"
+				pathLength={110}
 			/>
 			<path
-				d="M 96 2 Q 72 44 50 48"
-				fill="none"
-				stroke="var(--accent)"
-				strokeOpacity="0.35"
-				strokeWidth="1"
+				className="arc-flow"
+				d="M 198 2 Q 140 26 100 26"
+				pathLength={110}
 			/>
 		</svg>
 	);
 
 	return (
-		<header className="site-header">
-			{!stuck ? (
-				<>
-					<div className="header-top">
+		<header className={`site-header${stuck ? " is-stuck" : ""}`}>
+			<div className="header-top">
+				{!stuck ? (
+					<>
 						{langBtn}
 						{themeBtn}
-					</div>
-					{langHint ? (
-						<p
-							style={{
-								textAlign: "center",
-								fontSize: 12,
-								color: "var(--ink-dim)",
-								margin: "4px 0 0",
-							}}
-						>
-							Language switching coming soon.
-						</p>
-					) : null}
-					<div className="sticky-pill-wrap">
-						{arcs}
-						{pill}
-						{picker}
-					</div>
-				</>
-			) : (
-				<div className="stuck-row">
+					</>
+				) : null}
+			</div>
+			{langHint ? (
+				<p className="lang-hint">Language switching coming soon.</p>
+			) : null}
+			<div className="pill-stack">
+				{arcs}
+				{pill}
+				{picker}
+			</div>
+			{stuck ? (
+				<div className="stuck-corners">
 					{langBtn}
-					<div style={{ position: "relative", display: "flex", justifyContent: "center", flex: 1, minWidth: 0 }}>
-						{arcs}
-						{pill}
-						{picker}
-					</div>
 					{themeBtn}
 				</div>
-			)}
+			) : null}
 		</header>
 	);
 }

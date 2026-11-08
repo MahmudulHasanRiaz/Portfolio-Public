@@ -21,12 +21,15 @@ interface Props {
 }
 
 const SWIPE_THRESHOLD = 28;
-const FLIP_MS = 220;
+const FLIP_OUT_MS = 240;
+const FLIP_IN_MS = 280;
 const PEEK_COUNT = 3;
 
 export default function ProjectsCarousel({ projects }: Props) {
 	const [index, setIndex] = useState(0);
 	const [leaving, setLeaving] = useState<1 | -1 | null>(null);
+	const [entering, setEntering] = useState(false);
+	const [enterDir, setEnterDir] = useState<1 | -1>(1);
 	const [reducedMotion, setReducedMotion] = useState(false);
 	const timer = useRef<number | null>(null);
 	const dragStart = useRef<{ x: number; y: number } | null>(null);
@@ -52,20 +55,29 @@ export default function ProjectsCarousel({ projects }: Props) {
 
 	const moveTo = useCallback(
 		(target: number, dir: 1 | -1) => {
-			if (count <= 1 || leaving !== null) return;
+			if (count <= 1 || leaving !== null || entering) return;
 			const next = (target + count) % count;
 			if (next === index) return;
 			if (reducedMotion) {
 				setIndex(next);
 				return;
 			}
+			// Page-flip, two beats: the outgoing card turns away
+			// (rotateY toward the spine), then the incoming card turns in
+			// from the other side. A plain slide+fade is not a page turn.
+			setEnterDir(dir);
 			setLeaving(dir);
 			timer.current = window.setTimeout(() => {
 				setIndex(next);
 				setLeaving(null);
-			}, FLIP_MS);
+				setEntering(true);
+				timer.current = window.setTimeout(
+					() => setEntering(false),
+					FLIP_IN_MS,
+				);
+			}, FLIP_OUT_MS);
 		},
-		[count, index, leaving, reducedMotion],
+		[count, index, leaving, entering, reducedMotion],
 	);
 
 	const go = useCallback(
@@ -171,9 +183,16 @@ export default function ProjectsCarousel({ projects }: Props) {
 							className="deck-peek"
 							aria-hidden="true"
 							style={{
-								transform: `translate(${depth * 7}px, ${depth * 9}px) rotate(${depth * 1.2}deg)`,
+								transform: `translate(${depth * 8}px, ${depth * 12}px) rotate(${depth * 1.5}deg)`,
 								opacity: 1 - depth * 0.28,
 								zIndex: PEEK_COUNT - depth,
+								...(peek.thumbnail
+									? {
+											backgroundImage: `url(${peek.thumbnail})`,
+											backgroundSize: "cover",
+											backgroundPosition: "center",
+										}
+									: { background: "var(--accent-wash)" }),
 							}}
 						/>
 					);
@@ -183,13 +202,19 @@ export default function ProjectsCarousel({ projects }: Props) {
 					href={`/projects/${current.slug}`}
 					style={{
 						zIndex: 10,
-						transition: `transform ${FLIP_MS}ms ease, opacity ${FLIP_MS}ms ease`,
+						transformStyle: "preserve-3d",
+						transition: `transform ${leaving !== null ? FLIP_OUT_MS : FLIP_IN_MS}ms ease, opacity ${leaving !== null ? FLIP_OUT_MS : FLIP_IN_MS}ms ease`,
 						...(leaving !== null
 							? {
-									transform: `translateX(${leaving * 48}px) rotate(${leaving * 5}deg)`,
+									transform: `perspective(1200px) rotateY(${leaving * -70}deg) translateX(${leaving * -40}px)`,
 									opacity: 0,
 								}
-							: {}),
+							: entering
+								? {
+										transform: `perspective(1200px) rotateY(${enterDir * 70}deg) translateX(${enterDir * 40}px)`,
+										opacity: 0,
+									}
+								: {}),
 					}}
 				>
 					<div className="deck-thumb">

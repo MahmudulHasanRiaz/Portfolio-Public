@@ -46,9 +46,11 @@ const isKnowMe = profile === "knowme";
 				/>
 			</svg>
 		</div>
+		<div class="hero-badge-anchor">
+			<HeroDesignation profile={profile} client:load />
+		</div>
 	</div>
 	<div>
-		<HeroDesignation profile={profile} client:load />
 		<h1 class="hero-name">{PROFILE.name}</h1>
 		{
 			isKnowMe ? (

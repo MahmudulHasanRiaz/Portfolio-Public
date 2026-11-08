@@ -76,6 +76,8 @@ const LINE_PAIRS: Array<[number, number]> = [
 const CLUSTER_CENTER: Vec = { x: 0, y: 0, z: 0.62 };
 const CLUSTER_RADIUS = 0.38;
 const LANDING_MS = 1600;
+const MAX_VEL = 0.12;
+const INERTIA_DECAY = 0.9;
 
 const DUST_SPOTS = [
 	{ left: "12%", top: "20%" },
@@ -133,6 +135,7 @@ export default function StackGlobe() {
 	const snapAfterInertiaRef = useRef(false);
 	const draggingRef = useRef(false);
 	const movedRef = useRef(false);
+	const downIndexRef = useRef<number | null>(null);
 	const lastPointerRef = useRef({ x: 0, y: 0 });
 	const frontIdxRef = useRef(0);
 	const frontNameRef = useRef(STACK[0].name);
@@ -180,7 +183,16 @@ export default function StackGlobe() {
 					-1.2,
 					Math.min(1.2, rot.x + deltaX * 0.14),
 				);
-				if (Math.abs(deltaY) < 0.01 && Math.abs(deltaX) < 0.01) {
+				// rot.x is clamped to ±1.2: if the target needs more tilt
+				// than the clamp allows, the X axis can never converge —
+				// treat "pressed against the clamp" as done for X.
+				const atLimitX =
+					(rot.x <= -1.2 && deltaX < 0) ||
+					(rot.x >= 1.2 && deltaX > 0);
+				if (
+					Math.abs(deltaY) < 0.01 &&
+					(Math.abs(deltaX) < 0.01 || atLimitX)
+				) {
 					flyToRef.current = null;
 					if (snapPendingRef.current) {
 						snapPendingRef.current = false;
@@ -189,12 +201,22 @@ export default function StackGlobe() {
 					}
 				}
 			} else if (!draggingRef.current) {
-				// Inertia decay after a drag; then magnetic snap.
-				if (Math.abs(vel.x) > 0.0004 || Math.abs(vel.y) > 0.0004) {
+				// While a detail card is open the globe holds still:
+				// leftover velocity decays fast and is never applied.
+				if (selectedRef.current !== null) {
+					vel.x *= 0.5;
+					vel.y *= 0.5;
+					if (Math.abs(vel.x) < 0.0004) vel.x = 0;
+					if (Math.abs(vel.y) < 0.0004) vel.y = 0;
+				} else if (
+					Math.abs(vel.x) > 0.0004 ||
+					Math.abs(vel.y) > 0.0004
+				) {
+					// Inertia decay after a drag; then magnetic snap.
 					rot.x = Math.max(-1.2, Math.min(1.2, rot.x + vel.x));
 					rot.y += vel.y;
-					vel.x *= 0.94;
-					vel.y *= 0.94;
+					vel.x *= INERTIA_DECAY;
+					vel.y *= INERTIA_DECAY;
 				} else if (snapAfterInertiaRef.current) {
 					snapAfterInertiaRef.current = false;
 					vel.x = 0;
@@ -267,13 +289,13 @@ export default function StackGlobe() {
 				if (el) {
 					const depth = (p.z + 1) / 2;
 					const dimmed = filterActive && !matchingSet.has(i);
-					el.style.left = `${50 + p.x * 42}%`;
-					el.style.top = `${50 + p.y * 42}%`;
+					el.style.left = `${50 + p.x * 38}%`;
+					el.style.top = `${50 + p.y * 38}%`;
 					el.style.transform = `translate(-50%, -50%) scale(${
-						0.72 + 0.28 * depth
+						0.6 + 0.4 * depth
 					})`;
 					el.style.zIndex = String(Math.round(depth * 100));
-					el.style.opacity = dimmed ? "" : String(0.5 + 0.5 * depth);
+					el.style.opacity = dimmed ? "" : String(0.3 + 0.7 * depth);
 					el.classList.toggle("front", i === frontIdx);
 					el.classList.toggle("dimmed", dimmed);
 				}
@@ -292,10 +314,10 @@ export default function StackGlobe() {
 				const [a, b] = LINE_PAIRS[k];
 				const pa = cur[a];
 				const pb = cur[b];
-				line.setAttribute("x1", String(50 + pa.x * 42));
-				line.setAttribute("y1", String(50 + pa.y * 42));
-				line.setAttribute("x2", String(50 + pb.x * 42));
-				line.setAttribute("y2", String(50 + pb.y * 42));
+				line.setAttribute("x1", String(50 + pa.x * 38));
+				line.setAttribute("y1", String(50 + pa.y * 38));
+				line.setAttribute("x2", String(50 + pb.x * 38));
+				line.setAttribute("y2", String(50 + pb.y * 38));
 			}
 
 			raf = requestAnimationFrame(loop);
@@ -348,6 +370,7 @@ export default function StackGlobe() {
 	};
 
 	const spin = () => {
+		if (draggingRef.current) return;
 		if (selectedRef.current) {
 			selectedRef.current = null;
 			setSelected(null);
@@ -355,7 +378,12 @@ export default function StackGlobe() {
 		flyToRef.current = null;
 		snapPendingRef.current = false;
 		snapAfterInertiaRef.current = false;
-		velRef.current.y += 0.22;
+		// One energetic turn that settles back into the slow auto-rotate.
+		// Capped: repeat taps cannot stack velocity into a runaway spin.
+		velRef.current.y = Math.max(
+			-MAX_VEL,
+			Math.min(MAX_VEL, velRef.current.y + 0.12),
+		);
 		resumeAtRef.current = 0;
 	};
 
@@ -363,6 +391,15 @@ export default function StackGlobe() {
 		if (reducedRef.current) return;
 		draggingRef.current = true;
 		movedRef.current = false;
+		// Remember which tag (if any) the pointer went down on. A rotating
+		// tag can move between pointer-down and click, so the tap target is
+		// taken from here, not from the click event.
+		const target = (
+			e.target as HTMLElement | null
+		)?.closest?.("[data-tech]") as HTMLElement | null;
+		downIndexRef.current = target
+			? Number(target.getAttribute("data-tech"))
+			: null;
 		lastPointerRef.current = { x: e.clientX, y: e.clientY };
 		velRef.current = { x: 0, y: 0 };
 		flyToRef.current = null;
@@ -381,15 +418,41 @@ export default function StackGlobe() {
 			Math.min(1.2, rotRef.current.x + dy * 0.005),
 		);
 		velRef.current = {
-			x: velRef.current.x * 0.7 + dy * 0.005 * 0.3,
-			y: velRef.current.y * 0.7 + dx * 0.005 * 0.3,
+			x: Math.max(
+				-MAX_VEL,
+				Math.min(
+					MAX_VEL,
+					velRef.current.x * 0.7 + dy * 0.005 * 0.3,
+				),
+			),
+			y: Math.max(
+				-MAX_VEL,
+				Math.min(
+					MAX_VEL,
+					velRef.current.y * 0.7 + dx * 0.005 * 0.3,
+				),
+			),
 		};
 	};
 
 	const onPointerUp = () => {
 		if (!draggingRef.current) return;
 		draggingRef.current = false;
+		// A tap (no real movement) on a tag opens its card. Pointer-up is
+		// used instead of click: a rotating tag can drift between
+		// pointer-down and click, so the click lands on the wrong tag.
+		if (!movedRef.current && downIndexRef.current !== null) {
+			handleTap(downIndexRef.current);
+		}
+		downIndexRef.current = null;
 		snapAfterInertiaRef.current = true;
+	};
+
+	const onPointerCancel = () => {
+		// Interrupted gesture (browser took over for scroll, etc.): end the
+		// drag without opening anything.
+		draggingRef.current = false;
+		downIndexRef.current = null;
 	};
 
 	return (
@@ -404,7 +467,7 @@ export default function StackGlobe() {
 					onPointerDown={onPointerDown}
 					onPointerMove={onPointerMove}
 					onPointerUp={onPointerUp}
-					onPointerCancel={onPointerUp}
+					onPointerCancel={onPointerCancel}
 					style={{ touchAction: "pan-y", cursor: "grab" }}
 				>
 					<div className="globe-ball" aria-hidden="true" />
@@ -470,7 +533,13 @@ export default function StackGlobe() {
 								tagRefs.current[i] = el;
 							}}
 							className="globe-tag"
-							onClick={() => handleTap(i)}
+							data-tech={i}
+							onClick={(e) => {
+								// Pointer taps open via pointer-up (see
+								// onPointerUp); a click with detail 0 is
+								// keyboard activation.
+								if (e.detail === 0) handleTap(i);
+							}}
 							aria-label={`${tech.name} — ${tech.category}`}
 						>
 							<TechLogo tech={tech} />

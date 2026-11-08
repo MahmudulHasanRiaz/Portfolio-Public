@@ -19,9 +19,11 @@ const {
 	title = "Mahmudul Hasan Riaz",
 	description = "Software Engineer, Entrepreneur and Nasheed Artist — Dhaka, Bangladesh.",
 	profile = "se",
-	ogImage = "https://riaz.com.bd/speaker.jpg",
+	ogImage,
 	ogType = "website",
 } = Astro.props;
+
+const ogImageUrl = ogImage ?? `${Astro.url.origin}/speaker.jpg`;
 ---
 
 <!doctype html>
@@ -30,16 +32,18 @@ const {
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="description" content={description} />
+		<!-- DEV ONLY: keep the in-progress site out of search indexes until launch. Remove at launch. -->
+		<meta name="robots" content="noindex, nofollow" />
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
 		<meta property="og:type" content={ogType} />
 		<meta property="og:url" content={Astro.url.href} />
 		<meta property="og:site_name" content="Mahmudul Hasan Riaz" />
-		<meta property="og:image" content={ogImage} />
+		<meta property="og:image" content={ogImageUrl} />
 		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:title" content={title} />
 		<meta name="twitter:description" content={description} />
-		<meta name="twitter:image" content={ogImage} />
+		<meta name="twitter:image" content={ogImageUrl} />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 		<script is:inline>
