@@ -1,10 +1,21 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { getEntry, getLiveEntry, render } from "astro:content";
+import { getEntry, getLiveEntry } from "astro:content";
 import DetailCta from "../../components/DetailCta.astro";
 import DetailMedia from "../../components/DetailMedia.astro";
+import DetailVideoFacade from "../../components/DetailVideoFacade.astro";
+import KeyStrip from "../../components/KeyStrip.astro";
+import MarkdownBody from "../../components/MarkdownBody.astro";
 import PrevNext from "../../components/PrevNext.astro";
-import { formatDate, getCaseStudies } from "../../lib/content";
+import TechChips from "../../components/TechChips.astro";
+import { formatDate, getCaseStudies, getProjects } from "../../lib/content";
+import {
+	SITE_URL,
+	absUrl,
+	dedupeBlocks,
+	mergeDetail,
+	parseBodyBlocks,
+} from "../../lib/detail";
 
 // On-demand detail route — hybrid live-then-static: the live collection
 // first (instant when a case study is newly published), then the build-time
@@ -17,17 +28,14 @@ const liveResult = slug
 	: undefined;
 const liveEntry = liveResult?.entry;
 if (liveEntry) Astro.cache.set(liveEntry);
-const buildEntry =
-	!liveEntry && slug
-		? await getEntry("caseStudies", slug)
-		: undefined;
+const buildEntry = slug ? await getEntry("caseStudies", slug) : undefined;
 const entry = liveEntry ?? buildEntry;
 if (!entry) Astro.response.status = 404;
 
-// Build-time entries render their markdown body; live entries carry the
-// body as a plain `content` string, rendered as paragraphs below.
-const rendered = buildEntry ? await render(buildEntry) : undefined;
-const Content = rendered?.Content;
+interface Metric {
+	value: string;
+	label: string;
+}
 
 interface CaseStudyData {
 	title: string;
@@ -37,42 +45,70 @@ interface CaseStudyData {
 	publishedAt?: string;
 	thumbnail?: string;
 	thumbnailType?: "image" | "video";
+	thumbnailVideoUrl?: string;
 	problem?: string;
 	fix?: string;
 	result?: string;
+	fixPoints?: string[];
+	metrics?: Metric[];
+	research?: string;
+	techs?: string[];
 	projectSlug?: string;
 	gallery?: string[];
 	videos?: { url: string; title?: string }[];
 }
 
-const d = entry?.data as unknown as CaseStudyData | undefined;
-const liveParagraphs =
-	liveEntry && d?.content
-		? d.content
-				.split(/\n\s*\n/)
-				.map((s) => s.trim())
-				.filter(Boolean)
-		: [];
-const bodyParagraphs =
-	liveParagraphs.length > 0
-		? liveParagraphs
-		: !Content && d?.description
-			? [d.description]
-			: [];
+const liveData = liveEntry?.data as unknown as
+	| Record<string, unknown>
+	| undefined;
+const buildData = buildEntry?.data as unknown as
+	| Record<string, unknown>
+	| undefined;
+const d = mergeDetail(buildData, liveData) as unknown as
+	| CaseStudyData
+	| undefined;
 
-const metaParts: string[] = [];
-if (d?.tags?.length) metaParts.push(d.tags.join(", "));
-const dateText = formatDate(d?.publishedAt);
-if (dateText) metaParts.push(dateText);
+// The story body, rendered ONCE: the live content string, else the
+// build-time markdown body. Any paragraph that merely restates the
+// Problem / Fix / Result fields (the live duplication bug — the same
+// three paragraphs rendered as cards AND as plain text) is dropped,
+// so each section appears exactly once. What survives is the hook lede.
+const rawBody = d?.content ?? buildEntry?.body ?? "";
+const ledeBlocks = dedupeBlocks(parseBodyBlocks(rawBody), [
+	d?.problem,
+	d?.fix,
+	d?.result,
+	d?.description,
+]);
+
+// "Built with" techs: the case study's own list when present, else the
+// linked project's stack (real data, never invented).
+let techs = d?.techs ?? [];
+if (techs.length === 0 && d?.projectSlug) {
+	const projects = await getProjects();
+	const linked = projects.find((p) => p.data.slug === d.projectSlug);
+	if (linked?.data.techs?.length) techs = linked.data.techs;
+}
+
+const isVideoThumb = d?.thumbnailType === "video";
+const videoSrc = isVideoThumb
+	? (d?.thumbnailVideoUrl ?? d?.thumbnail)
+	: undefined;
+const videoPoster =
+	isVideoThumb && d?.thumbnailVideoUrl ? (d?.thumbnail ?? null) : null;
+const coverImage = !isVideoThumb && d?.thumbnail ? d.thumbnail : videoPoster;
 
 // Prev/next by date order (newest first): prev = older, next = newer.
 const allStudies = await getCaseStudies();
 const currentIndex = allStudies.findIndex((s) => s.data.slug === slug);
 const prevStudy = currentIndex >= 0 ? allStudies[currentIndex + 1] : undefined;
 const nextStudy = currentIndex > 0 ? allStudies[currentIndex - 1] : undefined;
+const thumbOf = (s: (typeof allStudies)[number] | undefined) =>
+	s?.data.thumbnailType !== "video" && s?.data.thumbnail
+		? s.data.thumbnail
+		: null;
 
-const siteUrl = "https://riaz.com.bd";
-const pageUrl = `${siteUrl}/case-studies/${slug}`;
+const pageUrl = `${SITE_URL}/case-studies/${slug}`;
 const jsonLd = d
 	? {
 			"@context": "https://schema.org",
@@ -84,9 +120,10 @@ const jsonLd = d
 					author: {
 						"@type": "Person",
 						name: "Mahmudul Hasan Riaz",
-						url: siteUrl,
+						url: SITE_URL,
 					},
 					mainEntityOfPage: pageUrl,
+					...(coverImage ? { image: absUrl(coverImage) } : {}),
 				},
 				{
 					"@type": "BreadcrumbList",
@@ -95,13 +132,13 @@ const jsonLd = d
 							"@type": "ListItem",
 							position: 1,
 							name: "Home",
-							item: siteUrl,
+							item: SITE_URL,
 						},
 						{
 							"@type": "ListItem",
 							position: 2,
 							name: "Case Studies",
-							item: `${siteUrl}/case-studies`,
+							item: `${SITE_URL}/case-studies`,
 						},
 						{
 							"@type": "ListItem",
@@ -122,19 +159,14 @@ const jsonLd = d
 			? `${d.title} — Mahmudul Hasan Riaz`
 			: "Case study not found — Mahmudul Hasan Riaz"
 	}
-	description={
-		d?.description ??
-		"A case study by Mahmudul Hasan Riaz — how the system was built and what it changed."
-	}
+	description={d?.description}
 	ogType="article"
-	ogImage={
-		d?.thumbnailType !== "video" && d?.thumbnail ? d.thumbnail : undefined
-	}
+	ogImage={coverImage ? absUrl(coverImage) : null}
+	canonical={pageUrl}
 >
 	{
 		entry && d ? (
 			<section class="glass">
-				{/* JSON-LD is valid in the body. OG tags live in <head> via Layout. */}
 				{jsonLd && (
 					<script
 						type="application/ld+json"
@@ -145,63 +177,108 @@ const jsonLd = d
 				<a class="back-link" href="/case-studies">
 					← All case studies
 				</a>
-				{d.thumbnail && (
-					<div class="detail-hero">
-						{d.thumbnailType === "video" ? (
-							<video
-								src={d.thumbnail}
-								controls
-								autoplay
-								muted
-								loop
-								playsinline
+				{d.thumbnail &&
+					(isVideoThumb && videoSrc ? (
+						<div class="detail-hero">
+							<DetailVideoFacade
+								src={videoSrc}
+								poster={videoPoster}
+								title={d.title}
 							/>
-						) : (
+						</div>
+					) : (
+						<div class="detail-hero">
 							<img src={d.thumbnail} alt={d.title} />
-						)}
-					</div>
-				)}
+						</div>
+					))}
 				<h1 class="detail-title">{d.title}</h1>
-				{metaParts.length > 0 && (
-					<p class="detail-meta">{metaParts.join(" · ")}</p>
-				)}
+				{d.tags?.length ? (
+					<div class="tag-row" style="margin-top:12px;">
+						{d.tags.map((tag) => (
+							<span class="tag">{tag}</span>
+						))}
+					</div>
+				) : null}
+				<KeyStrip
+					items={[
+						{
+							label: "Published",
+							value: formatDate(d.publishedAt),
+						},
+						d.tags?.length
+							? { label: "Category", value: d.tags.join(", ") }
+							: null,
+						d.projectSlug
+							? {
+									label: "Project",
+									value: "View the project",
+									href: `/projects/${d.projectSlug}`,
+								}
+							: null,
+					]}
+				/>
+				{ledeBlocks.length > 0 ? (
+					<MarkdownBody blocks={ledeBlocks} />
+				) : null}
 				{(d.problem || d.fix || d.result) && (
 					<div class="problem-fix-result">
 						{d.problem && (
 							<div class="pfr">
-								<h3>Problem</h3>
+								<h3>The problem</h3>
 								<p>{d.problem}</p>
 							</div>
 						)}
 						{d.fix && (
 							<div class="pfr">
-								<h3>Fix</h3>
+								<h3>The fix</h3>
 								<p>{d.fix}</p>
+								{d.fixPoints?.length ? (
+									<ul class="fix-points">
+										{d.fixPoints.map((point) => (
+											<li>{point}</li>
+										))}
+									</ul>
+								) : null}
 							</div>
 						)}
 						{d.result && (
 							<div class="pfr">
-								<h3>Result</h3>
+								<h3>The result</h3>
 								<p>{d.result}</p>
 							</div>
 						)}
 					</div>
 				)}
-				<div class="detail-body">
-					{Content ? (
-						<Content />
-					) : (
-						bodyParagraphs.map((para) => <p>{para}</p>)
-					)}
-				</div>
-				<DetailMedia gallery={d.gallery ?? []} videos={d.videos ?? []} />
+				{d.metrics?.length ? (
+					<div class="metrics-band" aria-label="Results">
+						{d.metrics.map((metric) => (
+							<div class="metric-card">
+								<strong>{metric.value}</strong>
+								<span>{metric.label}</span>
+							</div>
+						))}
+					</div>
+				) : null}
+				{d.research ? (
+					<section class="detail-section" aria-label="Research">
+						<h2 class="detail-h2">What the research showed</h2>
+						<MarkdownBody text={d.research} />
+					</section>
+				) : null}
+				<TechChips techs={techs} />
+				<DetailMedia
+					gallery={d.gallery ?? []}
+					videos={d.videos ?? []}
+					exclude={d.thumbnail}
+					altBase={`${d.title} gallery image`}
+				/>
 				<DetailCta
 					title="Facing a similar problem?"
 					text="Tell me about your project — or first see the system this case study is about."
 					buttonLabel="Discuss a similar project"
 					linkHref={
 						d.projectSlug
-							? `/projects/${d.projectSlug}`
+							? `/projects/${d.projectSlug}?from=case-study:${slug}`
 							: undefined
 					}
 					linkLabel={d.projectSlug ? "View the project" : undefined}
@@ -213,6 +290,7 @@ const jsonLd = d
 							? {
 									href: `/case-studies/${prevStudy.data.slug}`,
 									title: prevStudy.data.title,
+									thumb: thumbOf(prevStudy),
 								}
 							: null
 					}
@@ -221,6 +299,7 @@ const jsonLd = d
 							? {
 									href: `/case-studies/${nextStudy.data.slug}`,
 									title: nextStudy.data.title,
+									thumb: thumbOf(nextStudy),
 								}
 							: null
 					}

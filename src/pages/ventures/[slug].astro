@@ -1,8 +1,21 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import DetailCta from "../../components/DetailCta.astro";
 import DetailMedia from "../../components/DetailMedia.astro";
-import { getEntry, getLiveEntry, render } from "astro:content";
+import DetailVideoFacade from "../../components/DetailVideoFacade.astro";
+import KeyStrip from "../../components/KeyStrip.astro";
+import MarkdownBody from "../../components/MarkdownBody.astro";
+import PrevNext from "../../components/PrevNext.astro";
+import { getEntry, getLiveEntry } from "astro:content";
 import { getVentures, formatDate } from "../../lib/content";
+import {
+	SITE_URL,
+	absUrl,
+	dedupeBlocks,
+	isRealUrl,
+	mergeDetail,
+	parseBodyBlocks,
+} from "../../lib/detail";
 import { PROFILE } from "../../data/site";
 
 // On-demand detail route — hybrid live-then-static.
@@ -18,171 +31,245 @@ const liveResult = slug
 	: undefined;
 const liveEntry = liveResult?.entry;
 if (liveEntry) Astro.cache.set(liveEntry);
-const buildEntry =
-	!liveEntry && slug
-		? await getEntry("ventures", slug)
-		: undefined;
-
+const buildEntry = slug ? await getEntry("ventures", slug) : undefined;
 const entry = liveEntry ?? buildEntry;
 if (!entry) Astro.response.status = 404;
 
-const data = entry?.data as
-	| {
-			title?: string;
-			description?: string;
-			content?: string;
-			tags?: string[];
-			publishedAt?: string;
-			thumbnail?: string;
-			thumbnailType?: "image" | "video";
-			website?: string | null;
-			gallery?: string[];
-			videos?: Array<{ url: string; title?: string }>;
-	  }
+interface Metric {
+	value: string;
+	label: string;
+}
+
+interface VentureData {
+	title?: string;
+	description?: string;
+	content?: string;
+	tags?: string[];
+	publishedAt?: string;
+	thumbnail?: string;
+	thumbnailType?: "image" | "video";
+	thumbnailVideoUrl?: string;
+	website?: string | null;
+	gallery?: string[];
+	videos?: Array<{ url: string; title?: string }>;
+	stage?: string;
+	location?: string;
+	teamSize?: string;
+	foundedDate?: string;
+	metrics?: Metric[];
+}
+
+const liveData = liveEntry?.data as unknown as
+	| Record<string, unknown>
+	| undefined;
+const buildData = buildEntry?.data as unknown as
+	| Record<string, unknown>
+	| undefined;
+const data = mergeDetail(buildData, liveData) as unknown as
+	| VentureData
 	| undefined;
 
-// Build-time entries render markdown; live entries carry a content string.
-const rendered = buildEntry ? await render(buildEntry) : undefined;
-const Content = rendered?.Content;
-const bodyText = data?.content;
+// The body is the long description — never the one-liner repeated: any
+// paragraph that restates the description is dropped (the live
+// duplication bug — the same line rendered as subtitle AND as body).
+const rawBody = data?.content ?? buildEntry?.body ?? "";
+const bodyBlocks = dedupeBlocks(parseBodyBlocks(rawBody), [
+	data?.description,
+]);
 
 const ventures = await getVentures();
 const idx = slug ? ventures.findIndex((v) => v.data.slug === slug) : -1;
 const prev = idx > 0 ? ventures[idx - 1] : undefined;
 const next =
 	idx >= 0 && idx < ventures.length - 1 ? ventures[idx + 1] : undefined;
+const thumbOf = (v: (typeof ventures)[number] | undefined) =>
+	v?.data.thumbnailType !== "video" && v?.data.thumbnail
+		? v.data.thumbnail
+		: null;
 
 const title = data?.title ?? "Venture not published yet";
-const description =
-	data?.description ?? "A venture by Mahmudul Hasan Riaz.";
+const description = data?.description;
 const tags = data?.tags ?? [];
-const gallery = data?.gallery ?? [];
-const videos = data?.videos ?? [];
-const website = data?.website ?? null;
+const website = isRealUrl(data?.website) ? data.website : null;
 
+const isVideoThumb = data?.thumbnailType === "video";
+const videoSrc = isVideoThumb
+	? (data?.thumbnailVideoUrl ?? data?.thumbnail)
+	: undefined;
+const videoPoster =
+	isVideoThumb && data?.thumbnailVideoUrl ? (data?.thumbnail ?? null) : null;
+const coverImage =
+	!isVideoThumb && data?.thumbnail ? data.thumbnail : videoPoster;
+
+const pageUrl = `${SITE_URL}/ventures/${slug}`;
 const jsonLd = data
 	? {
 			"@context": "https://schema.org",
-			"@type": "Organization",
-			name: title,
-			description,
-			...(website ? { url: website } : {}),
-			founder: { "@type": "Person", name: PROFILE.name },
+			"@graph": [
+				{
+					"@type": "Organization",
+					name: title,
+					...(description ? { description } : {}),
+					...(website ? { url: website } : {}),
+					founder: { "@type": "Person", name: PROFILE.name },
+				},
+				{
+					"@type": "BreadcrumbList",
+					itemListElement: [
+						{
+							"@type": "ListItem",
+							position: 1,
+							name: "Home",
+							item: SITE_URL,
+						},
+						{
+							"@type": "ListItem",
+							position: 2,
+							name: "Ventures",
+							item: `${SITE_URL}/ventures`,
+						},
+						{
+							"@type": "ListItem",
+							position: 3,
+							name: title,
+							item: pageUrl,
+						},
+					],
+				},
+			],
 		}
 	: null;
-const breadcrumb = {
-	"@context": "https://schema.org",
-	"@type": "BreadcrumbList",
-	itemListElement: [
-		{ "@type": "ListItem", position: 1, name: "Home", item: "https://riaz.com.bd/" },
-		{ "@type": "ListItem", position: 2, name: "Ventures", item: "https://riaz.com.bd/ventures" },
-		{ "@type": "ListItem", position: 3, name: title },
-	],
-};
 ---
 
-<Layout title={`${title} — Mahmudul Hasan Riaz`} description={description}>
-	{jsonLd ? (
-		<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
-	) : null}
-	<script type="application/ld+json" set:html={JSON.stringify(breadcrumb)} />
-
-	<p>
-		<a href="/ventures" class="back-link">← All ventures</a>
-	</p>
-
+<Layout
+	title={`${title} — Mahmudul Hasan Riaz`}
+	description={description}
+	ogType="website"
+	ogImage={coverImage ? absUrl(coverImage) : null}
+	canonical={pageUrl}
+>
 	{!entry || !data ? (
-		<section class="glass section">
+		<section class="glass">
+			<a class="back-link" href="/ventures">
+				← All ventures
+			</a>
+			<h1 class="detail-title">Venture not published yet</h1>
 			<p class="empty-state">This venture is not published yet.</p>
 		</section>
 	) : (
-		<article>
-			{data.thumbnailType === "video" && data.thumbnail ? (
-				<div class="detail-hero">
-					<video src={data.thumbnail} controls preload="metadata" />
-				</div>
-			) : data.thumbnail ? (
-				<div class="detail-hero">
-					<img src={data.thumbnail} alt={title} />
-				</div>
+		<section class="glass">
+			{jsonLd ? (
+				<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 			) : null}
+
+			<a href="/ventures" class="back-link">
+				← All ventures
+			</a>
+
+			{data.thumbnail &&
+				(isVideoThumb && videoSrc ? (
+					<div class="detail-hero">
+						<DetailVideoFacade
+							src={videoSrc}
+							poster={videoPoster}
+							title={title}
+						/>
+					</div>
+				) : (
+					<div class="detail-hero">
+						<img src={data.thumbnail} alt={title} />
+					</div>
+				))}
 			<h1 class="detail-title">{title}</h1>
-			{description ? <p class="detail-meta">{description}</p> : null}
+			{tags.length ? (
+				<div class="tag-row" style="margin-top:12px;">
+					{tags.map((tag) => (
+						<span class="tag">{tag}</span>
+					))}
+				</div>
+			) : null}
+			{description ? <p class="detail-lede">{description}</p> : null}
 
-			<div class="key-strip">
-				{data.publishedAt ? (
-					<span>
-						Published <b>{formatDate(data.publishedAt)}</b>
-					</span>
-				) : null}
-				{tags.length ? <span>{tags.join(", ")}</span> : null}
-				{website ? (
-					<span>
-						<a href={website} target="_blank" rel="noreferrer">
-							Visit website →
-						</a>
-					</span>
-				) : null}
-			</div>
+			<KeyStrip
+				items={[
+					{
+						label: "Published",
+						value: formatDate(data.publishedAt),
+					},
+					data.stage ? { label: "Stage", value: data.stage } : null,
+					data.location
+						? { label: "Location", value: data.location }
+						: null,
+					data.teamSize
+						? { label: "Team size", value: data.teamSize }
+						: null,
+					data.foundedDate
+						? {
+								label: "Founded",
+								value: formatDate(data.foundedDate),
+							}
+						: null,
+					tags.length
+						? { label: "Category", value: tags.join(", ") }
+						: null,
+					website
+						? { label: "Website", value: "Visit website", href: website }
+						: null,
+				]}
+			/>
 
-			<div class="detail-body">
-				{Content ? (
-					<Content />
-				) : bodyText ? (
-					bodyText.split(/\n\s*\n/).map((para) => <p>{para}</p>)
-				) : description ? (
-					<p>{description}</p>
-				) : null}
-			</div>
-
-			{gallery.length > 0 || videos.length > 0 ? (
-				<DetailMedia gallery={gallery} videos={videos} />
+			{data.metrics?.length ? (
+				<div class="metrics-band" aria-label="Venture metrics">
+					{data.metrics.map((metric) => (
+						<div class="metric-card">
+							<strong>{metric.value}</strong>
+							<span>{metric.label}</span>
+						</div>
+					))}
+				</div>
 			) : null}
 
-			<div class="detail-cta">
-				<h3>Have a project in mind?</h3>
-				<p>Tell me about it — I reply personally.</p>
-				<button
-					type="button"
-					class="btn"
-					data-open-contact
-					data-contact-source="venture"
-				>
-					Contact me
-				</button>
-			</div>
+			{bodyBlocks.length > 0 ? (
+				<section class="detail-section" aria-label={`About ${title}`}>
+					<h2 class="detail-h2">About {title}</h2>
+					<MarkdownBody blocks={bodyBlocks} />
+				</section>
+			) : null}
 
-			<nav class="prev-next" aria-label="Venture navigation">
-				{prev ? (
-					<a href={`/ventures/${prev.data.slug}`}>
-						<span class="pn-label">← Previous</span>
-						<span class="pn-title">{prev.data.title}</span>
-					</a>
-				) : (
-					<span />
-				)}
-				{next ? (
-					<a class="next" href={`/ventures/${next.data.slug}`}>
-						<span class="pn-label">Next →</span>
-						<span class="pn-title">{next.data.title}</span>
-					</a>
-				) : (
-					<span />
-				)}
-			</nav>
-		</article>
+			<DetailMedia
+				gallery={data.gallery ?? []}
+				videos={data.videos ?? []}
+				exclude={data.thumbnail}
+				altBase={`${title} gallery image`}
+			/>
+
+			<DetailCta
+				title={`Thinking of building something like ${title}?`}
+				text="Tell me about your venture — I reply personally."
+				buttonLabel="Discuss a similar venture"
+				source="venture-detail"
+			/>
+
+			<PrevNext
+				prev={
+					prev
+						? {
+								href: `/ventures/${prev.data.slug}`,
+								title: prev.data.title,
+								thumb: thumbOf(prev),
+							}
+						: null
+				}
+				next={
+					next
+						? {
+								href: `/ventures/${next.data.slug}`,
+								title: next.data.title,
+								thumb: thumbOf(next),
+							}
+						: null
+				}
+			/>
+		</section>
 	)}
 </Layout>
-
-<script is:inline>
-	// Open the shared contact form from this detail page's CTA.
-	document.querySelectorAll("[data-open-contact]").forEach((btn) => {
-		btn.addEventListener("click", () => {
-			const source = btn.getAttribute("data-contact-source") || undefined;
-			const service = btn.getAttribute("data-contact-service") || undefined;
-			window.dispatchEvent(
-				new CustomEvent("open-contact", { detail: { service, source } }),
-			);
-		});
-	});
-</script>

@@ -1,9 +1,16 @@
 ---
-// Detail-page media — gallery + videos, count-adaptive tiers.
-// Gallery: 0 = nothing · 1 = single large figure · 2 = side-by-side
-// · 3–6 = grid · 7+ = slider. Videos: 0 = nothing · 1 = one large player
-// · 2–3 = grid of players · 4+ = slider. Sliders are plain client-side
-// state in the inline script below (no framework).
+// Detail-page media — gallery + videos, count-adaptive tiers (preview spec).
+// Gallery: 0 = nothing · 1 = one large figure (max-w-3xl) · 2 = side-by-side
+// · 3–6 = grid (2 across mobile, 3 at sm+) · 7–12 = slider, up to 3 per
+// view · 13+ = slider, up to 4 per view.
+// Videos: 0 = nothing · 1 = one large player · 2–3 = side-by-side grid
+// · 4+ = slider (1 per view mobile, 2 wider).
+// Sliders are scroll-snap tracks with glass prev/next arrows, a progress
+// bar and an "N of M" page counter — wired by the shared
+// public/js/detail.js (delegated, no inline script in <main>). Without
+// JS the track still scrolls natively, so nothing is ever trapped.
+// The hero/cover image is excluded from the gallery (it already shows
+// at the top of the page) — a repeated hero slide was a live bug.
 // A video caption shows the video's own title when one exists — never a
 // hardcoded "Demo video" label; there is no demo flag in the data.
 interface VideoItem {
@@ -14,79 +21,97 @@ interface VideoItem {
 interface Props {
 	gallery?: string[];
 	videos?: VideoItem[];
+	/** Hero/cover image URL — never repeated as a gallery slide. */
+	exclude?: string | null;
+	/** Alt-text base for gallery images. */
+	altBase?: string;
 }
 
-const { gallery = [], videos = [] } = Astro.props;
-const gallerySlider = gallery.length >= 7;
+const { gallery = [], videos = [], exclude, altBase = "Gallery image" } = Astro.props;
+
+// Same image with different query params (?w=…&q=…) is still the same
+// image — compare without the query string.
+function stripQuery(url: string): string {
+	return url.split("?")[0];
+}
+const excluded = exclude ? stripQuery(exclude) : null;
+const seen = new Set<string>();
+const cleanGallery = gallery.filter((src) => {
+	const key = stripQuery(src);
+	if (excluded && key === excluded) return false;
+	if (seen.has(key)) return false;
+	seen.add(key);
+	return true;
+});
+
+const gallerySlider = cleanGallery.length >= 7;
+const galleryPerView = cleanGallery.length >= 13 ? 4 : 3;
 const videoSlider = videos.length >= 4;
 const galleryGridClass =
-	gallery.length === 1 ? "cols-1" : gallery.length === 2 ? "cols-2" : "cols-3";
+	cleanGallery.length === 1
+		? "cols-1"
+		: cleanGallery.length === 2
+			? "cols-2"
+			: "cols-3";
 const videoGridClass =
 	videos.length === 1 ? "cols-1" : videos.length === 2 ? "cols-2" : "cols-3";
-const sliderFigureStyle =
-	"margin:0;border-radius:var(--radius-sm);overflow:hidden;";
-const sliderMediaStyle = "width:100%;display:block;aspect-ratio:16 / 10;object-fit:cover;";
 ---
 
 {
-	(gallery.length > 0 || videos.length > 0) && (
-		<div>
-			{gallery.length > 0 &&
+	(cleanGallery.length > 0 || videos.length > 0) && (
+		<div class="detail-media">
+			{cleanGallery.length > 0 &&
 				(gallerySlider ? (
-					<div data-media-slider style="margin-top:16px;">
-						{gallery.map((src, i) => (
-							<figure data-slide hidden={i !== 0} style={sliderFigureStyle}>
-								<img
-									src={src}
-									alt={`Gallery image ${i + 1} of ${gallery.length}`}
-									loading="lazy"
-									style={sliderMediaStyle}
-								/>
-							</figure>
-						))}
-						<div
-							style="display:flex;align-items:center;gap:10px;margin-top:10px;"
-						>
+					<section class="media-slider" data-media-slider data-per-view={galleryPerView} aria-label="Gallery">
+						<div class="media-track">
+							{cleanGallery.map((src, i) => (
+								<figure class="media-slide">
+									<img
+										src={src}
+										alt={`${altBase} ${i + 1} of ${cleanGallery.length}`}
+										loading="lazy"
+									/>
+								</figure>
+							))}
+						</div>
+						<div class="slider-controls">
 							<button
 								type="button"
 								class="chev-btn"
 								data-slider-prev
-								aria-label="Previous image"
+								aria-label="Previous images"
 							>
 								‹
 							</button>
 							<div
-								style="flex:1;height:4px;border-radius:999px;background:var(--card-border);overflow:hidden;"
+								class="slider-progress"
 								aria-hidden="true"
 							>
 								<div
 									data-slider-progress
-									style={`height:100%;width:${100 / gallery.length}%;background:var(--accent);`}
+									style={`width:${100 / Math.ceil(cleanGallery.length / galleryPerView)}%;`}
 								/>
 							</div>
 							<button
 								type="button"
 								class="chev-btn"
 								data-slider-next
-								aria-label="Next image"
+								aria-label="Next images"
 							>
 								›
 							</button>
-							<span
-								data-slider-counter
-								style="font-size:13px;color:var(--ink-dim);white-space:nowrap;"
-							>
-								1 of {gallery.length}
+							<span data-slider-counter class="slider-counter">
+								1 of {Math.ceil(cleanGallery.length / galleryPerView)}
 							</span>
 						</div>
-					</div>
+					</section>
 				) : (
 					<div class={`media-grid ${galleryGridClass}`}>
-						{gallery.map((src, i) => (
+						{cleanGallery.map((src, i) => (
 							<figure>
 								<img
 									src={src}
-									alt={`Gallery image ${i + 1} of ${gallery.length}`}
+									alt={`${altBase} ${i + 1} of ${cleanGallery.length}`}
 									loading="lazy"
 								/>
 							</figure>
@@ -96,71 +121,59 @@ const sliderMediaStyle = "width:100%;display:block;aspect-ratio:16 / 10;object-f
 
 			{videos.length > 0 &&
 				(videoSlider ? (
-					<div data-media-slider style="margin-top:16px;">
-						{videos.map((video, i) => (
-							<figure data-slide hidden={i !== 0} style={sliderFigureStyle}>
-								<video
-									src={video.url}
-									controls
-									preload="metadata"
-									style={sliderMediaStyle}
-								/>
-								{video.title && (
-									<figcaption
-										style="font-size:13px;color:var(--ink-dim);padding:8px 2px 0;"
-									>
-										{video.title}
-									</figcaption>
-								)}
-							</figure>
-						))}
-						<div
-							style="display:flex;align-items:center;gap:10px;margin-top:10px;"
-						>
+					<section class="media-slider" data-media-slider data-per-view="2" aria-label="Videos">
+						<div class="media-track">
+							{videos.map((video) => (
+								<figure class="media-slide">
+									<video
+										src={video.url}
+										controls
+										preload="metadata"
+									/>
+									{video.title && (
+										<figcaption>{video.title}</figcaption>
+									)}
+								</figure>
+							))}
+						</div>
+						<div class="slider-controls">
 							<button
 								type="button"
 								class="chev-btn"
 								data-slider-prev
-								aria-label="Previous video"
+								aria-label="Previous videos"
 							>
 								‹
 							</button>
 							<div
-								style="flex:1;height:4px;border-radius:999px;background:var(--card-border);overflow:hidden;"
+								class="slider-progress"
 								aria-hidden="true"
 							>
 								<div
 									data-slider-progress
-									style={`height:100%;width:${100 / videos.length}%;background:var(--accent);`}
+									style={`width:${100 / Math.ceil(videos.length / 2)}%;`}
 								/>
 							</div>
 							<button
 								type="button"
 								class="chev-btn"
 								data-slider-next
-								aria-label="Next video"
+								aria-label="Next videos"
 							>
 								›
 							</button>
-							<span
-								data-slider-counter
-								style="font-size:13px;color:var(--ink-dim);white-space:nowrap;"
-							>
-								1 of {videos.length}
+							<span data-slider-counter class="slider-counter">
+								1 of {Math.ceil(videos.length / 2)}
 							</span>
 						</div>
-					</div>
+					</section>
 				) : (
 					<div class={`media-grid ${videoGridClass}`}>
 						{videos.map((video) => (
 							<figure>
 								<video src={video.url} controls preload="metadata" />
 								{video.title && (
-									<figcaption
-										style="font-size:13px;color:var(--ink-dim);padding:8px 2px 0;"
-									>
-										{video.title}
-									</figcaption>
+									<figcaption>{video.title}</figcaption>
 								)}
 							</figure>
 						))}
@@ -169,44 +182,3 @@ const sliderMediaStyle = "width:100%;display:block;aspect-ratio:16 / 10;object-f
 		</div>
 	)
 }
-
-<script>
-	// Media slider wiring (DetailMedia): prev/next + counter + progress bar.
-	// Runs once per slider; the wired flag keeps duplicate component
-	// instances on one page from double-binding.
-	(function () {
-		function setup(slider: HTMLElement) {
-			if (slider.dataset.wired) return;
-			slider.dataset.wired = "true";
-			const slides = Array.from(
-				slider.querySelectorAll("[data-slide]"),
-			) as HTMLElement[];
-			if (slides.length <= 1) return;
-			const counter = slider.querySelector("[data-slider-counter]");
-			const progress = slider.querySelector("[data-slider-progress]") as HTMLElement | null;
-			const prev = slider.querySelector("[data-slider-prev]");
-			const next = slider.querySelector("[data-slider-next]");
-			let current = 0;
-			function show(i: number) {
-				current = (i + slides.length) % slides.length;
-				slides.forEach(function (slide, idx) {
-					slide.hidden = idx !== current;
-					const video = slide.querySelector("video");
-					if (video) video.pause();
-				});
-				if (counter) counter.textContent = current + 1 + " of " + slides.length;
-				if (progress)
-					progress.style.width = ((current + 1) / slides.length) * 100 + "%";
-			}
-			if (prev) prev.addEventListener("click", function () {
-				show(current - 1);
-			});
-			if (next) next.addEventListener("click", function () {
-				show(current + 1);
-			});
-		}
-		document.querySelectorAll("[data-media-slider]").forEach(function (el) {
-			setup(el as HTMLElement);
-		});
-	})();
-</script>

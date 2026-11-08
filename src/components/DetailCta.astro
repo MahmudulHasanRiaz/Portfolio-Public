@@ -45,23 +45,11 @@ const {
 	</div>
 </div>
 
-<script>
-	// One delegated listener for every [data-open-contact] button on the
-	// page — DetailCta instances share it instead of each binding its own.
-	(function () {
-		const flag = window as unknown as { __detailCtaWired?: boolean };
-		if (flag.__detailCtaWired) return;
-		flag.__detailCtaWired = true;
-		document.addEventListener("click", function (event) {
-			const target = event.target;
-			if (!(target instanceof HTMLElement)) return;
-			const button = target.closest("[data-open-contact]");
-			if (!button) return;
-			const service = button.getAttribute("data-service") || undefined;
-			const source = button.getAttribute("data-source") || undefined;
-			window.dispatchEvent(
-				new CustomEvent("open-contact", { detail: { service, source } }),
-			);
-		});
-	})();
-</script>
+{/*
+	No inline script here: every [data-open-contact] button on the page
+	is wired by the shared public/js/detail.js (delegated listener,
+	loaded once by the Layout), so no script text ever sits inside
+	<main>. The button dispatches "open-contact" with the optional
+	service pre-selection and source section; the ContactModal island
+	listens for it.
+*/}

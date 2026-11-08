@@ -1218,9 +1218,24 @@ main {
 	pointer-events: none;
 }
 
+/* The runlight SVG must sit EXACTLY 7px outside the photo on ALL FOUR
+   sides. `inset: -7px` alone does NOT do that: the SVG is a replaced
+   element with an intrinsic aspect ratio from its viewBox (100:125),
+   so the browser derives its height from its width via that ratio and
+   IGNORES `bottom: -7px`. The box is 14px wider than the photo, so the
+   ratio-derived height is 17.5px taller (14 x 5/4) and the bottom edge
+   lands 10.5px below the photo instead of 7px — the visible trace sat
+   ~8.9px below the photo vs ~5.4px on the other three sides (the
+   user-reported doubled bottom gap). Explicit width + height make the
+   intrinsic ratio irrelevant: the box is exactly the photo +/- 7px on
+   every side, and the trace inside (preserveAspectRatio="none") is
+   uniform. Animation, dasharray, opacity and glow are untouched. */
 .hero-runlight {
 	position: absolute;
-	inset: -7px;
+	top: -7px;
+	left: -7px;
+	width: calc(100% + 14px);
+	height: calc(100% + 14px);
 	pointer-events: none;
 }
 
@@ -2054,15 +2069,41 @@ main {
 .detail-hero video {
 	width: 100%;
 	display: block;
-	aspect-ratio: 21 / 9;
+	/* Preview mold: 16/9 on mobile, 21/9 at sm+. */
+	aspect-ratio: 16 / 9;
 	object-fit: cover;
+}
+
+@media (min-width: 640px) {
+	.detail-hero img,
+	.detail-hero video {
+		aspect-ratio: 21 / 9;
+	}
+}
+
+/* A video facade inside the hero follows the same aspect as the image. */
+.detail-hero .video-facade {
+	aspect-ratio: 16 / 9;
+}
+
+@media (min-width: 640px) {
+	.detail-hero .video-facade {
+		aspect-ratio: 21 / 9;
+	}
 }
 
 .detail-title {
 	margin: 16px 0 0;
-	font-size: 24px;
+	/* Preview mold: text-3xl mobile, text-4xl at sm+. */
+	font-size: 30px;
 	line-height: 1.25;
 	letter-spacing: -0.01em;
+}
+
+@media (min-width: 640px) {
+	.detail-title {
+		font-size: 36px;
+	}
 }
 
 .detail-meta {
@@ -2071,24 +2112,52 @@ main {
 	color: var(--ink-dim);
 }
 
+/* Key-info strip (preview mold): a <dl> grid — 2 columns on mobile,
+   3 at sm, 4 at lg. Empty items are never rendered (see KeyStrip). */
 .key-strip {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px 20px;
-	margin-top: 16px;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px 20px;
+	margin: 16px 0 0;
 	padding: 12px 0;
 	border-top: 1px solid var(--card-border);
 	border-bottom: 1px solid var(--card-border);
 	font-size: 13px;
 }
 
-.key-strip b {
-	font-weight: 700;
+@media (min-width: 640px) {
+	.key-strip {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 1024px) {
+	.key-strip {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+
+.key-strip .key-item {
+	min-width: 0;
+}
+
+.key-strip dt {
+	font-size: 12px;
+	color: var(--ink-dim);
+}
+
+.key-strip dd {
+	margin: 2px 0 0;
+	font-size: 14px;
+	font-weight: 600;
+	overflow-wrap: break-word;
 }
 
 .detail-body {
 	margin-top: 16px;
 	font-size: 15px;
+	/* Preview mold: body copy in a max-w-3xl column. */
+	max-width: 48rem;
 }
 
 .detail-body h2 {
@@ -2145,12 +2214,26 @@ main {
 	grid-template-columns: 1fr;
 }
 
+/* A single gallery image/video is one large figure, max-w-3xl. */
+.media-grid.cols-1 figure {
+	max-width: 48rem;
+	margin-left: auto;
+	margin-right: auto;
+}
+
 .media-grid.cols-2 {
 	grid-template-columns: 1fr 1fr;
 }
 
+/* 3–6 items: 2 across on mobile, 3 at sm+. */
 .media-grid.cols-3 {
-	grid-template-columns: repeat(3, 1fr);
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+	.media-grid.cols-3 {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
 }
 
 .media-grid figure {
@@ -2167,24 +2250,50 @@ main {
 	object-fit: cover;
 }
 
+/* Prev/next (preview mold): stacked on mobile, two columns at sm+.
+   The next card flips row-reverse and right-aligns. Titles wrap
+   (min-w-0 + break words) instead of truncating at the card edge. */
 .prev-next {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: 1fr;
 	gap: 10px;
 	margin-top: 24px;
+}
+
+@media (min-width: 640px) {
+	.prev-next {
+		grid-template-columns: 1fr 1fr;
+	}
 }
 
 .prev-next a {
 	min-width: 0;
 	display: flex;
-	flex-direction: column;
-	gap: 2px;
+	flex-direction: row;
+	align-items: flex-start;
+	gap: 12px;
 	padding: 14px 16px;
 	border-radius: var(--radius-sm);
 	border: 1px solid var(--card-border);
 	background: var(--card);
 	text-decoration: none;
 	color: inherit;
+}
+
+.prev-next a .pn-thumb {
+	flex: none;
+	width: 80px;
+	height: 56px;
+	object-fit: cover;
+	border-radius: var(--radius-xs);
+}
+
+.prev-next a .pn-body {
+	min-width: 0;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
 }
 
 .prev-next a .pn-label {
@@ -2196,23 +2305,35 @@ main {
 	font-size: 14px;
 	font-weight: 600;
 	overflow: hidden;
+	overflow-wrap: break-word;
 	display: -webkit-box;
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
 }
 
 .prev-next a.next {
+	flex-direction: row-reverse;
 	text-align: right;
+}
+
+.prev-next a.next .pn-body {
 	align-items: flex-end;
 }
 
 .detail-cta {
 	margin-top: 24px;
-	padding: 20px;
-	border-radius: var(--radius-sm);
+	/* Preview mold: rounded-3xl accent-soft band, p-6 → p-8 at sm+. */
+	padding: 24px;
+	border-radius: 24px;
 	border: 1px solid var(--card-border);
 	background: var(--accent-wash);
 	text-align: center;
+}
+
+@media (min-width: 640px) {
+	.detail-cta {
+		padding: 32px;
+	}
 }
 
 .detail-cta h3 {
@@ -2232,6 +2353,303 @@ main {
 	align-items: center;
 	justify-content: center;
 	gap: 12px;
+}
+
+/* ---------- Detail pages — Run 13 ---------- */
+.detail-section {
+	margin-top: 24px;
+}
+
+.detail-h2 {
+	margin: 0 0 12px;
+	font-size: 18px;
+	line-height: 1.3;
+	letter-spacing: -0.01em;
+}
+
+/* One-liner lede under the title (venture description, post excerpt). */
+.detail-lede {
+	margin: 12px 0 0;
+	font-size: 16px;
+	line-height: 1.55;
+	color: var(--ink-dim);
+	max-width: 48rem;
+}
+
+/* Metrics band — accent-soft cards, value + label (real figures only). */
+.metrics-band {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+	margin-top: 16px;
+}
+
+@media (min-width: 640px) {
+	.metrics-band {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+.metric-card {
+	padding: 16px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--card-border);
+	background: var(--accent-soft);
+	text-align: center;
+}
+
+.metric-card strong {
+	display: block;
+	font-size: 24px;
+	line-height: 1.1;
+	font-weight: 800;
+	color: var(--accent-strong);
+	letter-spacing: -0.02em;
+}
+
+.metric-card span {
+	display: block;
+	margin-top: 4px;
+	font-size: 13px;
+	color: var(--ink-dim);
+}
+
+/* "The fix" checklist — teal check marks, one fix point per line. */
+.fix-points {
+	list-style: none;
+	margin: 12px 0 0;
+	padding: 0;
+	display: grid;
+	gap: 8px;
+}
+
+.fix-points li {
+	position: relative;
+	padding-left: 24px;
+	font-size: 14px;
+	color: var(--ink-dim);
+}
+
+.fix-points li::before {
+	content: "✓";
+	position: absolute;
+	left: 0;
+	top: 0;
+	color: var(--accent-strong);
+	font-weight: 800;
+}
+
+/* Media slider — scroll-snap track with glass arrows, progress bar
+   and "N of M" page counter. Works by native scroll even without JS. */
+.media-slider {
+	margin-top: 16px;
+}
+
+.media-track {
+	display: flex;
+	gap: 10px;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	scrollbar-width: none;
+	-webkit-overflow-scrolling: touch;
+}
+
+.media-track::-webkit-scrollbar {
+	display: none;
+}
+
+.media-slide {
+	flex: none;
+	margin: 0;
+	border-radius: var(--radius-sm);
+	overflow: hidden;
+	scroll-snap-align: start;
+	/* 1 per view on mobile; 2 at sm; per-view count at lg. */
+	flex-basis: 100%;
+}
+
+@media (min-width: 640px) {
+	.media-slide {
+		flex-basis: calc((100% - 10px) / 2);
+	}
+}
+
+@media (min-width: 1024px) {
+	.media-slider[data-per-view="3"] .media-slide {
+		flex-basis: calc((100% - 20px) / 3);
+	}
+	.media-slider[data-per-view="4"] .media-slide {
+		flex-basis: calc((100% - 30px) / 4);
+	}
+	.media-slider[data-per-view="2"] .media-slide {
+		flex-basis: calc((100% - 10px) / 2);
+	}
+}
+
+.media-slide img,
+.media-slide video {
+	width: 100%;
+	display: block;
+	aspect-ratio: 16 / 10;
+	object-fit: cover;
+}
+
+.media-slide figcaption,
+.media-grid figcaption {
+	font-size: 13px;
+	color: var(--ink-dim);
+	padding: 8px 2px 0;
+}
+
+.slider-controls {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 10px;
+}
+
+.slider-progress {
+	flex: 1;
+	height: 4px;
+	border-radius: 999px;
+	background: var(--card-border);
+	overflow: hidden;
+}
+
+.slider-progress > div {
+	height: 100%;
+	background: var(--accent);
+	border-radius: 999px;
+	transition: width 200ms ease;
+}
+
+.slider-counter {
+	font-size: 13px;
+	color: var(--ink-dim);
+	white-space: nowrap;
+}
+
+/* Audio release tile (preview): an accent tile with a LARGE platform
+   logo — never a big empty block with a lone mic icon. */
+.audio-tile {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	aspect-ratio: 16 / 9;
+	border-radius: var(--radius-sm);
+	background: var(--accent-wash);
+	color: var(--accent-strong);
+}
+
+.audio-tile img,
+.audio-tile svg {
+	width: 64px;
+	height: 64px;
+	object-fit: contain;
+	opacity: 0.9;
+}
+
+/* "Listen & watch" — full-width rows: real icon + Watch/Listen label. */
+.platform-list {
+	display: grid;
+	gap: 8px;
+}
+
+.platform-row-link {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 14px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--card-border);
+	background: var(--card);
+	color: var(--ink);
+	font-size: 14px;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.platform-row-link span:last-child {
+	margin-left: auto;
+	color: var(--ink-dim);
+	font-weight: 400;
+}
+
+/* Lyrics keep their line breaks. */
+.lyrics {
+	white-space: pre-line;
+	margin: 0;
+	font-size: 15px;
+	line-height: 1.7;
+	color: var(--ink-dim);
+}
+
+/* Post author card — speaker photo + name + roles + email. */
+.author-card {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	margin-top: 24px;
+	padding: 16px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--card-border);
+	background: var(--card);
+}
+
+.author-photo {
+	flex: none;
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+.author-info {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	font-size: 14px;
+}
+
+.author-info span {
+	font-size: 13px;
+	color: var(--ink-dim);
+}
+
+.author-info a {
+	font-size: 13px;
+	overflow-wrap: break-word;
+}
+
+/* "Play here" / "Play video" — a pill control, not bare text sitting
+   on the thumbnail's bottom edge. */
+.play-label {
+	position: absolute;
+	left: 50%;
+	bottom: 14px;
+	transform: translateX(-50%);
+	padding: 6px 14px;
+	border-radius: 999px;
+	background: rgba(0, 0, 0, 0.55);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 600;
+	white-space: nowrap;
+	pointer-events: none;
+}
+
+/* Video facade without a poster — accent tile behind the play button. */
+.video-facade-tile {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	background: var(--accent-wash);
+	color: var(--accent-strong);
 }
 
 /* ---------- Stack globe ---------- */

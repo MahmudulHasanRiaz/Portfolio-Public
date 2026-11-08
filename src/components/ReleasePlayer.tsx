@@ -37,20 +37,7 @@ export default function ReleasePlayer({
 					<span className="play-btn">
 						<Play size={28} fill="currentColor" />
 					</span>
-					<span
-						style={{
-							position: "absolute",
-							left: "50%",
-							bottom: 14,
-							transform: "translateX(-50%)",
-							color: "#fff",
-							fontSize: 13,
-							fontWeight: 600,
-							textShadow: "0 1px 6px rgba(0,0,0,0.6)",
-						}}
-					>
-						Play here
-					</span>
+					<span className="play-label">Play here</span>
 				</button>
 			)}
 			<p style={{ margin: "10px 0 0", fontSize: 13 }}>

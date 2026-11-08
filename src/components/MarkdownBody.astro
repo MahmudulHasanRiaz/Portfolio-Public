@@ -1,0 +1,30 @@
+---
+// Body text from a plain-text `content` string, rendered as the
+// preview's content blocks: '## ' lines become <h2> section headings,
+// everything else paragraphs. (Build-time entries render their
+// markdown natively via <Content/>; this is for live entries only.)
+import { parseBodyBlocks, type BodyBlock } from "../lib/detail";
+
+interface Props {
+	/** Raw body text to parse, or pre-parsed blocks (already deduped). */
+	text?: string | null;
+	blocks?: BodyBlock[];
+}
+
+const { text, blocks } = Astro.props;
+const rendered = blocks ?? parseBodyBlocks(text);
+---
+
+{
+	rendered.length > 0 && (
+		<div class="detail-body">
+			{rendered.map((block) =>
+				block.kind === "h2" ? (
+					<h2>{block.text}</h2>
+				) : (
+					<p>{block.text}</p>
+				),
+			)}
+		</div>
+	)
+}

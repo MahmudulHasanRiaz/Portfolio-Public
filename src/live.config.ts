@@ -17,6 +17,14 @@ const videoSchema = z.object({
 	title: z.string().optional(),
 });
 
+// Optional metric card (case studies, ventures): a real measured
+// figure + its label. Zod strips unknown live fields, so these must be
+// declared here or the backend's new fields never reach the page.
+const metricSchema = z.object({
+	value: z.string(),
+	label: z.string(),
+});
+
 const baseSchema = z.object({
 	title: z.string(),
 	slug: z.string(),
@@ -36,6 +44,7 @@ const livePosts = defineLiveCollection({
 		readingTime: z.number().optional(),
 		gallery: z.array(z.string()).default([]),
 		videos: z.array(videoSchema).default([]),
+		thumbnailVideoUrl: z.string().optional(),
 	}),
 });
 
@@ -46,6 +55,13 @@ const liveProjects = defineLiveCollection({
 		gallery: z.array(z.string()).default([]),
 		videos: z.array(videoSchema).default([]),
 		featured: z.boolean().optional(),
+		longDescription: z.string().optional(),
+		client: z.string().optional(),
+		role: z.string().optional(),
+		year: z.string().optional(),
+		status: z.string().optional(),
+		liveUrl: z.string().optional(),
+		thumbnailVideoUrl: z.string().optional(),
 	}),
 });
 
@@ -55,9 +71,14 @@ const liveCaseStudies = defineLiveCollection({
 		problem: z.string().optional(),
 		fix: z.string().optional(),
 		result: z.string().optional(),
+		fixPoints: z.array(z.string()).default([]),
+		metrics: z.array(metricSchema).default([]),
+		research: z.string().optional(),
+		techs: z.array(z.string()).default([]),
 		projectSlug: z.string().optional(),
 		gallery: z.array(z.string()).default([]),
 		videos: z.array(videoSchema).default([]),
+		thumbnailVideoUrl: z.string().optional(),
 	}),
 });
 
@@ -67,6 +88,12 @@ const liveVentures = defineLiveCollection({
 		website: z.string().nullable().optional(),
 		gallery: z.array(z.string()).default([]),
 		videos: z.array(videoSchema).default([]),
+		stage: z.string().optional(),
+		location: z.string().optional(),
+		teamSize: z.string().optional(),
+		foundedDate: z.string().optional(),
+		metrics: z.array(metricSchema).default([]),
+		thumbnailVideoUrl: z.string().optional(),
 	}),
 });
 
@@ -79,6 +106,9 @@ const liveReleases = defineLiveCollection({
 		youtubeId: z.string().optional(),
 		tune: z.string().optional(),
 		lyricist: z.string().optional(),
+		lyrics: z.string().optional(),
+		videos: z.array(videoSchema).default([]),
+		thumbnailVideoUrl: z.string().optional(),
 	}),
 });
 

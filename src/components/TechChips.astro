@@ -1,0 +1,39 @@
+---
+// "Built with" — tech chips with their REAL logos, resolved from the
+// single STACK source of truth (src/data/site.ts). A tech with no logo
+// (BullMQ, OAuth, …) renders as an honest text chip via BrandIcon —
+// never a fake logo.
+import BrandIcon from "./BrandIcon.astro";
+import { STACK } from "../data/site";
+
+interface Props {
+	techs?: string[];
+	title?: string;
+}
+
+const { techs = [], title = "Built with" } = Astro.props;
+const iconFor = (tech: string): string | null =>
+	STACK.find((t) => t.name === tech)?.icon ?? null;
+---
+
+{
+	techs.length > 0 && (
+		<section class="detail-section" aria-label={title}>
+			<h2 class="detail-h2">{title}</h2>
+			<div class="tag-row">
+				{techs.map((tech) => {
+					const icon = iconFor(tech);
+					return (
+						<span
+							class="tag"
+							style="display:inline-flex;align-items:center;gap:6px;"
+						>
+							<BrandIcon icon={icon} name={tech} size={14} />
+							{icon ? tech : null}
+						</span>
+					);
+				})}
+			</div>
+		</section>
+	)
+}

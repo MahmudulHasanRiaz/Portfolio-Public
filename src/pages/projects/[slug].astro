@@ -1,11 +1,22 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import { getEntry, getLiveEntry, render } from "astro:content";
-import BrandIcon from "../../components/BrandIcon.astro";
 import DetailCta from "../../components/DetailCta.astro";
 import DetailMedia from "../../components/DetailMedia.astro";
+import DetailVideoFacade from "../../components/DetailVideoFacade.astro";
+import KeyStrip from "../../components/KeyStrip.astro";
+import MarkdownBody from "../../components/MarkdownBody.astro";
 import PrevNext from "../../components/PrevNext.astro";
+import TechChips from "../../components/TechChips.astro";
 import { formatDate, getProjects } from "../../lib/content";
+import {
+	SITE_URL,
+	absUrl,
+	isRealUrl,
+	mergeDetail,
+	parseBodyBlocks,
+	serviceForTags,
+} from "../../lib/detail";
 
 // On-demand detail route — hybrid live-then-static: the live collection
 // first (instant when a project is newly published), then the build-time
@@ -18,15 +29,15 @@ const liveResult = slug
 	: undefined;
 const liveEntry = liveResult?.entry;
 if (liveEntry) Astro.cache.set(liveEntry);
-const buildEntry =
-	!liveEntry && slug
-		? await getEntry("projects", slug)
-		: undefined;
+// The build-time row is fetched even when a live row exists: its body
+// is the full story when the live row carries only the short
+// description, and its fields fill any gaps the live row leaves empty.
+const buildEntry = slug ? await getEntry("projects", slug) : undefined;
 const entry = liveEntry ?? buildEntry;
 if (!entry) Astro.response.status = 404;
 
 // Build-time entries render their markdown body; live entries carry the
-// body as a plain `content` string, rendered as paragraphs below.
+// body as a plain `content` string, rendered as blocks below.
 const rendered = buildEntry ? await render(buildEntry) : undefined;
 const Content = rendered?.Content;
 
@@ -34,47 +45,63 @@ interface ProjectData {
 	title: string;
 	description?: string;
 	content?: string;
+	longDescription?: string;
 	tags?: string[];
 	techs?: string[];
 	publishedAt?: string;
 	thumbnail?: string;
 	thumbnailType?: "image" | "video";
+	thumbnailVideoUrl?: string;
 	gallery?: string[];
 	videos?: { url: string; title?: string }[];
+	client?: string;
+	role?: string;
+	year?: string;
+	status?: string;
+	liveUrl?: string;
 }
 
-const d = entry?.data as unknown as ProjectData | undefined;
-const liveParagraphs =
-	liveEntry && d?.content
-		? d.content
-				.split(/\n\s*\n/)
-				.map((s) => s.trim())
-				.filter(Boolean)
+const liveData = liveEntry?.data as unknown as
+	| Record<string, unknown>
+	| undefined;
+const buildData = buildEntry?.data as unknown as
+	| Record<string, unknown>
+	| undefined;
+const d = mergeDetail(buildData, liveData) as unknown as
+	| ProjectData
+	| undefined;
+
+// Full story, in priority order: the backend's longDescription when it
+// exists, then the build-time markdown body, then the live content
+// string, then the short description (never an invented story).
+const storyBlocks = d?.longDescription
+	? parseBodyBlocks(d.longDescription)
+	: !Content && d?.content
+		? parseBodyBlocks(d.content)
 		: [];
-const bodyParagraphs =
-	liveParagraphs.length > 0
-		? liveParagraphs
-		: !Content && d?.description
-			? [d.description]
-			: [];
+const showDescriptionFallback =
+	!Content && storyBlocks.length === 0 && Boolean(d?.description);
 
-const metaParts: string[] = [];
-if (d?.tags?.length) metaParts.push(d.tags.join(", "));
-const dateText = formatDate(d?.publishedAt);
-if (dateText) metaParts.push(dateText);
+// Back link returns to origin: a visitor who arrived from a case
+// study ("View the project") goes back to that case study.
+const fromParam = Astro.url.searchParams.get("from") ?? "";
+const fromCaseStudy = fromParam.startsWith("case-study:")
+	? fromParam.slice("case-study:".length)
+	: null;
+const backHref = fromCaseStudy
+	? `/case-studies/${fromCaseStudy}`
+	: "/projects";
+const backLabel = fromCaseStudy ? "← Back to case study" : "← All projects";
 
-// Tech name -> Simple Icons slug ("woocommerce-w" = the WooCommerce W mark).
-// Unknown techs get a plain text chip via BrandIcon (never a fake logo).
-const TECH_ICONS: Record<string, string> = {
-	"Next.js": "nextdotjs",
-	React: "react",
-	TypeScript: "typescript",
-	PostgreSQL: "postgresql",
-	WooCommerce: "woocommerce-w",
-	WordPress: "wordpress",
-	PHP: "php",
-	Docker: "docker",
-};
+// Video thumbnail: thumbnailVideoUrl is the video file, thumbnail the
+// poster image; when the thumbnail itself is the video there is no poster.
+const isVideoThumb = d?.thumbnailType === "video";
+const videoSrc = isVideoThumb
+	? (d?.thumbnailVideoUrl ?? d?.thumbnail)
+	: undefined;
+const videoPoster =
+	isVideoThumb && d?.thumbnailVideoUrl ? (d?.thumbnail ?? null) : null;
+const coverImage = !isVideoThumb && d?.thumbnail ? d.thumbnail : videoPoster;
 
 // Prev/next by date order (newest first): prev = older, next = newer.
 const allProjects = await getProjects();
@@ -83,9 +110,12 @@ const prevProject =
 	currentIndex >= 0 ? allProjects[currentIndex + 1] : undefined;
 const nextProject =
 	currentIndex > 0 ? allProjects[currentIndex - 1] : undefined;
+const thumbOf = (p: (typeof allProjects)[number] | undefined) =>
+	p?.data.thumbnailType !== "video" && p?.data.thumbnail
+		? p.data.thumbnail
+		: null;
 
-const siteUrl = "https://riaz.com.bd";
-const pageUrl = `${siteUrl}/projects/${slug}`;
+const pageUrl = `${SITE_URL}/projects/${slug}`;
 const jsonLd = d
 	? {
 			"@context": "https://schema.org",
@@ -96,10 +126,11 @@ const jsonLd = d
 					description: d.description,
 					applicationCategory: "BusinessApplication",
 					url: pageUrl,
+					...(coverImage ? { image: absUrl(coverImage) } : {}),
 					author: {
 						"@type": "Person",
 						name: "Mahmudul Hasan Riaz",
-						url: siteUrl,
+						url: SITE_URL,
 					},
 					...(d.publishedAt ? { datePublished: d.publishedAt } : {}),
 				},
@@ -110,13 +141,13 @@ const jsonLd = d
 							"@type": "ListItem",
 							position: 1,
 							name: "Home",
-							item: siteUrl,
+							item: SITE_URL,
 						},
 						{
 							"@type": "ListItem",
 							position: 2,
 							name: "Projects",
-							item: `${siteUrl}/projects`,
+							item: `${SITE_URL}/projects`,
 						},
 						{
 							"@type": "ListItem",
@@ -135,19 +166,14 @@ const jsonLd = d
 	title={
 		d ? `${d.title} — Mahmudul Hasan Riaz` : "Project not found — Mahmudul Hasan Riaz"
 	}
-	description={
-		d?.description ??
-		"A project by Mahmudul Hasan Riaz — ERP, SaaS and e-commerce systems for businesses in Bangladesh and beyond."
-	}
+	description={d?.description}
 	ogType="website"
-	ogImage={
-		d?.thumbnailType !== "video" && d?.thumbnail ? d.thumbnail : undefined
-	}
+	ogImage={coverImage ? absUrl(coverImage) : null}
+	canonical={pageUrl}
 >
 	{
 		entry && d ? (
 			<section class="glass">
-				{/* JSON-LD is valid in the body. OG tags live in <head> via Layout. */}
 				{jsonLd && (
 					<script
 						type="application/ld+json"
@@ -155,70 +181,73 @@ const jsonLd = d
 					/>
 				)}
 
-				<a class="back-link" href="/projects">
-					← All projects
+				<a class="back-link" href={backHref}>
+					{backLabel}
 				</a>
-				{d.thumbnail && (
-					<div class="detail-hero">
-						{d.thumbnailType === "video" ? (
-							<video
-								src={d.thumbnail}
-								controls
-								autoplay
-								muted
-								loop
-								playsinline
+				{d.thumbnail &&
+					(isVideoThumb && videoSrc ? (
+						<div class="detail-hero">
+							<DetailVideoFacade
+								src={videoSrc}
+								poster={videoPoster}
+								title={d.title}
 							/>
-						) : (
+						</div>
+					) : (
+						<div class="detail-hero">
 							<img src={d.thumbnail} alt={d.title} />
-						)}
-					</div>
-				)}
+						</div>
+					))}
 				<h1 class="detail-title">{d.title}</h1>
-				{metaParts.length > 0 && (
-					<p class="detail-meta">{metaParts.join(" · ")}</p>
-				)}
-				{(d.techs?.length || d.tags?.length) && (
-					<div class="key-strip">
-						{d.techs?.length ? (
-							<span>
-								<b>Built with:</b> {d.techs.join(", ")}
-							</span>
-						) : null}
-						{d.tags?.length ? (
-							<span>
-								<b>Tags:</b> {d.tags.join(", ")}
-							</span>
-						) : null}
-					</div>
-				)}
-				{d.techs?.length ? (
-					<div class="tag-row" style="margin-top:16px;">
-						{d.techs.map((tech) => {
-							const icon = TECH_ICONS[tech] ?? null;
-							return (
-								<span
-									class="tag"
-									style="display:inline-flex;align-items:center;gap:6px;"
-								>
-									<BrandIcon icon={icon} name={tech} size={14} />
-									{icon ? tech : null}
-								</span>
-							);
-						})}
+				{d.tags?.length ? (
+					<div class="tag-row" style="margin-top:12px;">
+						{d.tags.map((tag) => (
+							<span class="tag">{tag}</span>
+						))}
 					</div>
 				) : null}
-				<div class="detail-body">
+				<KeyStrip
+					items={[
+						d.client ? { label: "Client", value: d.client } : null,
+						d.role ? { label: "Role", value: d.role } : null,
+						{
+							label: "Published",
+							value: formatDate(d.publishedAt) || d.year,
+						},
+						d.tags?.length
+							? { label: "Category", value: d.tags.join(", ") }
+							: null,
+						d.status ? { label: "Status", value: d.status } : null,
+						d.liveUrl && isRealUrl(d.liveUrl)
+							? { label: "Live site", value: "Visit site", href: d.liveUrl }
+							: null,
+					]}
+				/>
+				<section class="detail-section" aria-label="About this project">
+					<h2 class="detail-h2">About this project</h2>
 					{Content ? (
-						<Content />
-					) : (
-						bodyParagraphs.map((para) => <p>{para}</p>)
-					)}
-				</div>
-				<DetailMedia gallery={d.gallery ?? []} videos={d.videos ?? []} />
+						<div class="detail-body">
+							<Content />
+						</div>
+					) : storyBlocks.length > 0 ? (
+						<MarkdownBody blocks={storyBlocks} />
+					) : showDescriptionFallback ? (
+						<div class="detail-body">
+							<p>{d.description}</p>
+						</div>
+					) : null}
+				</section>
+				<TechChips techs={d.techs ?? []} />
+				<DetailMedia
+					gallery={d.gallery ?? []}
+					videos={d.videos ?? []}
+					exclude={d.thumbnail}
+					altBase={`${d.title} gallery image`}
+				/>
 				<DetailCta
 					title={`Want a system like ${d.title}?`}
 					text="Tell me what you are building — I will reply within a day."
+					service={serviceForTags(d.tags)}
 					source="project-detail"
 				/>
 				<PrevNext
@@ -227,6 +256,7 @@ const jsonLd = d
 							? {
 									href: `/projects/${prevProject.data.slug}`,
 									title: prevProject.data.title,
+									thumb: thumbOf(prevProject),
 								}
 							: null
 					}
@@ -235,6 +265,7 @@ const jsonLd = d
 							? {
 									href: `/projects/${nextProject.data.slug}`,
 									title: nextProject.data.title,
+									thumb: thumbOf(nextProject),
 								}
 							: null
 					}
