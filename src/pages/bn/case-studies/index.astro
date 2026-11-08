@@ -1,7 +1,7 @@
 ---
 import Layout from "../../../layouts/Layout.astro";
 import { getCaseStudies, truncateShort } from "../../../lib/content";
-import { getDict, langUrl, localizeData } from "../../../lib/i18n";
+import { getDict, langUrl, localizeCaseStudy } from "../../../lib/i18n";
 
 // Bangla case-study archive — no filters; grid of cards with title +
 // one-line hook, linking to the case-study detail page.
@@ -11,7 +11,7 @@ const t = getDict(lang);
 const studiesRaw = await getCaseStudies();
 const studies = studiesRaw.map((s) => ({
 	...s,
-	data: localizeData(s.data, lang),
+	data: localizeCaseStudy(s.data, lang),
 }));
 ---
 

@@ -18,7 +18,7 @@ import {
 	type PublicSettings,
 } from "../loaders/public-content";
 
-export type { PublicSettings, PrimaryIdentity, DefaultLanguage } from "../loaders/public-content";
+export type { PublicSettings, PrimaryIdentity, DefaultLanguage, SettingsBn } from "../loaders/public-content";
 
 export async function getSiteSettings(): Promise<PublicSettings> {
 	try {

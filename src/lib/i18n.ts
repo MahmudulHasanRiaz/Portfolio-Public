@@ -96,6 +96,39 @@ export function localizeData<T extends Record<string, unknown>>(
 	return out as T;
 }
 
+/**
+ * Case-study `bn` uses DB field names while the English top level uses
+ * API names — map before overlaying (live shape, PR #76):
+ *   bn.challenge → problem, bn.strategy → fix, bn.results → result,
+ *   bn.research → research.
+ * An explicit API-named key in `bn` (e.g. older build-time frontmatter
+ * with `problem`) wins over the mapped DB name, so both shapes work.
+ * All other types use identical field names in `bn` and need no map.
+ */
+const CASE_STUDY_BN_MAP: Record<string, string> = {
+	challenge: "problem",
+	strategy: "fix",
+	results: "result",
+	research: "research",
+};
+
+export function localizeCaseStudy<T extends Record<string, unknown>>(
+	data: T,
+	lang: Lang,
+): T {
+	if (lang !== "bn") return data;
+	const bn = (data as Record<string, unknown>)["bn"];
+	if (!bn || typeof bn !== "object") return data;
+	const remapped: Record<string, unknown> = {
+		...(bn as Record<string, unknown>),
+	};
+	for (const [dbKey, apiKey] of Object.entries(CASE_STUDY_BN_MAP)) {
+		if (apiKey in remapped) continue;
+		if (dbKey in remapped) remapped[apiKey] = remapped[dbKey];
+	}
+	return localizeData({ ...data, bn: remapped }, lang);
+}
+
 /** Date in the page language (Bangla → bn-BD, Bangla digits). */
 export function formatDateLang(
 	iso: string | undefined | null,

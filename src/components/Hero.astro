@@ -1,6 +1,6 @@
 ---
 import { PROFILE } from "../data/site";
-import { getSiteSettings } from "../lib/settings";
+import { getSiteSettings, type SettingsBn } from "../lib/settings";
 import { getDict, type Lang } from "../lib/i18n";
 import HeroDesignation from "./HeroDesignation";
 
@@ -18,15 +18,19 @@ const isKnowMe = profile === "knowme";
 // unreachable, so the build never breaks.
 const settings = await getSiteSettings();
 const photoUrl = settings.portraitUrl ?? PROFILE.photo;
-// Admin Bangla hero copy (settings.bn) wins over the dictionary on
-// /bn/ pages; the dictionary is the fallback — never a blank headline.
-const bnCopy =
-	lang === "bn" && settings.bn ? settings.bn : ({} as Record<string, unknown>);
+// Admin Bangla hero copy (settings.bn) wins over the English settings
+// copy on /bn/ pages; the English settings copy (admin-managed) wins
+// over the dictionary; the dictionary is the last resort — never a
+// blank headline.
+const bnCopy: SettingsBn = lang === "bn" ? (settings.bn ?? {}) : {};
 const str = (v: unknown) => (typeof v === "string" && v ? v : undefined);
 const heroHeadline =
-	str(bnCopy.heroHeadline) ?? (isKnowMe ? t.knowMeHeadline : t.heroHeadline);
+	str(bnCopy.heroHeadline) ??
+	str(isKnowMe ? settings.knowMeHeadline : settings.heroHeadline) ??
+	(isKnowMe ? t.knowMeHeadline : t.heroHeadline);
 const heroDesc =
 	str(bnCopy.heroDescription) ??
+	str(isKnowMe ? settings.knowMeSub : settings.heroDescription) ??
 	(isKnowMe ? t.knowMeSub : t.heroDescription);
 const designations =
 	lang === "bn" ? t.designationKnowMe : [...PROFILE.designations];

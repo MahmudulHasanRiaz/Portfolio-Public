@@ -16,7 +16,7 @@ import {
 	mergeDetail,
 	parseBodyBlocks,
 } from "../../../lib/detail";
-import { getDict, langUrl, localizeData } from "../../../lib/i18n";
+import { getDict, langUrl, localizeCaseStudy } from "../../../lib/i18n";
 
 // Bangla on-demand detail route — hybrid live-then-static: the live
 // collection first (instant when a case study is newly published), then
@@ -72,7 +72,7 @@ const merged = mergeDetail(buildData, liveData) as unknown as
 	| CaseStudyData
 	| undefined;
 const d = merged
-	? (localizeData(
+	? (localizeCaseStudy(
 			merged as unknown as Record<string, unknown>,
 			lang,
 		) as unknown as CaseStudyData)
@@ -121,7 +121,7 @@ const coverImage = !isVideoThumb && d?.thumbnail ? d.thumbnail : videoPoster;
 const allStudiesRaw = await getCaseStudies();
 const allStudies = allStudiesRaw.map((s) => ({
 	...s,
-	data: localizeData(s.data, lang),
+	data: localizeCaseStudy(s.data, lang),
 }));
 const currentIndex = allStudies.findIndex((s) => s.data.slug === slug);
 const prevStudy = currentIndex >= 0 ? allStudies[currentIndex + 1] : undefined;
