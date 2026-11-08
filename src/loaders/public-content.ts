@@ -98,10 +98,78 @@ function isItem(value: unknown): value is PublicContentItem {
 	return typeof item.slug === "string" && typeof item.title === "string";
 }
 
+/**
+ * Human labels for known case-study / venture metric keys (the API
+ * stores metrics as a JSON object keyed by a short camelCase id).
+ * Unknown keys fall back to a readable Title Case label.
+ */
+const METRIC_LABELS: Record<string, string> = {
+	stores: "Stores",
+	fraudChecks: "Fraud checks",
+	ordersPerDay: "Orders / day",
+	pageLoad: "Page load",
+	codConfirmation: "COD confirmation",
+	conversionUplift: "Conversion uplift",
+	fraudOrderReduction: "Fraud order reduction",
+	orderTimeSaved: "Order time saved",
+	branchesOnboarded: "Branches onboarded",
+	stockOutReduction: "Stock-out reduction",
+	expiryLossReduction: "Expiry loss reduction",
+};
+
+function metricLabel(key: string): string {
+	const known = METRIC_LABELS[key];
+	if (known) return known;
+	return key
+		.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+		.replace(/^./, (c) => c.toUpperCase());
+}
+
+/**
+ * Normalize a metrics value into the Metric[] array the live
+ * collections require ({value, label}).
+ *
+ * The API returns case-study metrics as a JSON OBJECT
+ * ({stores, fraudChecks, ordersPerDay, ...}) but the live schema
+ * requires an ARRAY — Zod rejected the whole live entry, so the page
+ * fell back to build-time rows with no cover/gallery/research/metrics.
+ * This transform is the safety net (the API now returns an array too):
+ * an array passes through (cleaned), an object becomes [{value, label}]
+ * pairs, anything else (null / missing / wrong type) becomes [].
+ */
+function normalizeMetrics(
+	value: unknown,
+): Array<{ value: string; label: string }> {
+	if (Array.isArray(value)) {
+		return value
+			.filter(
+				(m): m is { value: unknown; label: unknown } =>
+					typeof m === "object" && m !== null,
+			)
+			.map((m) => ({
+				value: String(m.value ?? ""),
+				label: String(m.label ?? ""),
+			}))
+			.filter((m) => m.value !== "" && m.label !== "");
+	}
+	if (typeof value === "object" && value !== null) {
+		return Object.entries(value as Record<string, unknown>)
+			.filter(([, v]) => v !== null && v !== undefined && String(v) !== "")
+			.map(([k, v]) => ({ value: String(v), label: metricLabel(k) }));
+	}
+	return [];
+}
+
 function toEntry(item: PublicContentItem, type: PublicContentType) {
+	// Case studies + ventures carry metrics: normalize to the Metric[]
+	// array the live schemas require (see normalizeMetrics).
+	const data: Record<string, unknown> = { ...item, type };
+	if (type === "case-studies" || type === "ventures") {
+		data.metrics = normalizeMetrics(item.metrics);
+	}
 	return {
 		id: item.slug,
-		data: { ...item, type },
+		data,
 		cacheHint: {
 			tags: [type, `${type}:${item.slug}`],
 			lastModified: item.updatedAt ? new Date(item.updatedAt) : undefined,
@@ -139,16 +207,44 @@ export type PrimaryIdentity = "developer" | "know-me";
  */
 export type DefaultLanguage = "en" | "bn" | "system";
 
+/**
+ * Optional Bangla settings copy from the admin panel (live shape,
+ * verified against GET /api/public/settings 2026-11-08). `statsLabels`
+ * is positional — [years, projects, clients, releases] — and `null`
+ * means "no Bangla yet" for that slot (falls back to the build-time
+ * label). EN stat labels are deliberately NOT emitted by the API (the
+ * DB seed copy differs from the live Astro copy) — Stats.astro keeps
+ * its labels from build-time and only overlays bn.statsLabels.
+ */
+export interface SettingsBn {
+	heroHeadline?: string;
+	heroDescription?: string;
+	knowMeHeadline?: string;
+	knowMeSub?: string;
+	statsLabels?: (string | null)[];
+}
+
 export interface PublicSettings {
 	portraitUrl: string | null;
 	primaryIdentity: PrimaryIdentity;
 	defaultLanguage: DefaultLanguage;
 	/**
-	 * Optional Bangla hero/profile copy from the admin panel (same
-	 * field names as the English settings copy). Absent = fall back
-	 * to the English strings. Consumed via getSiteSettings().
+	 * Admin-managed English hero / Know Me copy (live shape, verified
+	 * against GET /api/public/settings 2026-11-08). Hero.astro prefers
+	 * these over the dictionary; the dictionary is the fail-safe
+	 * fallback when the API is unset or unreachable.
 	 */
-	bn?: Record<string, unknown>;
+	heroHeadline: string;
+	heroDescription: string;
+	knowMeHeadline: string;
+	knowMeSub: string;
+	/**
+	 * Optional Bangla settings copy from the admin panel (same field
+	 * names as the English settings copy, plus positional statsLabels).
+	 * Absent = fall back to the English strings. Consumed via
+	 * getSiteSettings().
+	 */
+	bn?: SettingsBn;
 }
 
 /** Fail-safe defaults: repo portrait + Software Engineer profile. */
@@ -156,6 +252,13 @@ export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
 	portraitUrl: null,
 	primaryIdentity: "developer",
 	defaultLanguage: "en",
+	heroHeadline: "I build products people rely on every day.",
+	heroDescription:
+		"ERP, e-commerce and SaaS systems for businesses in Bangladesh and beyond — designed to hold up at real-world scale.",
+	knowMeHeadline:
+		"Software engineer, entrepreneur and nasheed artist — one person, five callings.",
+	knowMeSub:
+		"Mahmudul Hasan Riaz — a Hafiz-Alem who builds ERP and e-commerce software, founded three ventures, and shares nasheed, tilawat and lectures with listeners around the world.",
 };
 
 /**
@@ -216,11 +319,57 @@ export async function fetchPublicSettings(
 			record.defaultLanguage === "system"
 				? record.defaultLanguage
 				: "en";
-		const bn =
-			typeof record.bn === "object" && record.bn !== null
-				? (record.bn as Record<string, unknown>)
-				: undefined;
-		return { portraitUrl, primaryIdentity, defaultLanguage, bn };
+		const strField = (v: unknown, fallback: string): string =>
+			typeof v === "string" && v ? v : fallback;
+		const heroHeadline = strField(
+			record.heroHeadline,
+			DEFAULT_PUBLIC_SETTINGS.heroHeadline,
+		);
+		const heroDescription = strField(
+			record.heroDescription,
+			DEFAULT_PUBLIC_SETTINGS.heroDescription,
+		);
+		const knowMeHeadline = strField(
+			record.knowMeHeadline,
+			DEFAULT_PUBLIC_SETTINGS.knowMeHeadline,
+		);
+		const knowMeSub = strField(
+			record.knowMeSub,
+			DEFAULT_PUBLIC_SETTINGS.knowMeSub,
+		);
+		// Optional `bn` object (omitted when nothing is set): same four
+		// fields in Bangla, plus positional statsLabels. A present but
+		// empty `bn` object carries nothing — drop it so consumers can
+		// treat "no bn key" as "no Bangla yet".
+		let bn: SettingsBn | undefined;
+		if (typeof record.bn === "object" && record.bn !== null) {
+			const raw = record.bn as Record<string, unknown>;
+			const parsed: SettingsBn = {};
+			if (typeof raw.heroHeadline === "string" && raw.heroHeadline)
+				parsed.heroHeadline = raw.heroHeadline;
+			if (typeof raw.heroDescription === "string" && raw.heroDescription)
+				parsed.heroDescription = raw.heroDescription;
+			if (typeof raw.knowMeHeadline === "string" && raw.knowMeHeadline)
+				parsed.knowMeHeadline = raw.knowMeHeadline;
+			if (typeof raw.knowMeSub === "string" && raw.knowMeSub)
+				parsed.knowMeSub = raw.knowMeSub;
+			if (Array.isArray(raw.statsLabels))
+				parsed.statsLabels = raw.statsLabels.filter(
+					(s): s is string | null =>
+						typeof s === "string" || s === null,
+				);
+			if (Object.keys(parsed).length > 0) bn = parsed;
+		}
+		return {
+			portraitUrl,
+			primaryIdentity,
+			defaultLanguage,
+			heroHeadline,
+			heroDescription,
+			knowMeHeadline,
+			knowMeSub,
+			bn,
+		};
 	} catch {
 		return { ...DEFAULT_PUBLIC_SETTINGS };
 	}
