@@ -29,11 +29,11 @@ export const PROFILE = {
 	] as const,
 	heroHeadline: "I build products people rely on every day.",
 	heroDescription:
-		"ERP, e-commerce and SaaS systems for businesses in Bangladesh and beyond.",
+		"ERP, e-commerce and SaaS systems for businesses in Bangladesh and beyond — designed to hold up at real-world scale.",
 	knowMeHeadline:
 		"Software engineer, entrepreneur and nasheed artist — one person, five callings.",
 	knowMeSub:
-		"Software engineer by craft, entrepreneur by calling, nasheed artist by heart — and a Hafiz-Alem and public figure. This is the whole person.",
+		"Mahmudul Hasan Riaz — a Hafiz-Alem who builds ERP and e-commerce software, founded three ventures, and shares nasheed, tilawat and lectures with listeners around the world.",
 	photo: "/speaker.jpg",
 	photoAlt: "Mahmudul Hasan Riaz speaking at a podium",
 } as const;

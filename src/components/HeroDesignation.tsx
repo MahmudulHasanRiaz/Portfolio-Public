@@ -1,8 +1,23 @@
 import { useEffect, useState } from "react";
-import { Code, User } from "lucide-react";
+import { BookOpen, CodeXml, Megaphone, Mic, Rocket } from "lucide-react";
 import { PROFILE } from "../data/site";
 
 const DESIGNATIONS = PROFILE.designations;
+
+// One icon per designation — the icon changes with the word.
+const DESIGNATION_ICONS = {
+	"Software Engineer": CodeXml,
+	Entrepreneur: Rocket,
+	"Nasheed Artist": Mic,
+	"Hafiz-Alem": BookOpen,
+	"Public Figure": Megaphone,
+} as const;
+
+// Longest designation — the badge sizer reserves this width so the pill
+// never grows/shrinks while typing.
+const LONGEST_DESIGNATION = DESIGNATIONS.reduce((a, b) =>
+	a.length >= b.length ? a : b,
+);
 
 const TYPE_MS = 45;
 const EXIT_MS = 300;
@@ -58,56 +73,78 @@ export default function HeroDesignation({
 		return () => window.clearTimeout(timer);
 	}, [reduced, index, shown, exiting, profile]);
 
-	const Icon = profile === "knowme" ? User : Code;
+	const word = DESIGNATIONS[index] ?? DESIGNATIONS[0];
+	const Icon = DESIGNATION_ICONS[word];
+	const LongestIcon = DESIGNATION_ICONS[LONGEST_DESIGNATION];
 
 	// Reduced motion: first designation, static — no typing, no cursor.
 	if (reduced) {
 		return (
 			<>
 				<span className="hero-badge" aria-hidden="true">
-					<span className="badge-icon">
-						<Icon size={14} />
+					<span className="badge-sizer">
+						<span className="badge-icon">
+							<LongestIcon size={14} />
+						</span>
+						<span>{LONGEST_DESIGNATION}</span>
 					</span>
-					<span>{DESIGNATIONS[0]}</span>
+					<span className="badge-visible">
+						<span className="badge-icon">
+							<Icon size={14} />
+						</span>
+						<span>{DESIGNATIONS[0]}</span>
+					</span>
 				</span>
 				<span className="sr-only">{DESIGNATIONS.join(", ")}</span>
 			</>
 		);
 	}
 
-	const word = DESIGNATIONS[index] ?? DESIGNATIONS[0];
 	const letters = word.slice(0, shown).split("");
 
 	return (
 		<>
 			{/* Per-letter entrance + clean word exit. glass.css has no keyframes
 			    for these, so they live here, scoped to this island. */}
-			<style>{`@keyframes badge-letter-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+			<style>{`@keyframes badge-letter-in { from { opacity: 0; transform: translateY(6px); filter: blur(2px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
 @keyframes badge-word-exit { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-6px); } }`}</style>
 			<span className="hero-badge" aria-hidden="true">
-				<span className="badge-icon">
-					<Icon size={14} />
+				{/* Invisible sizer (longest designation + cursor replica)
+				    reserves the badge width so it never grows/shrinks
+				    while typing; the live word is centered over it. */}
+				<span className="badge-sizer">
+					<span className="badge-icon">
+						<LongestIcon size={14} />
+					</span>
+					<span>{LONGEST_DESIGNATION}</span>
+					<span className="badge-cursor" />
 				</span>
-				<span
-					style={
-						exiting
-							? { animation: "badge-word-exit 300ms ease forwards" }
-							: undefined
-					}
-				>
-					{letters.map((ch, i) => (
-						<span
-							key={i}
-							style={{
-								display: "inline-block",
-								animation: "badge-letter-in 260ms ease both",
-							}}
-						>
-							{ch === " " ? " " : ch}
-						</span>
-					))}
+				<span className="badge-visible">
+					<span className="badge-icon">
+						<Icon size={14} />
+					</span>
+					<span
+						style={
+							exiting
+								? { animation: "badge-word-exit 300ms ease forwards" }
+								: undefined
+						}
+					>
+						{letters.map((ch, i) => (
+							<span
+								key={i}
+								style={{
+									display: "inline-block",
+									animation:
+										"badge-letter-in 300ms cubic-bezier(0.22,1,0.36,1) both",
+								}}
+							>
+								{ch === " " ? " " : ch}
+							</span>
+						))}
+					</span>
+					{!exiting && <span className="badge-cursor" />}
 				</span>
-				{!exiting && <span className="badge-cursor" />}
 			</span>
 			{/* SEO: every designation in the DOM. The visible badge above is
 			    aria-hidden; this list is the accessible text, and the

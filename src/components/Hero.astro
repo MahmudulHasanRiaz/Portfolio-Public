@@ -20,6 +20,7 @@ const isKnowMe = profile === "knowme";
 				height="800"
 				fetchpriority="high"
 			/>
+			<div class="hero-photo-gradient" aria-hidden="true" />
 			<svg
 				class="hero-runlight"
 				viewBox="0 0 100 125"
@@ -40,14 +41,24 @@ const isKnowMe = profile === "knowme";
 					y="0.5"
 					width="99"
 					height="124"
-					pathLength="100"
-					stroke-dasharray="12 88"
+					pathLength="400"
+					stroke-dasharray="56 344"
 					vector-effect="non-scaling-stroke"
 				/>
 			</svg>
 		</div>
 		<div class="hero-badge-anchor">
 			<HeroDesignation profile={profile} client:load />
+		</div>
+		<div class="hero-photo-float" aria-hidden="true">
+			<div class="hero-photo-float-card">
+				<strong>80+</strong>
+				<span>Projects shipped</span>
+			</div>
+			<div class="hero-photo-float-card">
+				<strong>2,000–5,000</strong>
+				<span>Orders handled daily</span>
+			</div>
 		</div>
 	</div>
 	<div>
@@ -88,16 +99,16 @@ const isKnowMe = profile === "knowme";
 						{PROFILE.location}
 					</p>
 					<div class="hero-ctas">
+						<a class="btn" href="#projects">
+							View my work
+						</a>
 						<button
 							type="button"
-							class="btn"
+							class="btn btn-ghost"
 							data-contact-source="hero"
 						>
 							Contact me
 						</button>
-						<a class="btn btn-ghost" href="#projects">
-							View my work
-						</a>
 					</div>
 				</>
 			)

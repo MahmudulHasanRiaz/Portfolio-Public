@@ -32,7 +32,14 @@ export default function ContactModal() {
 			if (e.key === "Escape") setOpen(false);
 		};
 		window.addEventListener("keydown", onKey);
-		return () => window.removeEventListener("keydown", onKey);
+		// Lock body scroll while the modal is open; the cleanup runs on
+		// close AND on unmount, so the page never stays locked.
+		const previousOverflow = document.body.style.overflow;
+		document.body.style.overflow = "hidden";
+		return () => {
+			window.removeEventListener("keydown", onKey);
+			document.body.style.overflow = previousOverflow;
+		};
 	}, [open ]);
 
 	if (!open) return null;

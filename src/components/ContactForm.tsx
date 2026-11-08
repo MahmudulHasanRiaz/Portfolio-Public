@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { SERVICES } from "../data/site";
+import { PROFILE, SERVICES } from "../data/site";
 import { leadPayload, validateLead, type LeadError } from "../lib/lead";
 
 interface ContactFormProps {
@@ -28,6 +28,16 @@ export default function ContactForm({ service, source, inline = false }: Contact
 
 	const errorFor = (field: LeadError["field"]) =>
 		errors.find((e) => e.field === field)?.message;
+
+	const resetForm = () => {
+		setName("");
+		setEmail("");
+		setPhone("");
+		setSelectedService(service ?? "");
+		setMessage("");
+		setErrors([]);
+		setSubmitted(false);
+	};
 
 	const handleSubmit = (e: FormEvent) => {
 		e.preventDefault();
@@ -64,11 +74,30 @@ export default function ContactForm({ service, source, inline = false }: Contact
 			<div className="form-success">
 				<h3>Thanks — I&rsquo;ll get back to you soon.</h3>
 				<p>I reply personally to every message.</p>
+				<button type="button" className="btn btn-ghost" onClick={resetForm}>
+					Send another message
+				</button>
+				{inline ? (
+					<p className="form-prefer-email">
+						Prefer email? Write to me at{" "}
+						<a href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
+					</p>
+				) : null}
 			</div>
 		);
 	}
 
+	// The "Prefer email?" fallback lives under the inline (Contact
+	// section) form only — the preview's modal has no such line.
+	const preferEmail = inline ? (
+		<p className="form-prefer-email">
+			Prefer email? Write to me at{" "}
+			<a href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>
+		</p>
+	) : null;
+
 	return (
+		<>
 		<form onSubmit={handleSubmit} data-inline={inline ? "true" : undefined} noValidate>
 			<div className="form-field">
 				<label htmlFor="contact-name">
@@ -143,5 +172,7 @@ export default function ContactForm({ service, source, inline = false }: Contact
 				</button>
 			</div>
 		</form>
+		{preferEmail}
+		</>
 	);
 }

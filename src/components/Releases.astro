@@ -7,6 +7,7 @@ import { youtubeThumb } from "../lib/youtube";
 export interface ReleaseCardItem {
 	slug: string;
 	title: string;
+	description?: string;
 	releaseType?: string;
 	publishedAt?: string;
 	youtubeId?: string;
@@ -51,37 +52,53 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 						: null;
 					const shownPlatforms = release.platforms.slice(0, 5);
 					const extra = release.platforms.length - shownPlatforms.length;
+					// Audio-only releases link straight out to Spotify —
+					// the visitor should not have to open the detail page
+					// just to listen.
+					const spotify = release.platforms.find(
+						(p) => p.name === "Spotify",
+					);
 					return (
-						<a class="release-card" href={`/releases/${release.slug}`}>
-							<div class="release-thumb">
-								{thumb ? (
-									<img
-										src={thumb}
-										alt={release.title}
-										loading="lazy"
-									/>
-								) : (
-									<span class="audio-mark" aria-hidden="true">
-										<svg
-											width="22"
-											height="22"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											aria-hidden="true"
-										>
-											<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-											<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-											<line x1="12" x2="12" y1="19" y2="22" />
-										</svg>
-									</span>
-								)}
-							</div>
+						<article class="release-card">
+							<a
+								class="release-thumb-link"
+								href={`/releases/${release.slug}`}
+								aria-label={`View details for ${release.title}`}
+							>
+								<div class="release-thumb">
+									{thumb ? (
+										<img
+											src={thumb}
+											alt={release.title}
+											loading="lazy"
+										/>
+									) : (
+										<span class="audio-mark" aria-hidden="true">
+											<svg
+												width="22"
+												height="22"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												aria-hidden="true"
+											>
+												<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+												<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+												<line x1="12" x2="12" y1="19" y2="22" />
+											</svg>
+										</span>
+									)}
+								</div>
+							</a>
 							<div class="release-info">
-								<h3>{release.title}</h3>
+								<h3>
+									<a href={`/releases/${release.slug}`}>
+										{release.title}
+									</a>
+								</h3>
 								<p class="release-meta">
 									{release.releaseType ? (
 										<span class="type-tag">
@@ -93,10 +110,25 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 										: null}
 									{formatDate(release.publishedAt)}
 								</p>
+								{release.description ? (
+									<p class="release-desc">
+										{release.description}
+									</p>
+								) : null}
 								{!hasYouTube ? (
 									<span class="audio-badge">
 										Audio only — not on YouTube
 									</span>
+								) : null}
+								{!hasYouTube && spotify ? (
+									<a
+										class="release-listen"
+										href={spotify.url}
+										target="_blank"
+										rel="noreferrer"
+									>
+										Listen on Spotify ↗
+									</a>
 								) : null}
 							</div>
 							<div class="release-platforms">
@@ -104,18 +136,25 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 									const icon =
 										RELEASE_PLATFORM_ICONS[p.name];
 									return icon ? (
-										<BrandIcon
-											icon={icon}
-											name={p.name}
-											size={20}
-										/>
+										<a
+											href={p.url}
+											target="_blank"
+											rel="noreferrer"
+											aria-label={`${release.title} on ${p.name}`}
+										>
+											<BrandIcon
+												icon={icon}
+												name={p.name}
+												size={20}
+											/>
+										</a>
 									) : null;
 								})}
 								{extra > 0 ? (
 									<span class="plat-more">+{extra}</span>
 								) : null}
 							</div>
-						</a>
+						</article>
 					);
 				})}
 			</div>

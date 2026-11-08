@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
-import { Dices, X } from "lucide-react";
+import { RotateCw, X } from "lucide-react";
 import {
 	STACK,
 	STACK_CATEGORIES,
@@ -11,7 +11,7 @@ import {
 // 3D rotating tag sphere — HTML elements (NOT canvas) so every tech name
 // stays in the DOM (SEO). Positions come from a Fibonacci sphere; the globe
 // auto-rotates and never stops by default — it resumes within ~2s after a
-// detail card closes, after drag/snap, and after Spin. Only
+// detail card closes, after drag/snap, and ~2.6s after Spin. Only
 // prefers-reduced-motion stops it (static by design).
 
 interface Vec {
@@ -45,6 +45,22 @@ function rotatePoint(p: Vec, rotX: number, rotY: number): Vec {
 	return { x: x1, y: y2, z: z2 };
 }
 
+function easeInOutCubic(t: number): number {
+	return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+// Rotation that brings technology i to front-and-center, taking the short
+// way from the current Y rotation (nearest equivalent angle).
+function frontTarget(i: number, rotY: number): { rx: number; ry: number } {
+	const p = BASE_POINTS[i];
+	const ryBase = Math.atan2(-p.x, p.z);
+	const rx = Math.atan2(p.y, Math.hypot(p.x, p.z));
+	let ry = ryBase;
+	while (ry - rotY > Math.PI) ry -= Math.PI * 2;
+	while (ry - rotY < -Math.PI) ry += Math.PI * 2;
+	return { rx, ry };
+}
+
 const BASE_POINTS = fibonacciSphere(STACK.length);
 
 // Dark-on-transparent logos that render white in dark mode.
@@ -60,17 +76,50 @@ const DARK_INVERT_NAMES = new Set([
 	"WordPress",
 ]);
 
-// Constellation lines: barely-there hairlines between neighbouring tags.
-const LINE_PAIRS: Array<[number, number]> = [
-	[0, 1],
-	[5, 6],
-	[10, 11],
-	[15, 16],
-	[20, 21],
-	[25, 26],
-	[30, 31],
-	[35, 36],
+// Category colors (preview): a colored dot in each filter chip, in the
+// "Now:" label, and on every tag marks which family a tech belongs to.
+const CATEGORY_COLORS: Record<string, string> = {
+	Frontend: "#22d3ee",
+	Backend: "#2dd4bf",
+	Database: "#60a5fa",
+	"Cloud & Tools": "#fb923c",
+	"CMS & E-commerce": "#c084fc",
+	Auth: "#fb7185",
+	Concepts: "#9ca3af",
+};
+
+// Constellation lines: thin, faint hairlines between related
+// technologies — 20 named pairs, resolved to STACK indices once.
+const CONSTELLATION_PAIRS: Array<[string, string]> = [
+	["Next.js", "React"],
+	["React", "TypeScript"],
+	["TypeScript", "Tailwind CSS"],
+	["Node.js", "Nest.js"],
+	["Nest.js", "Express.js"],
+	["Express.js", "Fastify"],
+	["PostgreSQL", "Prisma"],
+	["Prisma", "Drizzle ORM"],
+	["PostgreSQL", "MySQL"],
+	["WordPress", "WooCommerce"],
+	["WooCommerce", "PHP"],
+	["Docker", "Vercel"],
+	["Vercel", "Cloudflare"],
+	["Cloudflare", "DigitalOcean"],
+	["Supabase", "PostgreSQL"],
+	["Clerk", "Firebase"],
+	["Firebase", "Better Auth"],
+	["Shopify", "WooCommerce"],
+	["Redis", "BullMQ"],
+	["S3/R2", "Cloudflare"],
 ];
+
+const LINE_PAIRS: Array<[number, number]> = CONSTELLATION_PAIRS.flatMap(
+	([a, b]) => {
+		const ia = STACK.findIndex((t) => t.name === a);
+		const ib = STACK.findIndex((t) => t.name === b);
+		return ia >= 0 && ib >= 0 ? [[ia, ib] as [number, number]] : [];
+	},
+);
 
 // Filter cluster: matching techs gather on a small sphere in front.
 const CLUSTER_CENTER: Vec = { x: 0, y: 0, z: 0.62 };
@@ -79,14 +128,21 @@ const LANDING_MS = 1600;
 const MAX_VEL = 0.12;
 const INERTIA_DECAY = 0.9;
 
-const DUST_SPOTS = [
-	{ left: "12%", top: "20%" },
-	{ left: "78%", top: "14%" },
-	{ left: "88%", top: "62%" },
-	{ left: "8%", top: "70%" },
-	{ left: "30%", top: "88%" },
-	{ left: "64%", top: "90%" },
-];
+// Ambient dust: 16 deterministic particles (seeded by index, so every
+// render and every visitor sees the same calm field — no per-render
+// flicker). 8s drift, opacity 0.1–0.26 (see particle-drift in glass.css).
+const DUST_SPOTS = Array.from({ length: 16 }, (_, i) => {
+	const rnd = (seed: number) => {
+		const v = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+		return v - Math.floor(v);
+	};
+	return {
+		left: `${3 + rnd(i * 3 + 1) * 94}%`,
+		top: `${3 + rnd(i * 3 + 2) * 94}%`,
+		size: 2 + rnd(i * 3 + 3) * 2.5,
+		delay: -rnd(i * 7 + 3) * 8,
+	};
+});
 
 function TechLogo({ tech }: { tech: StackTech }) {
 	if (tech.icon === "woocommerce-w") {
@@ -131,6 +187,14 @@ export default function StackGlobe() {
 	const landingUntilRef = useRef(0);
 	const clusterAngleRef = useRef(0);
 	const flyToRef = useRef<number | null>(null);
+	const tweenRef = useRef<{
+		fx: number;
+		fy: number;
+		tx: number;
+		ty: number;
+		start: number;
+		dur: number;
+	} | null>(null);
 	const snapPendingRef = useRef(false);
 	const snapAfterInertiaRef = useRef(false);
 	const draggingRef = useRef(false);
@@ -164,10 +228,23 @@ export default function StackGlobe() {
 			const paused =
 				selectedRef.current !== null ||
 				draggingRef.current ||
-				flyToRef.current !== null;
+				flyToRef.current !== null ||
+				tweenRef.current !== null;
 
-			// Magnetic fly-to-front (tap a tech, or snap after a drag).
-			if (flyToRef.current !== null) {
+			// Spin fly-to (and any tweened move): eased rotation onto the
+			// target, then a ~2.6s hold before auto-rotation resumes.
+			if (tweenRef.current !== null) {
+				const tw = tweenRef.current;
+				const t = Math.min(1, (now - tw.start) / tw.dur);
+				const e = easeInOutCubic(t);
+				rot.x = tw.fx + (tw.tx - tw.fx) * e;
+				rot.y = tw.fy + (tw.ty - tw.fy) * e;
+				if (t >= 1) {
+					tweenRef.current = null;
+					resumeAtRef.current = now + 2600;
+				}
+			} else if (flyToRef.current !== null) {
+				// Magnetic fly-to-front (tap a tech, or snap after a drag).
 				const target = rotatePoint(
 					BASE_POINTS[flyToRef.current],
 					rot.x,
@@ -289,11 +366,12 @@ export default function StackGlobe() {
 				if (el) {
 					const depth = (p.z + 1) / 2;
 					const dimmed = filterActive && !matchingSet.has(i);
+					// The front tag reads ~24% larger (preview spotlight).
+					let scale = 0.6 + 0.4 * depth;
+					if (i === frontIdx) scale *= 1.24;
 					el.style.left = `${50 + p.x * 38}%`;
 					el.style.top = `${50 + p.y * 38}%`;
-					el.style.transform = `translate(-50%, -50%) scale(${
-						0.6 + 0.4 * depth
-					})`;
+					el.style.transform = `translate(-50%, -50%) scale(${scale})`;
 					el.style.zIndex = String(Math.round(depth * 100));
 					el.style.opacity = dimmed ? "" : String(0.3 + 0.7 * depth);
 					el.classList.toggle("front", i === frontIdx);
@@ -307,7 +385,8 @@ export default function StackGlobe() {
 				setFrontName(STACK[frontIdx].name);
 			}
 
-			// Constellation lines follow their tags.
+			// Constellation lines follow their tags, fading with depth
+			// (never brighter than 0.32) and with a non-matching filter.
 			for (let k = 0; k < LINE_PAIRS.length; k++) {
 				const line = lineRefs.current[k];
 				if (!line) continue;
@@ -318,6 +397,16 @@ export default function StackGlobe() {
 				line.setAttribute("y1", String(50 + pa.y * 38));
 				line.setAttribute("x2", String(50 + pb.x * 38));
 				line.setAttribute("y2", String(50 + pb.y * 38));
+				const minDepth = (Math.min(pa.z, pb.z) + 1) / 2;
+				let lineOp = 0.32 * Math.pow(Math.max(0, minDepth), 1.4);
+				if (
+					filterActive &&
+					(STACK[a].category !== filterRef.current ||
+						STACK[b].category !== filterRef.current)
+				) {
+					lineOp *= 0.2;
+				}
+				line.style.opacity = String(lineOp);
 			}
 
 			raf = requestAnimationFrame(loop);
@@ -378,12 +467,27 @@ export default function StackGlobe() {
 		flyToRef.current = null;
 		snapPendingRef.current = false;
 		snapAfterInertiaRef.current = false;
-		// One energetic turn that settles back into the slow auto-rotate.
-		// Capped: repeat taps cannot stack velocity into a runaway spin.
-		velRef.current.y = Math.max(
-			-MAX_VEL,
-			Math.min(MAX_VEL, velRef.current.y + 0.12),
-		);
+		velRef.current = { x: 0, y: 0 };
+		// Fly TWO extra full turns onto a RANDOM tech over 1.5s, then
+		// hold ~2.6s before auto-rotation resumes (the tween's landing
+		// sets resumeAtRef). Repeat taps re-target; velocity never stacks.
+		const target = Math.floor(Math.random() * STACK.length);
+		if (reducedRef.current) {
+			const { rx, ry } = frontTarget(target, rotRef.current.y);
+			rotRef.current.x = rx;
+			rotRef.current.y = ry;
+			resumeAtRef.current = performance.now() + 2600;
+			return;
+		}
+		const { rx, ry } = frontTarget(target, rotRef.current.y);
+		tweenRef.current = {
+			fx: rotRef.current.x,
+			fy: rotRef.current.y,
+			tx: rx,
+			ty: ry + 2 * Math.PI * 2,
+			start: performance.now(),
+			dur: 1500,
+		};
 		resumeAtRef.current = 0;
 	};
 
@@ -403,6 +507,7 @@ export default function StackGlobe() {
 		lastPointerRef.current = { x: e.clientX, y: e.clientY };
 		velRef.current = { x: 0, y: 0 };
 		flyToRef.current = null;
+		tweenRef.current = null;
 		e.currentTarget.setPointerCapture(e.pointerId);
 	};
 
@@ -455,13 +560,18 @@ export default function StackGlobe() {
 		downIndexRef.current = null;
 	};
 
+	const frontTech = STACK.find((t) => t.name === frontName);
+
 	return (
 		<section className="glass section" id="stack">
 			<div className="section-head">
 				<h2>Stack</h2>
+				<p>
+					The tools behind the products above — drag the globe to
+					explore them all.
+				</p>
 			</div>
 			<div className="globe-wrap">
-				<style>{`@keyframes dust-drift { from { transform: translate(0, 0); } to { transform: translate(10px, -14px); } }`}</style>
 				<div
 					className="globe-stage"
 					onPointerDown={onPointerDown}
@@ -474,8 +584,10 @@ export default function StackGlobe() {
 					<div
 						className="globe-orbit"
 						aria-hidden="true"
-						style={{ inset: "-7%", transform: "rotateX(68deg)" }}
-					/>
+						style={{ inset: "-7%" }}
+					>
+						<span className="globe-satellite" aria-hidden="true" />
+					</div>
 					<svg
 						aria-hidden="true"
 						viewBox="0 0 100 100"
@@ -499,7 +611,7 @@ export default function StackGlobe() {
 								x2="50"
 								y2="50"
 								stroke="var(--ink)"
-								strokeOpacity={0.11}
+								strokeOpacity={1}
 								strokeWidth={1}
 								vectorEffect="non-scaling-stroke"
 							/>
@@ -510,18 +622,16 @@ export default function StackGlobe() {
 							<span
 								key={i}
 								aria-hidden="true"
+								className="globe-particle"
 								style={{
 									position: "absolute",
 									left: spot.left,
 									top: spot.top,
-									width: 4,
-									height: 4,
+									width: spot.size,
+									height: spot.size,
 									borderRadius: "50%",
-									background: "var(--ink-faint)",
-									opacity: 0.45,
-									animation: `dust-drift ${7 + i}s ease-in-out ${
-										i * 0.7
-									}s infinite alternate`,
+									background: "var(--accent)",
+									animationDelay: `${spot.delay}s`,
 								}}
 							/>
 						))}
@@ -548,6 +658,16 @@ export default function StackGlobe() {
 					))}
 				</div>
 				<p className="globe-now">
+					<span
+						aria-hidden="true"
+						className="globe-now-dot"
+						style={{
+							background:
+								(frontTech
+									? CATEGORY_COLORS[frontTech.category]
+									: undefined) ?? "var(--accent)",
+						}}
+					/>
 					Now: <b>{frontName}</b>
 				</p>
 				{selected ? (
@@ -601,6 +721,19 @@ export default function StackGlobe() {
 								}
 								onClick={() => applyFilter(cat)}
 							>
+								<span
+									aria-hidden="true"
+									style={{
+										display: "inline-block",
+										width: 6,
+										height: 6,
+										flex: "none",
+										borderRadius: "50%",
+										background: CATEGORY_COLORS[cat],
+										marginRight: 6,
+										verticalAlign: "1px",
+									}}
+								/>
 								{cat}
 							</button>
 						))}
@@ -610,7 +743,7 @@ export default function StackGlobe() {
 						className="spin-btn"
 						onClick={spin}
 					>
-						<Dices size={16} />
+						<RotateCw size={16} />
 						Spin
 					</button>
 				</div>

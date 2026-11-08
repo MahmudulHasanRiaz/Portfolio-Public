@@ -8,7 +8,7 @@ import StackGlobe from "../components/StackGlobe";
 import Combined from "../components/Combined.astro";
 import ClientsWall from "../components/ClientsWall.astro";
 import ContactForm from "../components/ContactForm";
-import { getProjects, getCaseStudies, getPosts, formatDate } from "../lib/content";
+import { getProjects, getCaseStudies, getPosts, formatDate, readingTimeFromText } from "../lib/content";
 import { PROFILE } from "../data/site";
 
 // Software Engineer profile — the conversion-focused homepage.
@@ -56,7 +56,10 @@ const personJsonLd = {
 
 	<section class="glass section" id="projects">
 		<div class="section-head">
-			<h2>Projects</h2>
+			<div>
+				<h2>Projects</h2>
+				<p>Selected work — real systems running real businesses.</p>
+			</div>
 			<a class="view-all" href="/projects">View all projects →</a>
 		</div>
 		{projects.length === 0 ? (
@@ -70,7 +73,10 @@ const personJsonLd = {
 		caseStudies.length > 0 ? (
 			<section class="glass section" id="case-studies">
 				<div class="section-head">
-					<h2>Case studies</h2>
+					<div>
+						<h2>Case studies</h2>
+						<p>The problem, the fix, the result — in one line each. Tap a case study to read the full story.</p>
+					</div>
 					<a class="view-all" href="/case-studies">
 						View all case studies →
 					</a>
@@ -78,9 +84,38 @@ const personJsonLd = {
 				<div class="card-grid">
 					{caseStudies.map((cs) => (
 						<a class="grid-card" href={`/case-studies/${cs.data.slug}`}>
+							<div class="grid-thumb">
+								{cs.data.thumbnail ? (
+									<img
+										src={cs.data.thumbnail}
+										alt={cs.data.title}
+										loading="lazy"
+									/>
+								) : (
+									<span class="thumb-fallback" aria-hidden="true">
+										{cs.data.title.charAt(0)}
+									</span>
+								)}
+							</div>
 							<div class="grid-body">
 								<h3>{cs.data.title}</h3>
 								{cs.data.description ? <p>{cs.data.description}</p> : null}
+								<span class="service-cue">Read the case study
+									<svg
+										width="15"
+										height="15"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										aria-hidden="true"
+									>
+										<line x1="5" y1="12" x2="19" y2="12" />
+										<polyline points="12 5 19 12 12 19" />
+									</svg>
+								</span>
 							</div>
 						</a>
 					))}
@@ -97,31 +132,48 @@ const personJsonLd = {
 
 	<section class="glass section" id="posts">
 		<div class="section-head">
-			<h2>Latest posts</h2>
+			<div>
+				<h2>Latest posts</h2>
+				<p>Notes on building, and on the nasheed work.</p>
+			</div>
 			<a class="view-all" href="/posts">View all posts →</a>
 		</div>
 		{posts.length === 0 ? (
 			<p class="empty-state">No posts published yet.</p>
 		) : (
 			<div class="card-grid">
-				{posts.slice(0, 3).map((post) => (
-					<a class="grid-card" href={`/posts/${post.data.slug}`}>
-						{post.data.thumbnail ? (
-							<div class="grid-thumb">
-								<img
-									src={post.data.thumbnail}
-									alt={post.data.title}
-									loading="lazy"
-								/>
+				{posts.slice(0, 3).map((post) => {
+					const readingTime =
+						post.data.readingTime ??
+						readingTimeFromText(post.body) ??
+						undefined;
+					return (
+						<a class="grid-card" href={`/posts/${post.data.slug}`}>
+							{post.data.thumbnail ? (
+								<div class="grid-thumb">
+									<img
+										src={post.data.thumbnail}
+										alt={post.data.title}
+										loading="lazy"
+									/>
+								</div>
+							) : null}
+							<div class="grid-body">
+								{post.data.tags?.[0] ? (
+									<div class="tag-row">
+										<span class="tag">{post.data.tags[0]}</span>
+									</div>
+								) : null}
+								<h3>{post.data.title}</h3>
+								{post.data.excerpt ? <p>{post.data.excerpt}</p> : null}
+								<p class="grid-meta">
+									{formatDate(post.data.publishedAt)}
+									{readingTime ? ` · ${readingTime} min read` : ""}
+								</p>
 							</div>
-						) : null}
-						<div class="grid-body">
-							<h3>{post.data.title}</h3>
-							{post.data.excerpt ? <p>{post.data.excerpt}</p> : null}
-							<p class="grid-meta">{formatDate(post.data.publishedAt)}</p>
-						</div>
-					</a>
-				))}
+						</a>
+					);
+				})}
 			</div>
 		)}
 	</section>
@@ -131,7 +183,7 @@ const personJsonLd = {
 			<h2>Have a project in mind?</h2>
 		</div>
 		<p class="muted" style="margin:0 0 8px;">
-			Tell me what you are building — I reply personally to every message.
+			Tell me what you are building — I reply personally, usually within a day.
 		</p>
 		<div class="contact-info">
 			<div class="info-row">

@@ -21,15 +21,16 @@ interface Props {
 }
 
 const SWIPE_THRESHOLD = 28;
-const FLIP_OUT_MS = 240;
-const FLIP_IN_MS = 280;
+// Page-flip (preview): one 0.52s turn around the LEFT edge (the spine),
+// rotateY 0 → -104deg, opacity 1 → 0.2, on a soft paper ease.
+const FLIP_MS = 520;
+const FLIP_EASE = "cubic-bezier(0.35, 0.55, 0.35, 1)";
 const PEEK_COUNT = 3;
 
 export default function ProjectsCarousel({ projects }: Props) {
 	const [index, setIndex] = useState(0);
 	const [leaving, setLeaving] = useState<1 | -1 | null>(null);
 	const [entering, setEntering] = useState(false);
-	const [enterDir, setEnterDir] = useState<1 | -1>(1);
 	const [reducedMotion, setReducedMotion] = useState(false);
 	const timer = useRef<number | null>(null);
 	const dragStart = useRef<{ x: number; y: number } | null>(null);
@@ -62,10 +63,10 @@ export default function ProjectsCarousel({ projects }: Props) {
 				setIndex(next);
 				return;
 			}
-			// Page-flip, two beats: the outgoing card turns away
-			// (rotateY toward the spine), then the incoming card turns in
-			// from the other side. A plain slide+fade is not a page turn.
-			setEnterDir(dir);
+			// Page-flip, two beats: the outgoing card turns away around
+			// its left edge (rotateY toward -104deg, fading to 0.2),
+			// then the incoming card turns in from the same edge and
+			// settles flat. The deck container supplies the perspective.
 			setLeaving(dir);
 			timer.current = window.setTimeout(() => {
 				setIndex(next);
@@ -73,9 +74,9 @@ export default function ProjectsCarousel({ projects }: Props) {
 				setEntering(true);
 				timer.current = window.setTimeout(
 					() => setEntering(false),
-					FLIP_IN_MS,
+					FLIP_MS,
 				);
-			}, FLIP_OUT_MS);
+			}, FLIP_MS);
 		},
 		[count, index, leaving, entering, reducedMotion],
 	);
@@ -203,16 +204,18 @@ export default function ProjectsCarousel({ projects }: Props) {
 					style={{
 						zIndex: 10,
 						transformStyle: "preserve-3d",
-						transition: `transform ${leaving !== null ? FLIP_OUT_MS : FLIP_IN_MS}ms ease, opacity ${leaving !== null ? FLIP_OUT_MS : FLIP_IN_MS}ms ease`,
+						transformOrigin: "left center",
+						backfaceVisibility: "hidden",
+						transition: `transform ${FLIP_MS}ms ${FLIP_EASE}, opacity ${FLIP_MS}ms ${FLIP_EASE}`,
 						...(leaving !== null
 							? {
-									transform: `perspective(1200px) rotateY(${leaving * -70}deg) translateX(${leaving * -40}px)`,
-									opacity: 0,
+									transform: "rotateY(-104deg)",
+									opacity: 0.2,
 								}
 							: entering
 								? {
-										transform: `perspective(1200px) rotateY(${enterDir * 70}deg) translateX(${enterDir * 40}px)`,
-										opacity: 0,
+										transform: "rotateY(-104deg)",
+										opacity: 0.2,
 									}
 								: {}),
 					}}

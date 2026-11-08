@@ -45,6 +45,12 @@ const ogImageUrl = ogImage ?? `${Astro.url.origin}/speaker.jpg`;
 		<meta name="twitter:description" content={description} />
 		<meta name="twitter:image" content={ogImageUrl} />
 		<meta name="generator" content={Astro.generator} />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+			rel="stylesheet"
+		 />
 		<title>{title}</title>
 		<script is:inline>
 			// Theme: system preference by default; manual toggle overrides + remembered.

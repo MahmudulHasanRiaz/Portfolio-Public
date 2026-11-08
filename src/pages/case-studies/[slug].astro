@@ -195,16 +195,16 @@ const jsonLd = d
 					)}
 				</div>
 				<DetailMedia gallery={d.gallery ?? []} videos={d.videos ?? []} />
-				{d.projectSlug && (
-					<p style="margin-top:16px;">
-						<a class="btn btn-ghost" href={`/projects/${d.projectSlug}`}>
-							View the project →
-						</a>
-					</p>
-				)}
 				<DetailCta
-					title="Want a system like this?"
-					text="Tell me what you are building — I will reply within a day."
+					title="Facing a similar problem?"
+					text="Tell me about your project — or first see the system this case study is about."
+					buttonLabel="Discuss a similar project"
+					linkHref={
+						d.projectSlug
+							? `/projects/${d.projectSlug}`
+							: undefined
+					}
+					linkLabel={d.projectSlug ? "View the project" : undefined}
 					source="case-study-detail"
 				/>
 				<PrevNext

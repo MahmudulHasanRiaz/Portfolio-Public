@@ -22,7 +22,7 @@ const PROFILES: Array<{
 
 const NAV_LINKS = [
 	{ label: "Work", href: "/#projects" },
-	{ label: "Ventures", href: "/#ventures" },
+	{ label: "Ventures", href: "/#beyond" },
 	{ label: "Nasheed", href: "/releases" },
 	{ label: "About", href: "/know-me" },
 	{ label: "Contact", href: "/#contact" },
@@ -54,6 +54,23 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 		onScroll();
 		window.addEventListener("scroll", onScroll, { passive: true });
 		return () => window.removeEventListener("scroll", onScroll);
+	}, []);
+
+	// Scroll restoration: on mount, force the unscrolled header state so
+	// a browser-restored scroll position never leaves the header stuck.
+	useEffect(() => {
+		try {
+			if ("scrollRestoration" in history) {
+				history.scrollRestoration = "manual";
+			}
+		} catch {
+			/* history API unavailable */
+		}
+		// Don't yank the page when the URL carries an anchor — the
+		// browser still needs to land on it.
+		if (!window.location.hash) {
+			window.scrollTo(0, 0);
+		}
 	}, []);
 
 	useEffect(() => {
@@ -120,7 +137,16 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 			onClick={toggleTheme}
 			aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
 		>
-			{theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+			{/* Crossfading icon swap: both icons stay mounted and swap
+			    with a 300ms rotate/scale/opacity transition. */}
+			<span className="theme-icon-wrap" aria-hidden="true">
+				<span className={`theme-icon${theme === "dark" ? " active" : ""}`}>
+					<Sun size={16} />
+				</span>
+				<span className={`theme-icon${theme === "light" ? " active" : ""}`}>
+					<Moon size={16} />
+				</span>
+			</span>
 		</button>
 	);
 
