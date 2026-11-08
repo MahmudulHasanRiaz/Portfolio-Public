@@ -5,6 +5,7 @@
 // flips row-reverse and right-aligns. Titles wrap (min-w-0 + break
 // words) instead of truncating at the card edge. An optional 80×56
 // thumbnail renders beside the label, as in the preview.
+import { getDict, type Dict, type Lang } from "../lib/i18n";
 interface PrevNextItem {
 	href: string;
 	title: string;
@@ -14,14 +15,17 @@ interface PrevNextItem {
 interface Props {
 	prev?: PrevNextItem | null;
 	next?: PrevNextItem | null;
+	lang?: Lang;
+	dict?: Dict;
 }
 
-const { prev = null, next = null } = Astro.props;
+const { prev = null, next = null, lang = "en", dict } = Astro.props;
+const t = dict ?? getDict(lang);
 ---
 
 {
 	(prev || next) && (
-		<nav class="prev-next" aria-label="Previous and next">
+		<nav class="prev-next" aria-label={`${t.previous} / ${t.next}`}>
 			{prev ? (
 				<a href={prev.href}>
 					{prev.thumb ? (
@@ -35,7 +39,7 @@ const { prev = null, next = null } = Astro.props;
 						/>
 					) : null}
 					<span class="pn-body">
-						<span class="pn-label">← Previous</span>
+						<span class="pn-label">← {t.previous}</span>
 						<span class="pn-title">{prev.title}</span>
 					</span>
 				</a>
@@ -55,7 +59,7 @@ const { prev = null, next = null } = Astro.props;
 						/>
 					) : null}
 					<span class="pn-body">
-						<span class="pn-label">Next →</span>
+						<span class="pn-label">{t.next} →</span>
 						<span class="pn-title">{next.title}</span>
 					</span>
 				</a>

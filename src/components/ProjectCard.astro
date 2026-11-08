@@ -1,6 +1,7 @@
 ---
 // Grid card for the projects archive — thumbnail, title, description, tags.
 import { truncateShort } from "../lib/content";
+import { langUrl, type Lang } from "../lib/i18n";
 
 interface Props {
 	project: {
@@ -10,12 +11,13 @@ interface Props {
 		tags: string[];
 		thumbnail?: string | null;
 	};
+	lang?: Lang;
 }
 
-const { project } = Astro.props;
+const { project, lang = "en" } = Astro.props;
 ---
 
-<a class="grid-card" href={`/projects/${project.slug}`}>
+<a class="grid-card" href={langUrl(`/projects/${project.slug}`, lang)}>
 	<div class="grid-thumb">
 		{
 			project.thumbnail ? (

@@ -2,6 +2,9 @@
 title: "Inside WooMate Lite: Blocking Fake Orders in WooCommerce"
 slug: "inside-woomate-lite-blocking-fake-orders"
 excerpt: "Fake cash-on-delivery orders quietly eat a Bangladeshi store's courier budget. WooMate Lite stops them at checkout — here is how."
+bn:
+  title: "WooMate Lite-এর ভেতরে: WooCommerce-এ ভুয়া অর্ডার আটকানো"
+  excerpt: "ভুয়া ক্যাশ-অন-ডেলিভারি অর্ডার চুপচাপ খেয়ে ফেলে বাংলাদেশি স্টোরের কুরিয়ার বাজেট। WooMate Lite চেকআউটেই তা আটকায় — কীভাবে, দেখুন।"
 tags: ["WordPress", "WooCommerce", "COD fraud prevention"]
 thumbnail: "/posts/woomate.jpg"
 thumbnailType: "image"

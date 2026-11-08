@@ -1,74 +1,97 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { getPosts, formatDate, truncateShort } from "../../lib/content";
+import {
+	getPosts,
+	formatDate,
+	readingTimeFromText,
+} from "../../lib/content";
+import { getDict, langUrl, readingTimeLabel, showingLabel } from "../../lib/i18n";
+
+// Posts archive — fixed strings from the dictionary (same keys as the
+// /bn/ archive). Reading time is computed from the actual post text.
+const lang = "en" as const;
+const t = getDict(lang);
 
 const posts = await getPosts();
 const allTags = [...new Set(posts.flatMap((p) => p.data.tags ?? []))].sort();
 ---
 
 <Layout
-	title="All posts — Mahmudul Hasan Riaz"
-	description="Posts by Mahmudul Hasan Riaz — ERP, e-commerce, WordPress, and nasheed."
+	title={t.postsPageTitle}
+	description={t.postsPageDescription}
+	lang={lang}
 >
 	<p>
-		<a href="/" class="back-link">← Back to home</a>
+		<a href={langUrl("/", lang)} class="back-link">{t.backHome}</a>
 	</p>
-	<h1 style="margin:0 0 8px;font-size:26px;line-height:1.25;">All posts</h1>
+	<h1 style="margin:0 0 8px;font-size:26px;line-height:1.25;">{t.allPosts}</h1>
 
 	{
 		posts.length === 0 ? (
 			<section class="glass section">
-				<p class="empty-state">No posts published yet.</p>
+				<p class="empty-state">{t.emptyPosts}</p>
 			</section>
 		) : (
 			<>
 				{allTags.length > 0 ? (
 					<div class="chip-row" id="post-filters" style="margin-top:16px;">
-						<button type="button" class="chip active" data-tag="all">
-							All
+						<button type="button" class="chip active" data-tag="all" aria-pressed="true">
+							{t.allChip}
 						</button>
-						{allTags.map((t) => (
-							<button type="button" class="chip" data-tag={t}>
-								{t}
+						{allTags.map((tag) => (
+							<button type="button" class="chip" data-tag={tag} aria-pressed="false">
+								{tag}
 							</button>
 						))}
 					</div>
 				) : null}
-				<p class="count-line" id="post-count">
-					Showing {posts.length} of {posts.length} posts
+				<p class="count-line" id="post-count" data-count-template={t.showingPosts}>
+					{showingLabel(t.showingPosts, posts.length, posts.length)}
 				</p>
 				<section class="card-grid section" id="post-grid">
-					{posts.map((post) => (
-						<a
-							class="grid-card"
-							href={`/posts/${post.data.slug}`}
-							data-tags={(post.data.tags ?? []).join(",")}
-						>
-							<div class="grid-thumb">
-								{post.data.thumbnail ? (
-									<img
-										src={post.data.thumbnail}
-										alt={post.data.title}
-										loading="lazy"
-									/>
-								) : (
-									<div class="thumb-fallback">
-										{post.data.title.charAt(0)}
-									</div>
-								)}
-							</div>
-							<div class="grid-body">
-								<h3>{post.data.title}</h3>
-								{post.data.excerpt ? <p>{truncateShort(post.data.excerpt)}</p> : null}
-								<p class="grid-meta">
-									{formatDate(post.data.publishedAt)}
-									{post.data.readingTime
-										? ` · ${post.data.readingTime} min read`
-										: ""}
-								</p>
-							</div>
-						</a>
-					))}
+					{posts.map((post) => {
+						// Reading time is COMPUTED from the actual post text —
+						// same as the homepage cards — never the stored value
+						// on its own (the API ships readingTime: 1 for every
+						// post). Stored value is only a fallback.
+						const postText =
+							post.body ?? (post.data as { content?: string }).content ?? "";
+						const readingTime =
+							readingTimeFromText(postText) ?? post.data.readingTime ?? undefined;
+						return (
+							<a
+								class="grid-card"
+								href={langUrl(`/posts/${post.data.slug}`, lang)}
+								data-tags={(post.data.tags ?? []).join(",")}
+							>
+								<div class="grid-thumb">
+									{post.data.thumbnail ? (
+										<img
+											src={post.data.thumbnail}
+											alt={post.data.title}
+											loading="lazy"
+										/>
+									) : (
+										<div class="thumb-fallback">
+											{post.data.title.charAt(0)}
+										</div>
+									)}
+								</div>
+								<div class="grid-body">
+									{post.data.tags?.[0] ? (
+										<div class="tag-row">
+											<span class="tag">{post.data.tags[0]}</span>
+										</div>
+									) : null}
+									<h3>{post.data.title}</h3>
+									<p class="grid-meta">
+										{formatDate(post.data.publishedAt, lang)}
+										{readingTime ? ` · ${readingTimeLabel(readingTime, lang)}` : ""}
+									</p>
+								</div>
+							</a>
+						);
+					})}
 				</section>
 			</>
 		)
@@ -81,10 +104,17 @@ const allTags = [...new Set(posts.flatMap((p) => p.data.tags ?? []))].sort();
 	const cards = document.querySelectorAll("#post-grid .grid-card");
 	const count = document.getElementById("post-count");
 	const total = cards.length;
+	const template = count ? count.getAttribute("data-count-template") || "" : "";
+	const fmt = (n) =>
+		template.includes("টি") ? n.toLocaleString("bn-BD") : String(n);
 	chips.forEach((chip) => {
 		chip.addEventListener("click", () => {
-			chips.forEach((c) => c.classList.remove("active"));
+			chips.forEach((c) => {
+				c.classList.remove("active");
+				c.setAttribute("aria-pressed", "false");
+			});
 			chip.classList.add("active");
+			chip.setAttribute("aria-pressed", "true");
 			const tag = chip.getAttribute("data-tag");
 			let shown = 0;
 			cards.forEach((card) => {
@@ -95,7 +125,10 @@ const allTags = [...new Set(posts.flatMap((p) => p.data.tags ?? []))].sort();
 				card.style.display = show ? "" : "none";
 				if (show) shown++;
 			});
-			if (count) count.textContent = `Showing ${shown} of ${total} posts`;
+			if (count)
+				count.textContent = template
+					? template.replace("{shown}", fmt(shown)).replace("{total}", fmt(total))
+					: `Showing ${shown} of ${total} posts`;
 		});
 	});
 </script>

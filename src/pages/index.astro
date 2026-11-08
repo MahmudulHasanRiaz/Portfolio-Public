@@ -9,6 +9,7 @@ import Combined from "../components/Combined.astro";
 import ClientsWall from "../components/ClientsWall.astro";
 import ContactForm from "../components/ContactForm";
 import { getProjects, getCaseStudies, getPosts, formatDate, readingTimeFromText, truncateShort } from "../lib/content";
+import { getDict, langUrl, readingTimeLabel } from "../lib/i18n";
 import { PROFILE } from "../data/site";
 
 // Software Engineer profile — the conversion-focused homepage.
@@ -16,6 +17,10 @@ import { PROFILE } from "../data/site";
 // Combined "Beyond the code" → Clients → Latest posts → Contact → Footer.
 // (There is no separate Ventures or Releases section here — both live
 // inside Combined as mini-rows/chips, and in full on the Know Me page.)
+// Fixed strings come from the dictionary (same keys as the /bn/ page).
+const lang = "en" as const;
+const t = getDict(lang);
+
 const projects = await getProjects();
 const caseStudies = await getCaseStudies();
 const posts = await getPosts();
@@ -37,35 +42,37 @@ const personJsonLd = {
 	jobTitle: PROFILE.designations,
 	url: "https://riaz.com.bd/",
 	email: PROFILE.email,
+	inLanguage: "en",
 	address: { "@type": "PostalAddress", addressLocality: "Dhaka", addressCountry: "BD" },
 };
 ---
 
 <Layout
-	title="Mahmudul Hasan Riaz — Software Engineer, Entrepreneur & Nasheed Artist"
-	description="Software Engineer, Entrepreneur and Nasheed Artist from Dhaka, Bangladesh. ERP, e-commerce and SaaS systems for businesses in Bangladesh and beyond."
+	title={t.homeTitle}
+	description={t.homeDescription}
 	profile="se"
+	lang={lang}
 >
 	<script type="application/ld+json" set:html={JSON.stringify(personJsonLd)} />
 
-	<Hero profile="se" />
+	<Hero profile="se" lang={lang} />
 
-	<Stats />
+	<Stats lang={lang} />
 
-	<Services />
+	<Services lang={lang} />
 
 	<section class="glass section" id="projects">
 		<div class="section-head">
 			<div>
-				<h2>Projects</h2>
-				<p>Selected work — real systems running real businesses.</p>
+				<h2>{t.projectsTitle}</h2>
+				<p>{t.projectsSub}</p>
 			</div>
-			<a class="view-all" href="/projects">View all projects →</a>
+			<a class="view-all" href={langUrl("/projects", lang)}>{t.viewAllProjects}</a>
 		</div>
 		{projects.length === 0 ? (
-			<p class="empty-state">No projects published yet.</p>
+			<p class="empty-state">{t.emptyProjects}</p>
 		) : (
-			<ProjectsCarousel projects={carouselProjects} client:load />
+			<ProjectsCarousel projects={carouselProjects} lang={lang} dict={t} client:load />
 		)}
 	</section>
 
@@ -74,16 +81,16 @@ const personJsonLd = {
 			<section class="glass section" id="case-studies">
 				<div class="section-head">
 					<div>
-						<h2>Case studies</h2>
-						<p>The problem, the fix, the result — in one line each. Tap a case study to read the full story.</p>
+						<h2>{t.caseStudiesTitle}</h2>
+						<p>{t.caseStudiesSub}</p>
 					</div>
-					<a class="view-all" href="/case-studies">
-						View all case studies →
+					<a class="view-all" href={langUrl("/case-studies", lang)}>
+						{t.viewAllCaseStudies}
 					</a>
 				</div>
 				<div class="card-grid">
 					{caseStudies.map((cs) => (
-						<a class="grid-card" href={`/case-studies/${cs.data.slug}`}>
+						<a class="grid-card" href={langUrl(`/case-studies/${cs.data.slug}`, lang)}>
 							<div class="grid-thumb">
 								{cs.data.thumbnail ? (
 									<img
@@ -100,7 +107,7 @@ const personJsonLd = {
 							<div class="grid-body">
 								<h3>{cs.data.title}</h3>
 								{cs.data.description ? <p>{truncateShort(cs.data.description)}</p> : null}
-								<span class="service-cue">Read the case study
+								<span class="service-cue">{t.readCaseStudy}
 									<svg
 										width="15"
 										height="15"
@@ -124,22 +131,22 @@ const personJsonLd = {
 		) : null
 	}
 
-	<StackGlobe client:load />
+	<StackGlobe lang={lang} dict={t} client:load />
 
-	<Combined />
+	<Combined lang={lang} />
 
-	<ClientsWall />
+	<ClientsWall lang={lang} />
 
 	<section class="glass section" id="posts">
 		<div class="section-head">
 			<div>
-				<h2>Latest posts</h2>
-				<p>Notes on building, and on the nasheed work.</p>
+				<h2>{t.latestPostsTitle}</h2>
+				<p>{t.latestPostsSub}</p>
 			</div>
-			<a class="view-all" href="/posts">View all posts →</a>
+			<a class="view-all" href={langUrl("/posts", lang)}>{t.viewAllPosts}</a>
 		</div>
 		{posts.length === 0 ? (
-			<p class="empty-state">No posts published yet.</p>
+			<p class="empty-state">{t.emptyPosts}</p>
 		) : (
 			<div class="card-grid">
 				{posts.slice(0, 3).map((post) => {
@@ -159,7 +166,7 @@ const personJsonLd = {
 						post.data.readingTime ??
 						undefined;
 					return (
-						<a class="grid-card" href={`/posts/${post.data.slug}`}>
+						<a class="grid-card" href={langUrl(`/posts/${post.data.slug}`, lang)}>
 							<div class="grid-thumb">
 								{post.data.thumbnail ? (
 									<img
@@ -180,10 +187,9 @@ const personJsonLd = {
 									</div>
 								) : null}
 								<h3>{post.data.title}</h3>
-								{post.data.excerpt ? <p>{truncateShort(post.data.excerpt)}</p> : null}
 								<p class="grid-meta">
-									{formatDate(post.data.publishedAt)}
-									{readingTime ? ` · ${readingTime} min read` : ""}
+									{formatDate(post.data.publishedAt, lang)}
+									{readingTime ? ` · ${readingTimeLabel(readingTime, lang)}` : ""}
 								</p>
 							</div>
 						</a>
@@ -196,17 +202,17 @@ const personJsonLd = {
 	<section class="glass section" id="contact">
 		<div style="text-align:center;">
 			<h2 style="margin:0;font-size:24px;line-height:1.3;letter-spacing:-0.01em;">
-				Have a project in mind?
+				{t.contactTitle}
 			</h2>
 			<p
 				class="muted"
 				style="margin:8px auto 0;max-width:520px;font-size:15px;"
 			>
-				Tell me what you are building — I reply personally, usually within a day.
+				{t.contactSub}
 			</p>
 		</div>
 		<div style="max-width:520px;margin:24px auto 0;">
-			<ContactForm inline source="homepage-contact" client:load />
+			<ContactForm inline source="homepage-contact" lang={lang} dict={t} client:load />
 		</div>
 	</section>
 </Layout>

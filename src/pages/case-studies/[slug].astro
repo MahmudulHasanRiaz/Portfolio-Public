@@ -16,11 +16,15 @@ import {
 	mergeDetail,
 	parseBodyBlocks,
 } from "../../lib/detail";
+import { getDict, langUrl } from "../../lib/i18n";
 
 // On-demand detail route — hybrid live-then-static: the live collection
 // first (instant when a case study is newly published), then the build-time
 // collection as fallback, then a 404. Route caching is in astro.config.mjs.
 export const prerender = false;
+
+const lang = "en" as const;
+const t = getDict(lang);
 
 const { slug } = Astro.params;
 const liveResult = slug
@@ -117,6 +121,7 @@ const jsonLd = d
 					"@type": "Article",
 					headline: d.title,
 					description: d.description,
+					inLanguage: "en",
 					author: {
 						"@type": "Person",
 						name: "Mahmudul Hasan Riaz",
@@ -137,7 +142,7 @@ const jsonLd = d
 						{
 							"@type": "ListItem",
 							position: 2,
-							name: "Case Studies",
+							name: t.allCaseStudies,
 							item: `${SITE_URL}/case-studies`,
 						},
 						{
@@ -157,12 +162,13 @@ const jsonLd = d
 	title={
 		d
 			? `${d.title} — Mahmudul Hasan Riaz`
-			: "Case study not found — Mahmudul Hasan Riaz"
+			: `${t.notFoundCaseStudy} — Mahmudul Hasan Riaz`
 	}
 	description={d?.description}
 	ogType="article"
 	ogImage={coverImage ? absUrl(coverImage) : null}
 	canonical={pageUrl}
+	lang={lang}
 >
 	{
 		entry && d ? (
@@ -174,8 +180,8 @@ const jsonLd = d
 					/>
 				)}
 
-				<a class="back-link" href="/case-studies">
-					← All case studies
+				<a class="back-link" href={langUrl("/case-studies", lang)}>
+					{t.backAllCaseStudies}
 				</a>
 				{d.thumbnail &&
 					(isVideoThumb && videoSrc ? (
@@ -184,6 +190,8 @@ const jsonLd = d
 								src={videoSrc}
 								poster={videoPoster}
 								title={d.title}
+								lang={lang}
+								dict={t}
 							/>
 						</div>
 					) : (
@@ -202,17 +210,17 @@ const jsonLd = d
 				<KeyStrip
 					items={[
 						{
-							label: "Published",
-							value: formatDate(d.publishedAt),
+							label: t.publishedLabel,
+							value: formatDate(d.publishedAt, lang),
 						},
 						d.tags?.length
-							? { label: "Category", value: d.tags.join(", ") }
+							? { label: t.categoryLabel, value: d.tags.join(", ") }
 							: null,
 						d.projectSlug
 							? {
-									label: "Project",
-									value: "View the project",
-									href: `/projects/${d.projectSlug}`,
+									label: t.projectLabel,
+									value: t.viewProject,
+									href: langUrl(`/projects/${d.projectSlug}`, lang),
 								}
 							: null,
 					]}
@@ -224,13 +232,13 @@ const jsonLd = d
 					<div class="problem-fix-result">
 						{d.problem && (
 							<div class="pfr">
-								<h3>The problem</h3>
+								<h3>{t.problem}</h3>
 								<p>{d.problem}</p>
 							</div>
 						)}
 						{d.fix && (
 							<div class="pfr">
-								<h3>The fix</h3>
+								<h3>{t.fix}</h3>
 								<p>{d.fix}</p>
 								{d.fixPoints?.length ? (
 									<ul class="fix-points">
@@ -243,14 +251,14 @@ const jsonLd = d
 						)}
 						{d.result && (
 							<div class="pfr">
-								<h3>The result</h3>
+								<h3>{t.result}</h3>
 								<p>{d.result}</p>
 							</div>
 						)}
 					</div>
 				)}
 				{d.metrics?.length ? (
-					<div class="metrics-band" aria-label="Results">
+					<div class="metrics-band" aria-label={t.result}>
 						{d.metrics.map((metric) => (
 							<div class="metric-card">
 								<strong>{metric.value}</strong>
@@ -260,12 +268,12 @@ const jsonLd = d
 					</div>
 				) : null}
 				{d.research ? (
-					<section class="detail-section" aria-label="Research">
-						<h2 class="detail-h2">What the research showed</h2>
+					<section class="detail-section" aria-label={t.research}>
+						<h2 class="detail-h2">{t.research}</h2>
 						<MarkdownBody text={d.research} />
 					</section>
 				) : null}
-				<TechChips techs={techs} />
+				<TechChips techs={techs} lang={lang} dict={t} />
 				<DetailMedia
 					gallery={d.gallery ?? []}
 					videos={d.videos ?? []}
@@ -273,22 +281,24 @@ const jsonLd = d
 					altBase={`${d.title} gallery image`}
 				/>
 				<DetailCta
-					title="Facing a similar problem?"
-					text="Tell me about your project — or first see the system this case study is about."
-					buttonLabel="Discuss a similar project"
+					title={t.facingSimilar}
+					text={t.caseStudyCtaText}
+					buttonLabel={t.discussSimilarProject}
 					linkHref={
 						d.projectSlug
-							? `/projects/${d.projectSlug}?from=case-study:${slug}`
+							? langUrl(`/projects/${d.projectSlug}?from=case-study:${slug}`, lang)
 							: undefined
 					}
-					linkLabel={d.projectSlug ? "View the project" : undefined}
+					linkLabel={d.projectSlug ? t.viewProject : undefined}
 					source="case-study-detail"
+					lang={lang}
+					dict={t}
 				/>
 				<PrevNext
 					prev={
 						prevStudy
 							? {
-									href: `/case-studies/${prevStudy.data.slug}`,
+									href: langUrl(`/case-studies/${prevStudy.data.slug}`, lang),
 									title: prevStudy.data.title,
 									thumb: thumbOf(prevStudy),
 								}
@@ -297,21 +307,23 @@ const jsonLd = d
 					next={
 						nextStudy
 							? {
-									href: `/case-studies/${nextStudy.data.slug}`,
+									href: langUrl(`/case-studies/${nextStudy.data.slug}`, lang),
 									title: nextStudy.data.title,
 									thumb: thumbOf(nextStudy),
 								}
 							: null
 					}
+					lang={lang}
+					dict={t}
 				/>
 			</section>
 		) : (
 			<section class="glass">
-				<a class="back-link" href="/case-studies">
-					← All case studies
+				<a class="back-link" href={langUrl("/case-studies", lang)}>
+					{t.backAllCaseStudies}
 				</a>
-				<h1 class="detail-title">Case study not found</h1>
-				<p class="empty-state">This case study is not published yet.</p>
+				<h1 class="detail-title">{t.notFoundCaseStudy}</h1>
+				<p class="empty-state">{t.notPublishedCaseStudy}</p>
 			</section>
 		)
 	}

@@ -2,38 +2,36 @@ import { useEffect, useState } from "react";
 import { BookOpen, CodeXml, Megaphone, Mic, Rocket } from "lucide-react";
 import { PROFILE } from "../data/site";
 
-const DESIGNATIONS = PROFILE.designations;
-
-// One icon per designation — the icon changes with the word.
-const DESIGNATION_ICONS = {
-	"Software Engineer": CodeXml,
-	Entrepreneur: Rocket,
-	"Nasheed Artist": Mic,
-	"Hafiz-Alem": BookOpen,
-	"Public Figure": Megaphone,
-} as const;
-
-// Longest designation — the badge sizer reserves this width so the pill
-// never grows/shrinks while typing.
-const LONGEST_DESIGNATION = DESIGNATIONS.reduce((a, b) =>
-	a.length >= b.length ? a : b,
-);
-
-const TYPE_MS = 45;
-const EXIT_MS = 300;
-
-// SE profile: "Software Engineer" holds ~4.5s, the other four ~1.45s each.
-// Know Me profile: all five cycle equally (~2.2s each).
-function holdMs(profile: "se" | "knowme", index: number): number {
-	if (profile === "knowme") return 2200;
-	return index === 0 ? 4500 : 1450;
-}
+// Icons in designation order (index-based, so Bangla designations get
+// the same icons as the English ones — never keyed by the word itself).
+const DESIGNATION_ICONS = [CodeXml, Rocket, Mic, BookOpen, Megaphone] as const;
 
 export default function HeroDesignation({
 	profile,
+	designations,
 }: {
 	profile: "se" | "knowme";
+	/** Designation words in the page language (defaults to English). */
+	designations?: string[];
 }) {
+	const DESIGNATIONS =
+		designations?.length ? designations : [...PROFILE.designations];
+
+	// Longest designation — the badge sizer reserves this width so the pill
+	// never grows/shrinks while typing.
+	const LONGEST_DESIGNATION = DESIGNATIONS.reduce((a, b) =>
+		a.length >= b.length ? a : b,
+	);
+
+	const TYPE_MS = 45;
+	const EXIT_MS = 300;
+
+	// SE profile: "Software Engineer" holds ~4.5s, the other four ~1.45s each.
+	// Know Me profile: all five cycle equally (~2.2s each).
+	function holdMs(profile: "se" | "knowme", index: number): number {
+		if (profile === "knowme") return 2200;
+		return index === 0 ? 4500 : 1450;
+	}
 	const [index, setIndex] = useState(0);
 	// First paint shows the FULL first designation (SSR HTML contains the
 	// complete word) — never an empty pill with just an icon + cursor.
@@ -77,8 +75,11 @@ export default function HeroDesignation({
 	}, [reduced, index, shown, exiting, profile]);
 
 	const word = DESIGNATIONS[index] ?? DESIGNATIONS[0];
-	const Icon = DESIGNATION_ICONS[word];
-	const LongestIcon = DESIGNATION_ICONS[LONGEST_DESIGNATION];
+	const Icon = DESIGNATION_ICONS[index % DESIGNATION_ICONS.length]!;
+	const LongestIcon =
+		DESIGNATION_ICONS[
+			DESIGNATIONS.indexOf(LONGEST_DESIGNATION) % DESIGNATION_ICONS.length
+		]!;
 
 	// Reduced motion: first designation, static — no typing, no cursor.
 	if (reduced) {

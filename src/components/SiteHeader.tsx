@@ -9,26 +9,28 @@ import {
 	Sun,
 	User,
 } from "lucide-react";
+import {
+	langUrl,
+	otherLangUrl,
+	SITE_LANG_KEY,
+	type Dict,
+	type Lang,
+} from "../lib/i18n";
 
 export type ProfileId = "se" | "knowme";
 
-const PROFILES: Array<{
-	id: ProfileId;
-	label: string;
-	href: string;
-	icon: typeof Code;
-}> = [
-	{ id: "se", label: "Software Engineer", href: "/", icon: Code },
-	{ id: "knowme", label: "Know Me", href: "/know-me", icon: User },
-];
-
-const NAV_LINKS = [
-	{ label: "Work", href: "/#projects" },
-	{ label: "Ventures", href: "/#beyond" },
-	{ label: "Nasheed", href: "/releases" },
-	{ label: "About", href: "/know-me" },
-	{ label: "Contact", href: "/#contact" },
-];
+// Language switcher (bilingual): the corner button is a plain <a> to
+// the SAME page in the other language — no JS navigation, so it works
+// without JS and crawlers can follow it. Clicking stores the choice
+// (localStorage `site-lang`) BEFORE navigating, so the first-visit
+// script in Layout.astro never overrides an explicit choice. The URL
+// the visitor is on always wins over any stored preference.
+interface SiteHeaderProps {
+	current: ProfileId;
+	lang: Lang;
+	currentPath: string;
+	dict: Dict;
+}
 
 // Label animation (preview, CORRECTED 2026-11-08 ~18:42): the pill LABEL
 // only ANIMATES — it cycles between the two profile names with a smooth
@@ -59,11 +61,42 @@ const ROTATION_PAUSED_KEY = "profile-rotation-paused";
  * slide + fade ~450ms) exactly like the React preview; the label NEVER
  * navigates the page. Tapping a profile pauses the animation on it.
  */
-export default function SiteHeader({ current }: { current: ProfileId }) {
+export default function SiteHeader({
+	current,
+	lang,
+	currentPath,
+	dict,
+}: SiteHeaderProps) {
+	const PROFILES: Array<{
+		id: ProfileId;
+		label: string;
+		href: string;
+		icon: typeof Code;
+	}> = [
+		{
+			id: "se",
+			label: dict.profileSe,
+			href: langUrl("/", lang),
+			icon: Code,
+		},
+		{
+			id: "knowme",
+			label: dict.profileKnowMe,
+			href: langUrl("/know-me", lang),
+			icon: User,
+		},
+	];
+
+	const NAV_LINKS = [
+		{ label: dict.navWork, href: langUrl("/#projects", lang) },
+		{ label: dict.navVentures, href: langUrl("/#beyond", lang) },
+		{ label: dict.navNasheed, href: langUrl("/releases", lang) },
+		{ label: dict.navAbout, href: langUrl("/know-me", lang) },
+		{ label: dict.navContact, href: langUrl("/#contact", lang) },
+	];
+
 	const [stuck, setStuck] = useState(false);
 	const [pickerOpen, setPickerOpen] = useState(false);
-	const [lang, setLang] = useState<"en" | "bn">("en");
-	const [langHint, setLangHint] = useState(false);
 	const [theme, setTheme] = useState<"light" | "dark">("light");
 	const [rotationPaused, setRotationPaused] = useState(false);
 	// The profile name the pill label currently shows. While the label
@@ -224,10 +257,17 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 		document.documentElement.setAttribute("data-theme", next);
 	};
 
+	// Language switch: the button is a plain link to the same page in
+	// the other language. Store the explicit choice BEFORE navigating
+	// so the first-visit script never overrides it.
+	const targetLang: Lang = lang === "en" ? "bn" : "en";
+	const switchHref = otherLangUrl(currentPath, lang);
 	const onLangClick = () => {
-		// Language switching is coming soon — show a brief hint.
-		setLangHint(true);
-		window.setTimeout(() => setLangHint(false), 2000);
+		try {
+			localStorage.setItem(SITE_LANG_KEY, targetLang);
+		} catch {
+			/* storage unavailable — the URL still switches language */
+		}
 	};
 
 	// Tapping a profile in the picker pauses rotation ON that profile
@@ -249,17 +289,17 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 	// the preview). The hidden set is inert (tabIndex -1) so keyboard
 	// users never tab into an invisible button.
 	const langBtn = (inert: boolean) => (
-		<button
-			type="button"
+		<a
 			className="corner-btn"
 			tabIndex={inert ? -1 : undefined}
+			href={switchHref}
 			onClick={onLangClick}
-			aria-label="Switch language (coming soon)"
-			title="Language switching coming soon"
+			aria-label={dict.switchLanguage}
+			title={dict.switchLanguage}
 		>
 			<span className="lang-mobile">{lang === "en" ? "BN" : "EN"}</span>
 			<span className="lang-desktop">EN/BN</span>
-		</button>
+		</a>
 	);
 
 	const themeBtn = (inert: boolean) => (
@@ -268,7 +308,7 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 			className="corner-btn"
 			tabIndex={inert ? -1 : undefined}
 			onClick={toggleTheme}
-			aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+			aria-label={theme === "dark" ? dict.switchToLight : dict.switchToDark}
 		>
 			{/* Crossfading icon swap: both icons stay mounted and swap
 			    with a 300ms rotate/scale/opacity transition. */}
@@ -332,7 +372,7 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 	// big full-width teal "Resume auto-rotation" button sits at the
 	// bottom (preview).
 	const picker = pickerOpen ? (
-		<div className="header-picker" role="menu" aria-label="Choose a profile">
+		<div className="header-picker" role="menu" aria-label={dict.chooseProfile}>
 			<p
 				style={{
 					margin: "4px 10px 8px",
@@ -343,7 +383,7 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 					color: "var(--ink-dim)",
 				}}
 			>
-				Choose a profile
+				{dict.chooseProfile}
 			</p>
 			{PROFILES.map((p) => {
 				const Icon = p.icon;
@@ -381,7 +421,7 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 				onClick={resumeRotation}
 			>
 				<Play size={14} />
-				Resume auto-rotation
+				{dict.resumeRotation}
 			</button>
 		</div>
 	) : null;
@@ -406,7 +446,7 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 				type="button"
 				className="pill-profile-btn"
 				onClick={() => setPickerOpen((v) => !v)}
-				aria-label={`Choose a profile — ${displayed.label}`}
+				aria-label={`${dict.chooseProfile} — ${displayed.label}`}
 			>
 				{/* Fixed-width label stack (preview w-40/44/56): both
 				    profile labels stay mounted with stable keys; the
@@ -444,8 +484,8 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 					type="button"
 					className="pill-rotate-btn"
 					onClick={resumeRotation}
-					aria-label="Resume auto-rotation"
-					title="Resume auto-rotation"
+					aria-label={dict.resumeRotation}
+					title={dict.resumeRotation}
 				>
 					<Play size={13} />
 				</button>
@@ -479,9 +519,6 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 				{langBtn(stuck)}
 				{themeBtn(stuck)}
 			</div>
-			{langHint ? (
-				<p className="lang-hint">Language switching coming soon.</p>
-			) : null}
 			<div className="pill-stack">
 				{pill}
 			</div>

@@ -141,6 +141,30 @@ export function mergeDetail<T extends Record<string, unknown>>(
 	if (!live) return base;
 	const out: Record<string, unknown> = { ...base };
 	for (const [key, value] of Object.entries(live)) {
+		if (key === "bn") {
+			// Bangla variant merges field-wise (same rule as
+			// mergeEntryData in lib/content.ts): live `bn` wins where
+			// it has a value; build-time `bn` survives where empty.
+			const baseBn =
+				base["bn"] && typeof base["bn"] === "object"
+					? (base["bn"] as Record<string, unknown>)
+					: {};
+			const liveBn =
+				value && typeof value === "object"
+					? (value as Record<string, unknown>)
+					: {};
+			const merged: Record<string, unknown> = { ...baseBn };
+			for (const [bk, bv] of Object.entries(liveBn)) {
+				const empty =
+					bv === undefined ||
+					bv === null ||
+					bv === "" ||
+					(Array.isArray(bv) && bv.length === 0);
+				if (!empty) merged[bk] = bv;
+			}
+			if (Object.keys(merged).length > 0) out["bn"] = merged;
+			continue;
+		}
 		const empty =
 			value === undefined ||
 			value === null ||

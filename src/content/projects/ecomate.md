@@ -2,6 +2,9 @@
 title: "EcoMate"
 slug: "ecomate"
 description: "A single-tenant SaaS ERP and e-commerce platform — one Docker deployment per client, with inventory, POS, multi-branch and HR. Used by Fixed Plus and Avelto."
+bn:
+  title: "EcoMate"
+  description: "একক-ভাড়াটিয়া স্যাস ইআরপি ও ই-কমার্স প্ল্যাটফর্ম — প্রতি ক্লায়েন্টের জন্য একটি করে ডকার ডেপ্লয়মেন্ট, ইনভেন্টরি, পিওএস, মাল্টি-ব্রাঞ্চ ও এইচআরসহ। Fixed Plus ও Avelto ব্যবহার করে।"
 tags: ["SaaS", "ERP", "E-commerce"]
 techs: ["Next.js", "React", "TypeScript", "PostgreSQL", "Docker"]
 thumbnail: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&q=80&auto=format&fit=crop"

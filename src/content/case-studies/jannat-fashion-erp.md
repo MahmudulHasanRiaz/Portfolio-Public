@@ -2,6 +2,12 @@
 title: "Jannat Fashion ERP"
 slug: "jannat-fashion-erp-case-study"
 description: "How one ERP carries 2,000 to 5,000 orders a day for Jannat Fashion — across stores, fraud checks, payroll and wholesale."
+bn:
+  title: "Jannat Fashion ERP"
+  description: "একটি ইআরপি কীভাবে জান্নাত ফ্যাশনের দিনে ২,০০০ থেকে ৫,০০০ অর্ডার সামলায় — স্টোর, প্রতারণা যাচাই, পে-রোল ও পাইকারি জুড়ে।"
+  problem: "জান্নাত ফ্যাশন একাধিক WooCommerce স্টোর জুড়ে দিনে ২,০০০ থেকে ৫,০০০ অর্ডার নেয়। অর্ডার, প্রতারণা, পে-রোল, অ্যাকাউন্টিং ও পাইকারি ছড়িয়ে ছিল এমন সব টুলে যেগুলো একে অপরের সঙ্গে কথা বলত না।"
+  fix: "একটি Next.js ইআরপি যা প্রতিটি স্টোরের অর্ডার একটিই প্রবাহে আনে — প্রতারণা রোধ, পে-রোল ও অ্যাকাউন্টিং, এসআর পোর্টাল ও পাইকারিসহ একই সিস্টেমে।"
+  result: "পুরো কার্যক্রম এখন একটি সিস্টেমে চলে — অর্ডার, স্টোর, প্রতারণা যাচাই, পে-রোল ও পাইকারি।"
 tags: ["Next.js", "ERP", "E-commerce"]
 projectSlug: "jannat-fashion-erp"
 problem: "Jannat Fashion takes 2,000 to 5,000 orders a day across multiple WooCommerce stores. Orders, fraud, payroll, accounting and wholesale were spread across tools that did not talk to each other."

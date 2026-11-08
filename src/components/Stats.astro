@@ -1,13 +1,24 @@
 ---
 import { STATS } from "../data/site";
+import { getDict, type Lang } from "../lib/i18n";
+
+interface Props {
+	lang?: Lang;
+}
+
+const { lang = "en" } = Astro.props;
+const t = getDict(lang);
+// Stat labels in the page language (values are the real proof
+// figures — identical in both languages).
+const labels = [t.statYears, t.statProjects, t.statClients, t.statReleases];
 ---
 
 <section class="glass section stats-glass" id="stats">
 	<div class="proof-strip">
-		{STATS.map((stat) => (
+		{STATS.map((stat, i) => (
 			<div class="proof-cell">
 				<div class="proof-num">{stat.value}</div>
-				<div class="proof-label">{stat.label}</div>
+				<div class="proof-label">{labels[i] ?? stat.label}</div>
 			</div>
 		))}
 	</div>

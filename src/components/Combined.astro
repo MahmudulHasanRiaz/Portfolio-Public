@@ -2,8 +2,20 @@
 import BrandIcon from "./BrandIcon.astro";
 import { PLATFORMS } from "../data/site";
 import { getVentures, truncateShort } from "../lib/content";
+import { getDict, langUrl, localizeData, type Lang } from "../lib/i18n";
 
-const ventures = await getVentures();
+interface Props {
+	lang?: Lang;
+}
+
+const { lang = "en" } = Astro.props;
+const t = getDict(lang);
+
+const venturesRaw = await getVentures();
+const ventures = venturesRaw.map((v) => ({
+	...v,
+	data: localizeData(v.data, lang),
+}));
 const musicPlatforms = PLATFORMS.filter((p) => p.group === "music");
 // Preview mini-row copy (authorized preview content): SHORT one-line
 // descriptions that fit in full — the live API's long descriptions
@@ -14,6 +26,16 @@ const VENTURE_SHORT: Record<string, string> = {
 	clouddesk: "Remote-work tools for distributed teams.",
 	skillbridge: "Connecting skilled freelancers with local businesses.",
 };
+// Bangla mini-row copy (faithful translations of the English above).
+const VENTURE_SHORT_BN: Record<string, string> = {
+	hisabkit: "ছোট বাংলাদেশি ব্যবসার জন্য হিসাবরক্ষণ টুলকিট।",
+	clouddesk: "দূরবর্তী দলের জন্য রিমোট-ওয়ার্ক টুল।",
+	skillbridge: "দক্ষ ফ্রিল্যান্সারদের সঙ্গে স্থানীয় ব্যবসার সংযোগ।",
+};
+const ventureShort = (slug: string) =>
+	lang === "bn"
+		? (VENTURE_SHORT_BN[slug] ?? VENTURE_SHORT[slug])
+		: VENTURE_SHORT[slug];
 // Preview order: HisabKit, CloudDesk, SkillBridge (live API sorts
 // newest-first, which renders them reversed).
 const VENTURE_ORDER = ["hisabkit", "clouddesk", "skillbridge"];
@@ -29,21 +51,17 @@ const VENTURE_FALLBACK_THUMB: Record<string, string> = {
 	clouddesk: "/ventures/clouddesk.jpg",
 	skillbridge: "/ventures/skillbridge.jpg",
 };
-// Short artist points, verbatim from the React preview.
-const artistShortPoints = [
-	"Nasheed, tilawat, podcast and lecture releases",
-	"Hafiz — memorised the Qur'an; Islamic scholar",
-	"10+ releases across YouTube and Spotify",
-];
+// Short artist points, verbatim from the React preview (English) /
+// faithful Bangla translation (dictionary).
+const artistShortPoints = t.artistPoints;
 ---
 
 <section class="glass section" id="beyond">
 	<div class="section-head">
-		<h2>Beyond the code</h2>
+		<h2>{t.beyondTitle}</h2>
 	</div>
 	<p class="muted" style="margin:0 0 16px;font-size:14px;">
-		One person, two more callings — building companies, and recording
-		nasheeds.
+		{t.beyondSub}
 	</p>
 	<div class="combined-grid">
 		<div class="combined-half">
@@ -68,20 +86,18 @@ const artistShortPoints = [
 				Entrepreneur &amp; Public Figure
 			</h3>
 			<p>
-				Founder of three ventures — and alongside them, community
-				and charitable initiatives in Dhaka, and talks on faith,
-				work and technology.
+				{t.entrepreneurText}
 			</p>
 			{
 				orderedVentures.length === 0 ? (
 					<p class="muted" style="margin:0;font-size:14px;">
-						Ventures will appear here when published.
+						{t.venturesEmptyShort}
 					</p>
 				) : (
 					orderedVentures.map((venture) => (
 						<a
 							class="mini-row"
-							href={`/ventures/${venture.data.slug}`}
+							href={langUrl(`/ventures/${venture.data.slug}`, lang)}
 						>
 							<span class="mini-thumb">
 								{venture.data.thumbnail ||
@@ -107,11 +123,11 @@ const artistShortPoints = [
 							</span>
 							<span class="mini-text">
 								<b>{venture.data.title}</b>
-								{VENTURE_SHORT[venture.data.slug] ??
+								{ventureShort(venture.data.slug) ??
 								venture.data.description ? (
 									<span>
 										{truncateShort(
-											VENTURE_SHORT[venture.data.slug] ??
+											ventureShort(venture.data.slug) ??
 												venture.data.description,
 										)}
 									</span>
@@ -129,8 +145,8 @@ const artistShortPoints = [
 				)
 			}
 			<p style="margin:14px 0 0;text-align:right;">
-				<a class="view-all" href="/ventures">
-					View all ventures →
+				<a class="view-all" href={langUrl("/ventures", lang)}>
+					{t.viewAllVentures}
 				</a>
 			</p>
 		</div>
@@ -152,7 +168,7 @@ const artistShortPoints = [
 						<line x1="12" x2="12" y1="19" y2="22" />
 					</svg>
 				</span>
-				Islamic Artist
+				{t.artistTitle}
 			</h3>
 			<ul class="artist-points">
 				{artistShortPoints.map((point) => (
@@ -175,9 +191,9 @@ const artistShortPoints = [
 	</div>
 	<div class="combined-cta">
 		<p>
-			<strong>Want the whole picture?</strong>
-			Every venture and every release, in full — on the Know Me page.
+			<strong>{t.wantWholePicture}</strong>
+			{t.wholePictureText}
 		</p>
-		<a class="btn" href="/know-me">Know Me →</a>
+		<a class="btn" href={langUrl("/know-me", lang)}>{t.knowMeCta}</a>
 	</div>
 </section>

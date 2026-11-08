@@ -1,0 +1,60 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import { getCaseStudies, truncateShort } from "../../../lib/content";
+import { getDict, langUrl, localizeData } from "../../../lib/i18n";
+
+// Bangla case-study archive — no filters; grid of cards with title +
+// one-line hook, linking to the case-study detail page.
+const lang = "bn" as const;
+const t = getDict(lang);
+
+const studiesRaw = await getCaseStudies();
+const studies = studiesRaw.map((s) => ({
+	...s,
+	data: localizeData(s.data, lang),
+}));
+---
+
+<Layout
+	title={t.caseStudiesPageTitle}
+	description={t.caseStudiesPageDescription}
+	lang={lang}
+>
+	<section class="glass">
+		<p style="margin:0 0 8px;">
+			<a class="back-link" href={langUrl("/", lang)}>{t.backHome}</a>
+		</p>
+		<h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;">
+			{t.allCaseStudies}
+		</h1>
+		{
+			studies.length === 0 ? (
+				<p class="empty-state">{t.emptyCaseStudies}</p>
+			) : (
+				<div class="card-grid">
+					{studies.map((s) => (
+						<a class="grid-card" href={langUrl(`/case-studies/${s.data.slug}`, lang)}>
+							<div class="grid-thumb">
+								{s.data.thumbnail ? (
+									<img
+										src={s.data.thumbnail}
+										alt={s.data.title}
+										loading="lazy"
+									/>
+								) : (
+									<span class="thumb-fallback" aria-hidden="true">
+										{s.data.title.charAt(0)}
+									</span>
+								)}
+							</div>
+							<div class="grid-body">
+								<h3>{s.data.title}</h3>
+								{s.data.description && <p>{truncateShort(s.data.description)}</p>}
+							</div>
+						</a>
+					))}
+				</div>
+			)
+		}
+	</section>
+</Layout>

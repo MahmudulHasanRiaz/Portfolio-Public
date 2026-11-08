@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 // truncateShort lives in lib/text.ts (no astro:content) — a client
 // island cannot import lib/content.ts (server-only astro:content).
 import { truncateShort } from "../lib/text";
+import { getDict, langUrl, type Dict, type Lang } from "../lib/i18n";
 
 // Projects carousel — stacked deck ported from the approved React preview.
 // The page renders the section wrapper (heading + "View all projects →");
@@ -25,22 +26,32 @@ export interface CarouselProject {
 
 interface Props {
 	projects: CarouselProject[];
+	lang?: Lang;
+	dict?: Dict;
 }
 
 const SWIPE_THRESHOLD = 28;
-// Page-flip (preview): one 0.52s turn around the LEFT edge (the spine),
-// rotateY 0 → -104deg, opacity 1 → 0.2, on a soft paper ease.
+// Page-flip (preview): one 0.52s turn around the RIGHT edge (the spine),
+// rotateY 0 → +104deg, opacity 1 → 0.2, on a soft paper ease.
+// The flip travels LEFT-to-RIGHT: the card's free (left) edge lifts
+// toward the viewer and sweeps right, pivoting on the right spine.
 const FLIP_MS = 520;
 const FLIP_EASE = "cubic-bezier(0.35, 0.55, 0.35, 1)";
 const PEEK_COUNT = 3;
 const DESKTOP_QUERY = "(min-width: 1024px)";
 
-export default function ProjectsCarousel({ projects }: Props) {
+export default function ProjectsCarousel({ projects, lang = "en", dict }: Props) {
+	const t = dict ?? getDict(lang);
 	const [index, setIndex] = useState(0);
 	const [leaving, setLeaving] = useState<1 | -1 | null>(null);
 	const [entering, setEntering] = useState(false);
 	const [reducedMotion, setReducedMotion] = useState(false);
 	const [isDesktop, setIsDesktop] = useState(false);
+	// Pre-hydration skeleton: false until the island mounts, so the
+	// section shows a glass skeleton card (same footprint as a real card)
+	// while the carousel JS loads instead of a blank gap.
+	const [ready, setReady] = useState(false);
+	const [loadedThumbs, setLoadedThumbs] = useState<Record<string, boolean>>({});
 	const timer = useRef<number | null>(null);
 	const raf1 = useRef<number | null>(null);
 	const raf2 = useRef<number | null>(null);
@@ -52,6 +63,7 @@ export default function ProjectsCarousel({ projects }: Props) {
 	const flipping = leaving !== null || entering;
 
 	useEffect(() => {
+		setReady(true);
 		const motionMq = window.matchMedia("(prefers-reduced-motion: reduce)");
 		setReducedMotion(motionMq.matches);
 		const onMotionChange = (e: MediaQueryListEvent) =>
@@ -88,8 +100,8 @@ export default function ProjectsCarousel({ projects }: Props) {
 				setIndex(next);
 				return;
 			}
-			// Page-flip, two beats around the LEFT edge (the spine).
-			// Beat 1: the outgoing card turns away, rotateY 0 → -104deg,
+			// Page-flip, two beats around the RIGHT edge (the spine).
+			// Beat 1: the outgoing card turns away, rotateY 0 → +104deg,
 			// opacity 1 → 0.2, over 0.52s. The peek pages fade out while
 			// the card is turning, so no second image can ghost through
 			// the fading card (no cross-fade / double exposure).
@@ -97,7 +109,7 @@ export default function ProjectsCarousel({ projects }: Props) {
 			timer.current = window.setTimeout(() => {
 				// Beat 2: swap the content while the card is edge-on,
 				// then turn the incoming card in from the same edge.
-				// The incoming card is painted at -104deg first (double
+				// The incoming card is painted at +104deg first (double
 				// rAF guarantees a paint), then the transition carries it
 				// to flat — a real entrance, not a silent swap.
 				setIndex(next);
@@ -125,6 +137,16 @@ export default function ProjectsCarousel({ projects }: Props) {
 
 	// Swipe: pointer events for mouse/pen, touch events for touch.
 	// Pointer events are ignored for touch so a swipe never fires twice.
+	// A drag only counts as a swipe when it is mostly horizontal
+	// (|dx| > |dy|) — a vertical scroll must never flip the card.
+	const finishDrag = (dx: number, dy: number) => {
+		dragStart.current = null;
+		if (Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+			suppressClick.current = true;
+			go(dx < 0 ? 1 : -1);
+		}
+	};
+
 	const onPointerDown = (e: React.PointerEvent) => {
 		if (e.pointerType === "touch") return;
 		dragStart.current = { x: e.clientX, y: e.clientY };
@@ -133,11 +155,8 @@ export default function ProjectsCarousel({ projects }: Props) {
 	const onPointerUp = (e: React.PointerEvent) => {
 		if (e.pointerType === "touch" || !dragStart.current) return;
 		const dx = e.clientX - dragStart.current.x;
-		dragStart.current = null;
-		if (Math.abs(dx) >= SWIPE_THRESHOLD) {
-			suppressClick.current = true;
-			go(dx < 0 ? 1 : -1);
-		}
+		const dy = e.clientY - dragStart.current.y;
+		finishDrag(dx, dy);
 	};
 
 	const onTouchStart = (e: React.TouchEvent) => {
@@ -149,11 +168,12 @@ export default function ProjectsCarousel({ projects }: Props) {
 		const touch = e.changedTouches[0];
 		if (!touch || !dragStart.current) return;
 		const dx = touch.clientX - dragStart.current.x;
+		const dy = touch.clientY - dragStart.current.y;
+		finishDrag(dx, dy);
+	};
+
+	const onTouchCancel = () => {
 		dragStart.current = null;
-		if (Math.abs(dx) >= SWIPE_THRESHOLD) {
-			suppressClick.current = true;
-			go(dx < 0 ? 1 : -1);
-		}
 	};
 
 	const onClickCapture = (e: React.MouseEvent) => {
@@ -165,8 +185,30 @@ export default function ProjectsCarousel({ projects }: Props) {
 	};
 
 	if (count === 0 || !current) {
-		return <p className="empty-state">No projects published yet.</p>;
+		return <p className="empty-state">{t.emptyProjects}</p>;
 	}
+
+	// Skeleton while the island hydrates — same card footprint, glass
+	// shimmer (loading.css), no layout jump when the real card lands.
+	if (!ready) {
+		return (
+			<div className="skel-grid" role="status" aria-label={t.loadingProjects}>
+				{[0, 1, 2].map((i) => (
+					<div key={i} className="skel-card" aria-hidden="true">
+						<div className="skel skel-thumb" />
+						<div className="skel-body">
+							<div className="skel skel-line skel-line--title" />
+							<div className="skel skel-line" />
+							<div className="skel skel-line skel-line--short" />
+						</div>
+					</div>
+				))}
+			</div>
+		);
+	}
+
+	const markThumbLoaded = (slug: string) =>
+		setLoadedThumbs((prev) => (prev[slug] ? prev : { ...prev, [slug]: true }));
 
 	// DESKTOP: 3-per-row grid with a staggered fade+rise reveal.
 	// No carousel, no dots, no chevrons — every project is visible.
@@ -177,7 +219,7 @@ export default function ProjectsCarousel({ projects }: Props) {
 					<a
 						key={project.slug}
 						className="grid-card projects-grid-card"
-						href={`/projects/${project.slug}`}
+						href={langUrl(`/projects/${project.slug}`, lang)}
 						style={{ animationDelay: `${i * 80}ms` }}
 					>
 						<div className="grid-thumb">
@@ -186,6 +228,9 @@ export default function ProjectsCarousel({ projects }: Props) {
 									src={project.thumbnail}
 									alt={project.title}
 									loading="lazy"
+									className={loadedThumbs[project.slug] ? "img-loaded" : undefined}
+									onLoad={() => markThumbLoaded(project.slug)}
+									onError={() => markThumbLoaded(project.slug)}
 								/>
 							) : (
 								<span className="thumb-fallback" aria-hidden="true">
@@ -215,12 +260,47 @@ export default function ProjectsCarousel({ projects }: Props) {
 	// MOBILE: single-card carousel with the page-flip.
 	return (
 		<div className="projects-carousel">
+			{/* Split-arrow controls: minimal bare chevrons, no filled
+			    circle, no border, no shadow — Prev on the LEFT, Next on
+			    the RIGHT, flanking the centred dots + counter. Scoped
+			    here (not glass.css) so parallel workers never clash. */}
+			<style>{`
+				.deck-arrow {
+					width: 40px;
+					height: 40px;
+					flex: none;
+					display: inline-flex;
+					align-items: center;
+					justify-content: center;
+					padding: 0;
+					border: 0;
+					background: transparent;
+					box-shadow: none;
+					color: var(--ink-dim);
+					cursor: pointer;
+					border-radius: 50%;
+					transition: color 180ms ease, opacity 180ms ease, transform 180ms ease;
+				}
+				.deck-arrow:hover:not(:disabled) { color: var(--accent); }
+				.deck-arrow:active:not(:disabled) { transform: scale(0.92); }
+				.deck-arrow:disabled { opacity: 0.3; cursor: default; }
+				.deck-arrow:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+				.deck-arrow--prev { justify-self: start; }
+				.deck-arrow--next { justify-self: end; }
+			`}</style>
 			<div
 				className={`deck${flipping ? " deck--flipping" : ""}`}
 				role="region"
 				aria-roledescription="carousel"
-				aria-label="Projects"
-				style={{ touchAction: "pan-y" }}
+				aria-label={t.projectsTitle}
+				style={{
+					touchAction: "pan-y",
+					// glass.css reserves 60px RIGHT / 52px below for the old
+					// right-fanning stack; the tighter left-fanning stack
+					// needs its reserve on the LEFT instead (deepest peek
+					// overhangs ~24px left, ~18px below).
+					margin: "4px 4px 26px 30px",
+				}}
 				onPointerDown={onPointerDown}
 				onPointerUp={onPointerUp}
 				onPointerCancel={() => {
@@ -228,28 +308,30 @@ export default function ProjectsCarousel({ projects }: Props) {
 				}}
 				onTouchStart={onTouchStart}
 				onTouchEnd={onTouchEnd}
+				onTouchCancel={onTouchCancel}
 				onClickCapture={onClickCapture}
 			>
 				{[1, 2, 3].map((depth) => {
 					if (count <= depth) return null;
 					const peek = projects[(index + depth) % count];
 					if (!peek) return null;
-					// Stacked pages, left → right: every page behind the
-					// main card pivots on the LEFT edge (the spine) and
-					// steps further RIGHT and slightly down, so the pages
-					// fan out to the right in a clear left-to-right
-					// progression. Each peek is a real page edge — 20px
-					// right per depth, rotated off the spine — with the
-					// next project's thumbnail faintly visible on it,
-					// never a 10px sliver.
+					// Stacked pages, right → left: every page behind the
+					// main card pivots on the RIGHT edge (the spine) and
+					// steps further LEFT and slightly down, so the pages
+					// fan out to the left in a clear right-to-left
+					// progression — the side the flipping card came from.
+					// TIGHT stack (preview): each peek is a little smaller
+					// than the card (scale 0.98 / 0.96 / 0.94) and steps
+					// only 12px left / 5px down per depth, so the stack
+					// reads as close, compact pages — never a loose fan.
 					return (
 						<div
 							key={`${peek.slug}-${depth}`}
 							className="deck-peek"
 							aria-hidden="true"
 							style={{
-								transform: `translate(${depth * 20}px, ${depth * 9}px) rotate(${depth * 2}deg)`,
-								transformOrigin: "left center",
+								transform: `translate(${-depth * 12}px, ${depth * 5}px) rotate(${-depth * 1}deg) scale(${1 - depth * 0.02})`,
+								transformOrigin: "right center",
 								opacity: 1 - depth * 0.18,
 								zIndex: PEEK_COUNT - depth,
 							}}
@@ -274,16 +356,16 @@ export default function ProjectsCarousel({ projects }: Props) {
 				})}
 				<a
 					className="deck-card"
-					href={`/projects/${current.slug}`}
+					href={langUrl(`/projects/${current.slug}`, lang)}
 					style={{
 						zIndex: 10,
 						transformStyle: "preserve-3d",
-						transformOrigin: "left center",
+						transformOrigin: "right center",
 						backfaceVisibility: "hidden",
 						transition: `transform ${FLIP_MS}ms ${FLIP_EASE}, opacity ${FLIP_MS}ms ${FLIP_EASE}`,
 						...(leaving !== null || entering
 							? {
-									transform: "rotateY(-104deg)",
+									transform: "rotateY(104deg)",
 									opacity: 0.2,
 								}
 							: {}),
@@ -291,7 +373,14 @@ export default function ProjectsCarousel({ projects }: Props) {
 				>
 					<div className="deck-thumb">
 						{current.thumbnail ? (
-							<img src={current.thumbnail} alt={current.title} loading="lazy" />
+							<img
+								src={current.thumbnail}
+								alt={current.title}
+								loading="lazy"
+								className={loadedThumbs[current.slug] ? "img-loaded" : undefined}
+								onLoad={() => markThumbLoaded(current.slug)}
+								onError={() => markThumbLoaded(current.slug)}
+							/>
 						) : (
 							<span className="thumb-fallback" aria-hidden="true">
 								{current.title.charAt(0)}
@@ -315,7 +404,16 @@ export default function ProjectsCarousel({ projects }: Props) {
 			</div>
 
 			<div className="deck-indicator">
-				<span className="deck-indicator-spacer" aria-hidden="true" />
+				<button
+					type="button"
+					className="deck-arrow deck-arrow--prev"
+					onClick={() => go(-1)}
+					disabled={count <= 1 || flipping}
+					aria-label={t.previousProject}
+					aria-busy={flipping}
+				>
+					<ChevronLeft size={20} />
+				</button>
 				<div className="deck-indicator-center">
 					<div className="deck-dots">
 						{projects.map((project, i) => (
@@ -324,35 +422,32 @@ export default function ProjectsCarousel({ projects }: Props) {
 								type="button"
 								className={`deck-dot${i === index ? " active" : ""}`}
 								onClick={() => goTo(i)}
-								aria-label={`Show ${project.title}`}
+								disabled={flipping}
+								aria-label={
+									lang === "bn"
+										? `${project.title} দেখান`
+										: `Show ${project.title}`
+								}
 								aria-current={i === index}
 							/>
 						))}
 					</div>
 					<span className="deck-counter">
-						{index + 1} of {count} — {current.title}
+						{lang === "bn"
+							? `${(index + 1).toLocaleString("bn-BD")} / ${count.toLocaleString("bn-BD")}`
+							: `${index + 1} of ${count}`}
 					</span>
 				</div>
-				<div className="deck-nav">
-					<button
-						type="button"
-						className="chev-btn"
-						onClick={() => go(-1)}
-						disabled={count <= 1}
-						aria-label="Previous project"
-					>
-						<ChevronLeft size={18} />
-					</button>
-					<button
-						type="button"
-						className="chev-btn"
-						onClick={() => go(1)}
-						disabled={count <= 1}
-						aria-label="Next project"
-					>
-						<ChevronRight size={18} />
-					</button>
-				</div>
+				<button
+					type="button"
+					className="deck-arrow deck-arrow--next"
+					onClick={() => go(1)}
+					disabled={count <= 1 || flipping}
+					aria-label={t.nextProject}
+					aria-busy={flipping}
+				>
+					<ChevronRight size={20} />
+				</button>
 			</div>
 		</div>
 	);

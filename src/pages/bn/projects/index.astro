@@ -1,0 +1,106 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import ProjectCard from "../../../components/ProjectCard.astro";
+import { getProjects } from "../../../lib/content";
+import { getDict, langUrl, localizeData, showingLabel } from "../../../lib/i18n";
+
+// Bangla projects archive — filters are client-side, driven by the
+// tags on the cards themselves (no framework, tiny inline script below).
+const lang = "bn" as const;
+const t = getDict(lang);
+
+const projectsRaw = await getProjects();
+const projects = projectsRaw.map((p) => ({
+	...p,
+	data: localizeData(p.data, lang),
+}));
+const tags = [...new Set(projects.flatMap((p) => p.data.tags))].sort((a, b) =>
+	a.localeCompare(b),
+);
+const total = projects.length;
+---
+
+<Layout
+	title={t.projectsPageTitle}
+	description={t.projectsPageDescription}
+	lang={lang}
+>
+	<section class="glass">
+		<p style="margin:0 0 8px;">
+			<a class="back-link" href={langUrl("/", lang)}>{t.backHome}</a>
+		</p>
+		<h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;">{t.allProjects}</h1>
+		{
+			projects.length === 0 ? (
+				<p class="empty-state">{t.emptyProjects}</p>
+			) : (
+				<>
+					<div class="chip-row" data-filter-row>
+						<button type="button" class="chip active" data-filter="all" aria-pressed="true">
+							{t.allChip}
+						</button>
+						{tags.map((tag) => (
+							<button type="button" class="chip" data-filter={tag} aria-pressed="false">
+								{tag}
+							</button>
+						))}
+					</div>
+					<p class="count-line" data-count-line data-count-template={t.showingProjects}>
+						{showingLabel(t.showingProjects, total, total)}
+					</p>
+					<div class="card-grid" data-project-grid style="margin-top:16px;">
+						{projects.map((p) => (
+							<ProjectCard
+								lang={lang}
+								project={{
+									slug: p.data.slug,
+									title: p.data.title,
+									description: p.data.description ?? "",
+									tags: p.data.tags,
+									thumbnail: p.data.thumbnail ?? null,
+								}}
+							/>
+						))}
+					</div>
+				</>
+			)
+		}
+	</section>
+</Layout>
+
+<script>
+	// Archive filtering: chips toggle cards by the .tag chips on each card.
+	(function () {
+		const row = document.querySelector("[data-filter-row]");
+		const grid = document.querySelector("[data-project-grid]");
+		const countLine = document.querySelector("[data-count-line]");
+		if (!row || !grid || !countLine) return;
+		const total = grid.querySelectorAll(".grid-card").length;
+		const template = countLine.getAttribute("data-count-template") || "";
+		const fmt = (n) =>
+			template.includes("টি") ? n.toLocaleString("bn-BD") : String(n);
+		row.addEventListener("click", function (event) {
+			const target = event.target;
+			if (!(target instanceof HTMLElement)) return;
+			const chip = target.closest("[data-filter]");
+			if (!chip) return;
+			const filter = chip.getAttribute("data-filter") ?? "all";
+			row.querySelectorAll(".chip").forEach(function (c) {
+				c.classList.toggle("active", c === chip);
+				c.setAttribute("aria-pressed", c === chip ? "true" : "false");
+			});
+			let visible = 0;
+			grid.querySelectorAll(".grid-card").forEach(function (card) {
+				const tags = Array.from(card.querySelectorAll(".tag")).map(function (t) {
+					return (t.textContent ?? "").trim();
+				});
+				const show = filter === "all" || tags.includes(filter);
+				(card as HTMLElement).style.display = show ? "" : "none";
+				if (show) visible += 1;
+			});
+			countLine.textContent = template
+				? template.replace("{shown}", fmt(visible)).replace("{total}", fmt(total))
+				: "Showing " + visible + " of " + total + " projects";
+		});
+	})();
+</script>

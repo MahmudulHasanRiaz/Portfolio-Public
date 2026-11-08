@@ -9,6 +9,7 @@ import MarkdownBody from "../../components/MarkdownBody.astro";
 import PrevNext from "../../components/PrevNext.astro";
 import TechChips from "../../components/TechChips.astro";
 import { formatDate, getProjects } from "../../lib/content";
+import { getDict, langUrl } from "../../lib/i18n";
 import {
 	SITE_URL,
 	absUrl,
@@ -22,6 +23,9 @@ import {
 // first (instant when a project is newly published), then the build-time
 // collection as fallback, then a 404. Route caching is in astro.config.mjs.
 export const prerender = false;
+
+const lang = "en" as const;
+const t = getDict(lang);
 
 const { slug } = Astro.params;
 const liveResult = slug
@@ -89,9 +93,9 @@ const fromCaseStudy = fromParam.startsWith("case-study:")
 	? fromParam.slice("case-study:".length)
 	: null;
 const backHref = fromCaseStudy
-	? `/case-studies/${fromCaseStudy}`
-	: "/projects";
-const backLabel = fromCaseStudy ? "← Back to case study" : "← All projects";
+	? langUrl(`/case-studies/${fromCaseStudy}`, lang)
+	: langUrl("/projects", lang);
+const backLabel = fromCaseStudy ? t.backCaseStudy : t.backAllProjects;
 
 // Video thumbnail: thumbnailVideoUrl is the video file, thumbnail the
 // poster image; when the thumbnail itself is the video there is no poster.
@@ -124,6 +128,7 @@ const jsonLd = d
 					"@type": "SoftwareApplication",
 					name: d.title,
 					description: d.description,
+					inLanguage: "en",
 					applicationCategory: "BusinessApplication",
 					url: pageUrl,
 					...(coverImage ? { image: absUrl(coverImage) } : {}),
@@ -146,7 +151,7 @@ const jsonLd = d
 						{
 							"@type": "ListItem",
 							position: 2,
-							name: "Projects",
+							name: t.allProjects,
 							item: `${SITE_URL}/projects`,
 						},
 						{
@@ -164,12 +169,13 @@ const jsonLd = d
 
 <Layout
 	title={
-		d ? `${d.title} — Mahmudul Hasan Riaz` : "Project not found — Mahmudul Hasan Riaz"
+		d ? `${d.title} — Mahmudul Hasan Riaz` : `${t.notFoundProject} — Mahmudul Hasan Riaz`
 	}
 	description={d?.description}
 	ogType="website"
 	ogImage={coverImage ? absUrl(coverImage) : null}
 	canonical={pageUrl}
+	lang={lang}
 >
 	{
 		entry && d ? (
@@ -191,6 +197,8 @@ const jsonLd = d
 								src={videoSrc}
 								poster={videoPoster}
 								title={d.title}
+								lang={lang}
+								dict={t}
 							/>
 						</div>
 					) : (
@@ -208,23 +216,23 @@ const jsonLd = d
 				) : null}
 				<KeyStrip
 					items={[
-						d.client ? { label: "Client", value: d.client } : null,
-						d.role ? { label: "Role", value: d.role } : null,
+						d.client ? { label: t.clientLabel, value: d.client } : null,
+						d.role ? { label: t.roleLabel, value: d.role } : null,
 						{
-							label: "Published",
-							value: formatDate(d.publishedAt) || d.year,
+							label: t.publishedLabel,
+							value: formatDate(d.publishedAt, lang) || d.year,
 						},
 						d.tags?.length
-							? { label: "Category", value: d.tags.join(", ") }
+							? { label: t.categoryLabel, value: d.tags.join(", ") }
 							: null,
-						d.status ? { label: "Status", value: d.status } : null,
+						d.status ? { label: t.statusLabel, value: d.status } : null,
 						d.liveUrl && isRealUrl(d.liveUrl)
-							? { label: "Live site", value: "Visit site", href: d.liveUrl }
+							? { label: t.liveSiteLabel, value: t.visitSite, href: d.liveUrl }
 							: null,
 					]}
 				/>
-				<section class="detail-section" aria-label="About this project">
-					<h2 class="detail-h2">About this project</h2>
+				<section class="detail-section" aria-label={t.aboutProject}>
+					<h2 class="detail-h2">{t.aboutProject}</h2>
 					{Content ? (
 						<div class="detail-body">
 							<Content />
@@ -237,7 +245,7 @@ const jsonLd = d
 						</div>
 					) : null}
 				</section>
-				<TechChips techs={d.techs ?? []} />
+				<TechChips techs={d.techs ?? []} lang={lang} dict={t} />
 				<DetailMedia
 					gallery={d.gallery ?? []}
 					videos={d.videos ?? []}
@@ -245,16 +253,18 @@ const jsonLd = d
 					altBase={`${d.title} gallery image`}
 				/>
 				<DetailCta
-					title={`Want a system like ${d.title}?`}
-					text="Tell me what you are building — I will reply within a day."
+					title={`${t.wantSystemLike} ${d.title}?`}
+					text={t.projectCtaText}
 					service={serviceForTags(d.tags)}
 					source="project-detail"
+					lang={lang}
+					dict={t}
 				/>
 				<PrevNext
 					prev={
 						prevProject
 							? {
-									href: `/projects/${prevProject.data.slug}`,
+									href: langUrl(`/projects/${prevProject.data.slug}`, lang),
 									title: prevProject.data.title,
 									thumb: thumbOf(prevProject),
 								}
@@ -263,21 +273,23 @@ const jsonLd = d
 					next={
 						nextProject
 							? {
-									href: `/projects/${nextProject.data.slug}`,
+									href: langUrl(`/projects/${nextProject.data.slug}`, lang),
 									title: nextProject.data.title,
 									thumb: thumbOf(nextProject),
 								}
 							: null
 					}
+					lang={lang}
+					dict={t}
 				/>
 			</section>
 		) : (
 			<section class="glass">
-				<a class="back-link" href="/projects">
-					← All projects
+				<a class="back-link" href={langUrl("/projects", lang)}>
+					{t.backAllProjects}
 				</a>
-				<h1 class="detail-title">Project not found</h1>
-				<p class="empty-state">This project is not published yet.</p>
+				<h1 class="detail-title">{t.notFoundProject}</h1>
+				<p class="empty-state">{t.notPublishedProject}</p>
 			</section>
 		)
 	}

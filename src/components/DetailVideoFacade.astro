@@ -5,15 +5,21 @@
 // shared public/js/detail.js (delegated, no inline script in <main>).
 // When there is no poster image, an accent tile with a play button
 // stands in — never a black void.
+import { getDict, type Dict, type Lang } from "../lib/i18n";
+
 interface Props {
 	/** Video URL (thumbnailVideoUrl when present, else the thumbnail). */
 	src: string;
 	/** Poster image URL, when the thumbnail is an image. */
 	poster?: string | null;
 	title: string;
+	lang?: Lang;
+	dict?: Dict;
 }
 
-const { src, poster, title } = Astro.props;
+const { src, poster, title, lang = "en", dict } = Astro.props;
+const t = dict ?? getDict(lang);
+const playLabel = lang === "bn" ? `${title} চালান` : `Play ${title}`;
 ---
 
 <button
@@ -22,7 +28,7 @@ const { src, poster, title } = Astro.props;
 	data-video-facade
 	data-src={src}
 	data-poster={poster ?? ""}
-	aria-label={`Play ${title}`}
+	aria-label={playLabel}
 >
 	{poster ? (
 		<img src={poster} alt={title} loading="lazy" />
@@ -50,5 +56,5 @@ const { src, poster, title } = Astro.props;
 			<path d="M8 5.5v13l11-6.5z" />
 		</svg>
 	</span>
-	<span class="play-label">Play video</span>
+	<span class="play-label">{t.playVideo}</span>
 </button>

@@ -35,6 +35,10 @@ const baseSchema = z.object({
 	updatedAt: z.string().optional(),
 	thumbnail: z.string().optional(),
 	thumbnailType: z.enum(["image", "video"]).optional(),
+	// Optional Bangla variant from the API (same field names as the
+	// English top level). Zod strips undeclared live fields, so this
+	// must be declared here or live `bn` never reaches the page.
+	bn: z.record(z.string(), z.unknown()).optional(),
 });
 
 const livePosts = defineLiveCollection({

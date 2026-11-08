@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ContactForm from "./ContactForm";
+import { lockBodyScroll, unlockBodyScroll } from "../lib/scrollLock";
+import { getDict, type Dict, type Lang } from "../lib/i18n";
 
 interface OpenContactDetail {
 	service?: string;
@@ -10,10 +12,38 @@ interface OpenContactDetail {
 // Opens when any CTA dispatches `window.dispatchEvent(new CustomEvent(
 // "open-contact", { detail: { service?, source? } }))`.
 // Backdrop click, the × button, and Escape all close it.
-export default function ContactModal() {
+//
+// SCROLL STABILITY (worker H, 2026-11-08): the modal used to BOUNCE on
+// open — up once, then down once, oscillating — when opened from a
+// service. Three stacked causes, all fixed here:
+//  1. The sheet opened as a short skeleton and the full form replaced
+//     it one frame later, so the bottom-anchored sheet's top edge
+//     jumped UP ~500px in a single frame. The form is fully local
+//     (no async data), so the skeleton served no purpose: the form now
+//     renders in the same frame as the sheet, at its final height.
+//  2. The scroll lock only set body overflow, and the service ->
+//     contact handover unlocked the page for a whole task (setTimeout
+//     0) between the two modals. The shared reference-counted lock in
+//     src/lib/scrollLock.ts locks <html> AND <body>, fixes the body at
+//     the saved scroll offset, and never unlocks across the handover.
+//  3. The sheet capped at 92vh — vh tracks the mobile toolbar, so the
+//     sheet resized whenever the toolbar showed/hid. It now caps at
+//     92dvh (stylesheet 92vh stays as the fallback for old browsers).
+// The sheet is focused on open with preventScroll (keyboard users land
+// in the dialog; no focus-driven scroll can move it), and nothing in
+// the modal ever autofocuses an input.
+export default function ContactModal({
+	lang = "en",
+	dict,
+}: {
+	lang?: Lang;
+	dict?: Dict;
+}) {
+	const t = dict ?? getDict(lang);
 	const [open, setOpen] = useState(false);
 	const [service, setService] = useState<string | undefined>(undefined);
 	const [source, setSource] = useState<string | undefined>(undefined);
+	const sheetRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
 		const handler = (e: Event) => {
@@ -32,13 +62,15 @@ export default function ContactModal() {
 			if (e.key === "Escape") setOpen(false);
 		};
 		window.addEventListener("keydown", onKey);
-		// Lock body scroll while the modal is open; the cleanup runs on
-		// close AND on unmount, so the page never stays locked.
-		const previousOverflow = document.body.style.overflow;
-		document.body.style.overflow = "hidden";
+		// Lock the page behind the modal; the cleanup runs on close AND
+		// on unmount, so the page never stays locked.
+		lockBodyScroll();
+		// Land keyboard focus inside the dialog without scrolling
+		// anything (the sheet is already fully in view).
+		sheetRef.current?.focus({ preventScroll: true });
 		return () => {
 			window.removeEventListener("keydown", onKey);
-			document.body.style.overflow = previousOverflow;
+			unlockBodyScroll();
 		};
 	}, [open ]);
 
@@ -51,23 +83,33 @@ export default function ContactModal() {
 			role="presentation"
 		>
 			<div
+				ref={sheetRef}
 				className="modal-sheet"
 				role="dialog"
 				aria-modal="true"
-				aria-label="Contact me"
+				aria-label={t.contactMe}
+				tabIndex={-1}
 				onClick={(e) => e.stopPropagation()}
+				style={{
+					// Dynamic viewport height: stable while the mobile
+					// toolbar shows/hides (vh would resize the sheet).
+					maxHeight: "92dvh",
+					// A tall form scrolls INSIDE the sheet; never let
+					// that scroll chain out to the page behind it.
+					overscrollBehavior: "contain",
+				}}
 			>
 				<button
 					type="button"
 					className="modal-close"
-					aria-label="Close"
+					aria-label={t.close}
 					onClick={() => setOpen(false)}
 				>
 					×
 				</button>
-				<h2>Contact me</h2>
-				<p className="modal-sub">Tell me what you need — I reply personally.</p>
-				<ContactForm service={service} source={source} />
+				<h2>{t.contactMe}</h2>
+				<p className="modal-sub">{t.modalSub}</p>
+				<ContactForm service={service} source={source} lang={lang} dict={t} />
 			</div>
 		</div>
 	);

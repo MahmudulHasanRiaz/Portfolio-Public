@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { RotateCw, X } from "lucide-react";
+import { getDict, type Dict, type Lang } from "../lib/i18n";
 import {
 	STACK,
 	STACK_CATEGORIES,
@@ -189,11 +190,24 @@ function TechLogo({ tech }: { tech: StackTech }) {
 	);
 }
 
-export default function StackGlobe() {
+export default function StackGlobe({
+	lang = "en",
+	dict,
+}: {
+	lang?: Lang;
+	dict?: Dict;
+}) {
+	const t = dict ?? getDict(lang);
 	const [filter, setFilter] = useState("All");
 	const [selected, setSelected] = useState<StackTech | null>(null);
 	const [frontName, setFrontName] = useState(STACK[0].name);
 	const [reduced, setReduced] = useState(false);
+	// Skeleton: false until the island has hydrated AND the first
+	// animation frame has positioned every tag. Before that the stage
+	// shows the frosted ball + a shimmer sweep with the (unpositioned)
+	// tags hidden — never a pile of tags at the centre, never an empty
+	// area. SSR renders ready=false, so the skeleton is the first paint.
+	const [ready, setReady] = useState(false);
 
 	const tagRefs = useRef<Array<HTMLButtonElement | null>>([]);
 	const stageRef = useRef<HTMLDivElement | null>(null);
@@ -202,6 +216,7 @@ export default function StackGlobe() {
 	const velRef = useRef({ x: 0, y: 0 });
 	const curRef = useRef<Vec[]>(BASE_POINTS.map((p) => ({ ...p })));
 	const resumeAtRef = useRef(0);
+	const readyRef = useRef(false);
 	const landingUntilRef = useRef(0);
 	const clusterAngleRef = useRef(0);
 	const flyToRef = useRef<number | null>(null);
@@ -279,13 +294,23 @@ export default function StackGlobe() {
 				// Magnetic fly-to-front (tap a tech, or snap after a drag).
 				// Scaled by dt60: same wall-clock convergence at any
 				// refresh rate.
+				// SIGN (fixed 2026-11-08): deltaY/deltaX are the target's
+				// angular shortfall FROM front, so rot must move AGAINST
+				// them. The old code added +atan2(...) to rot — positive
+				// feedback: deltaY grew every frame, wrapped at ±π, and
+				// the globe spun at ~0.44 rad/frame FOREVER after any
+				// drag (only Spin, whose tween uses frontTarget, could
+				// stop it). Verified by standalone simulation: old signs
+				// diverge from deltaY=0.08 within ~30 frames and never
+				// converge; flipped signs converge in 21–65 frames for
+				// 20 random starts/targets.
 				const target = rotatePoint(
 					BASE_POINTS[flyToRef.current],
 					rot.x,
 					rot.y,
 				);
-				const deltaY = Math.atan2(target.x, target.z);
-				const deltaX = -Math.atan2(
+				const deltaY = -Math.atan2(target.x, target.z);
+				const deltaX = Math.atan2(
 					target.y,
 					Math.hypot(target.x, target.z),
 				);
@@ -405,7 +430,15 @@ export default function StackGlobe() {
 				}
 
 				const p = cur[i];
-				if (p.z > frontZ) {
+				// While a filter is active the spotlight (front halo /
+				// scale, and the "Now:" label) must be a MATCHING tag in
+				// the cluster — never a dimmed tag from the rest of the
+				// sphere. Before this, filtering Frontend spotlighted
+				// PostgreSQL (Database, dimmed) as "Now:".
+				if (
+					(!filterActive || matchingSet.has(i)) &&
+					p.z > frontZ
+				) {
 					frontZ = p.z;
 					frontIdx = i;
 				}
@@ -518,6 +551,25 @@ export default function StackGlobe() {
 				offY[i] = Math.max(-clampY, Math.min(clampY, offY[i]));
 				posX[i] += offX[i];
 				posY[i] += offY[i];
+				// Final-centre clamp (2026-11-08): the nudge clamp above
+				// only bounds the NUDGE, not the centre — base centre
+				// 50 + p.x * 42 already reaches 92%, +14% nudge put the
+				// centre at 106%, and the pill's half-width stuck out
+				// further (~29px overrun @390px — the mobile right-edge
+				// overflow). Clamp the final centre so the WHOLE pill
+				// stays inside the stage. Constellation lines read
+				// posX/posY afterwards, so they stay attached. Do NOT
+				// use overflow: clip on the stage — it would cut the
+				// orbit ring (inset -7%).
+				const tagEl = tagRefs.current[i];
+				const halfW = tagEl
+					? ((tagEl.offsetWidth * scales[i]) / 2 / stageW) * 100
+					: 8;
+				const halfH = tagEl
+					? ((tagEl.offsetHeight * scales[i]) / 2 / stageH) * 100
+					: 3;
+				posX[i] = Math.max(halfW, Math.min(100 - halfW, posX[i]));
+				posY[i] = Math.max(halfH, Math.min(100 - halfH, posY[i]));
 			}
 
 			// Pass 3: apply positions, scale, opacity and z-order.
@@ -578,6 +630,13 @@ export default function StackGlobe() {
 				line.style.opacity = String(lineOp);
 			}
 
+			// First positioned frame: the globe is live — drop the
+			// skeleton. Guarded by ref so this setState runs exactly once.
+			if (!readyRef.current) {
+				readyRef.current = true;
+				setReady(true);
+			}
+
 			raf = requestAnimationFrame(loop);
 		};
 
@@ -626,7 +685,26 @@ export default function StackGlobe() {
 				t.category === cat ? i : -1,
 			).filter((i) => i >= 0);
 			matchingRef.current = matching;
-			clusterBaseRef.current = fibonacciSphere(matching.length);
+			// Centre the cluster on its own centroid: fibonacciSphere
+			// points are only centred for larger n — for 1 tag the point
+			// is (1, 0, 0), which sat ~70px off-centre (Concepts), and
+			// for 3 tags ~24px off (CMS & E-commerce). The cluster
+			// rotates about the origin, so centred points stay centred.
+			const base = fibonacciSphere(matching.length);
+			const n = Math.max(1, base.length);
+			const centroid = base.reduce(
+				(s, p) => ({
+					x: s.x + p.x / n,
+					y: s.y + p.y / n,
+					z: s.z + p.z / n,
+				}),
+				{ x: 0, y: 0, z: 0 },
+			);
+			clusterBaseRef.current = base.map((p) => ({
+				x: p.x - centroid.x,
+				y: p.y - centroid.y,
+				z: p.z - centroid.z,
+			}));
 		}
 		if (selectedRef.current) {
 			selectedRef.current = null;
@@ -740,12 +818,42 @@ export default function StackGlobe() {
 
 	return (
 		<section className="glass section" id="stack">
+			<style>{`
+				/* Globe skeleton (loading state): the frosted ball is
+				   already in the stage from SSR; while the island
+				   hydrates the unpositioned tags stay hidden and a soft
+				   light sweep travels across the ball — never a pile of
+				   tags at the centre, never an empty area. */
+				.globe-stage.globe-loading .globe-tag { visibility: hidden; }
+				.globe-skeleton-shimmer {
+					position: absolute; inset: 0; z-index: 150;
+					border-radius: 50%; overflow: hidden;
+					pointer-events: none;
+				}
+				.globe-skeleton-shimmer::after {
+					content: ""; position: absolute; inset: -10% -30%;
+					background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.55) 50%, transparent 58%);
+					transform: translateX(-70%);
+					animation: globe-skeleton-shimmer 1.9s ease-in-out infinite alternate;
+				}
+				[data-theme="dark"] .globe-skeleton-shimmer::after {
+					background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.16) 50%, transparent 58%);
+				}
+				@media (prefers-color-scheme: dark) {
+					:root:not([data-theme="light"]) .globe-skeleton-shimmer::after {
+						background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.16) 50%, transparent 58%);
+					}
+				}
+				@keyframes globe-skeleton-shimmer { to { transform: translateX(70%); } }
+				@media (prefers-reduced-motion: reduce) {
+					.globe-skeleton-shimmer::after { animation: none; }
+				}
+			`}</style>
 			<div className="section-head">
 				<div>
-					<h2>The stack I work in</h2>
+					<h2>{t.stackTitle}</h2>
 					<p>
-						The tools behind the products above — drag the globe
-						to explore them all.
+						{t.stackSub}
 					</p>
 				</div>
 			</div>
@@ -753,14 +861,14 @@ export default function StackGlobe() {
 				<div
 					className="chip-row globe-filters"
 					role="group"
-					aria-label="Filter stack by category"
+					aria-label={t.stackFilter}
 				>
 					<button
 						type="button"
 						className={filter === "All" ? "chip active" : "chip"}
 						onClick={() => applyFilter("All")}
 					>
-						All
+						{t.allChip}
 					</button>
 					{STACK_CATEGORIES.map((cat) => (
 						<button
@@ -789,7 +897,9 @@ export default function StackGlobe() {
 					))}
 				</div>
 				<div
-					className="globe-stage"
+					className={
+						ready ? "globe-stage" : "globe-stage globe-loading"
+					}
 					ref={stageRef}
 					onPointerDown={onPointerDown}
 					onPointerMove={onPointerMove}
@@ -798,6 +908,12 @@ export default function StackGlobe() {
 					style={{ touchAction: "pan-y", cursor: "grab" }}
 				>
 					<div className="globe-ball" aria-hidden="true" />
+					{!ready ? (
+						<div
+							className="globe-skeleton-shimmer"
+							aria-hidden="true"
+						/>
+					) : null}
 					<div
 						className="globe-orbit"
 						aria-hidden="true"
@@ -895,16 +1011,16 @@ export default function StackGlobe() {
 										: undefined) ?? "var(--accent)",
 							}}
 						/>
-						Now: <b>{frontName}</b>
+						{t.nowLabel} <b>{frontName}</b>
 					</p>
 					<button
 						type="button"
 						className="spin-btn"
 						onClick={spin}
-						aria-label="Spin the globe to a random technology"
+						aria-label={t.spinLabel}
 					>
 						<RotateCw size={15} />
-						Spin
+						{t.spin}
 					</button>
 				</div>
 				{selected ? (
@@ -912,7 +1028,7 @@ export default function StackGlobe() {
 						<button
 							type="button"
 							onClick={closeCard}
-							aria-label="Close"
+							aria-label={t.close}
 							style={{
 								float: "right",
 								background: "transparent",

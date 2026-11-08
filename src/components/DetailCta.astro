@@ -3,6 +3,8 @@
 // the "open-contact" event the ContactModal island listens for, carrying
 // the optional service pre-selection and the source section. An optional
 // link (e.g. case study → "View the project") renders beside the button.
+import { getDict, type Dict, type Lang } from "../lib/i18n";
+
 interface Props {
 	title: string;
 	text: string;
@@ -11,6 +13,8 @@ interface Props {
 	buttonLabel?: string;
 	linkHref?: string;
 	linkLabel?: string;
+	lang?: Lang;
+	dict?: Dict;
 }
 
 const {
@@ -18,10 +22,14 @@ const {
 	text,
 	service,
 	source,
-	buttonLabel = "Contact me",
+	buttonLabel,
 	linkHref,
 	linkLabel,
+	lang = "en",
+	dict,
 } = Astro.props;
+const t = dict ?? getDict(lang);
+const ctaLabel = buttonLabel ?? t.contactMe;
 ---
 
 <div class="detail-cta">
@@ -35,7 +43,7 @@ const {
 			data-service={service}
 			data-source={source}
 		>
-			{buttonLabel}
+			{ctaLabel}
 		</button>
 		{linkHref && linkLabel && (
 			<a class="btn btn-ghost" href={linkHref}>

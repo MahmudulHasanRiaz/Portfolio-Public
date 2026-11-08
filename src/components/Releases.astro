@@ -2,6 +2,7 @@
 import BrandIcon from "./BrandIcon.astro";
 import { WIKIMEDIA_LOGOS } from "../data/site";
 import { youtubeThumb } from "../lib/youtube";
+import { getDict, langUrl, type Lang } from "../lib/i18n";
 
 export interface ReleaseCardItem {
 	slug: string;
@@ -15,9 +16,11 @@ export interface ReleaseCardItem {
 
 interface Props {
 	releases: ReleaseCardItem[];
+	lang?: Lang;
 }
 
-const { releases } = Astro.props;
+const { releases, lang = "en" } = Astro.props;
+const t = getDict(lang);
 
 // Platform name -> BrandIcon icon value (Simple Icons slug, or a real
 // Wikimedia logo). Unknown names render no icon, never a fake one.
@@ -45,6 +48,12 @@ function releaseYear(publishedAt?: string): string {
 }
 
 function typeLabel(releaseType?: string): string {
+	const key = (releaseType ?? "").toLowerCase();
+	if (key === "nasheed") return t.releaseTypeNasheed;
+	if (key === "tilawat") return t.releaseTypeTilawat;
+	if (key === "podcast") return t.releaseTypePodcast;
+	if (key === "lecture") return t.releaseTypeLecture;
+	if (key === "other") return t.releaseTypeOther;
 	if (!releaseType) return "";
 	return releaseType.charAt(0).toUpperCase() + releaseType.slice(1);
 }
@@ -60,17 +69,16 @@ function typeLabel(releaseType?: string): string {
 <section class="glass section" id="releases">
 	<div class="section-head">
 		<div>
-			<h2>Releases</h2>
+			<h2>{t.statReleases}</h2>
 			<p>
-				Nasheed, tilawat, podcast and lecture — every release with the
-				platforms it lives on.
+				{t.releasesSub}
 			</p>
 		</div>
-		<a class="view-all" href="/releases">View all releases →</a>
+		<a class="view-all" href={langUrl("/releases", lang)}>{t.viewAllReleases}</a>
 	</div>
 	{
 		releases.length === 0 ? (
-			<p class="empty-state">No releases published yet.</p>
+			<p class="empty-state">{t.emptyReleases}</p>
 		) : (
 			<ul class="release-grid">
 				{releases.map((release) => {
@@ -91,8 +99,8 @@ function typeLabel(releaseType?: string): string {
 						<li class="release-card">
 							<a
 								class="release-card-link"
-								href={`/releases/${release.slug}`}
-								aria-label={`View details for ${release.title}`}
+								href={langUrl(`/releases/${release.slug}`, lang)}
+								aria-label={`${t.viewDetailsFor} ${release.title}`}
 							>
 								<span class="release-card-thumb">
 									{thumb ? (
@@ -144,7 +152,7 @@ function typeLabel(releaseType?: string): string {
 										</span>
 										<span
 											class="release-card-platforms"
-											aria-label={`Available on ${release.platforms.map((p) => p.name).join(", ")}`}
+											aria-label={`${t.availableOn} ${release.platforms.map((p) => p.name).join(", ")}`}
 										>
 											{shownPlatforms.map((p) => {
 												const icon =
@@ -180,7 +188,7 @@ function typeLabel(releaseType?: string): string {
 												<circle cx="6" cy="18" r="3" />
 												<circle cx="18" cy="16" r="3" />
 											</svg>
-											Audio only — not on YouTube
+											{t.audioOnly}
 										</span>
 									) : null}
 								</span>

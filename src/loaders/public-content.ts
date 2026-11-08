@@ -131,15 +131,31 @@ async function fetchJson(
 /** API contract for GET {PUBLIC_CONTENT_API_URL}/api/public/settings. */
 export type PrimaryIdentity = "developer" | "know-me";
 
+/**
+ * Admin-configured default language (en | bn | system), exactly like
+ * the theme's light/dark/system. "system" = the visitor's browser
+ * language (bn → Bangla, anything else → English). Never hardcoded
+ * on the Astro side — the API owns it; absent = "en".
+ */
+export type DefaultLanguage = "en" | "bn" | "system";
+
 export interface PublicSettings {
 	portraitUrl: string | null;
 	primaryIdentity: PrimaryIdentity;
+	defaultLanguage: DefaultLanguage;
+	/**
+	 * Optional Bangla hero/profile copy from the admin panel (same
+	 * field names as the English settings copy). Absent = fall back
+	 * to the English strings. Consumed via getSiteSettings().
+	 */
+	bn?: Record<string, unknown>;
 }
 
 /** Fail-safe defaults: repo portrait + Software Engineer profile. */
 export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
 	portraitUrl: null,
 	primaryIdentity: "developer",
+	defaultLanguage: "en",
 };
 
 /**
@@ -195,7 +211,16 @@ export async function fetchPublicSettings(
 				: null;
 		const primaryIdentity: PrimaryIdentity =
 			record.primaryIdentity === "know-me" ? "know-me" : "developer";
-		return { portraitUrl, primaryIdentity };
+		const defaultLanguage: DefaultLanguage =
+			record.defaultLanguage === "bn" ||
+			record.defaultLanguage === "system"
+				? record.defaultLanguage
+				: "en";
+		const bn =
+			typeof record.bn === "object" && record.bn !== null
+				? (record.bn as Record<string, unknown>)
+				: undefined;
+		return { portraitUrl, primaryIdentity, defaultLanguage, bn };
 	} catch {
 		return { ...DEFAULT_PUBLIC_SETTINGS };
 	}

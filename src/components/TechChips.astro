@@ -5,21 +5,26 @@
 // never a fake logo.
 import BrandIcon from "./BrandIcon.astro";
 import { STACK } from "../data/site";
+import { getDict, type Dict, type Lang } from "../lib/i18n";
 
 interface Props {
 	techs?: string[];
 	title?: string;
+	lang?: Lang;
+	dict?: Dict;
 }
 
-const { techs = [], title = "Built with" } = Astro.props;
+const { techs = [], title, lang = "en", dict } = Astro.props;
+const t = dict ?? getDict(lang);
+const heading = title ?? t.builtWith;
 const iconFor = (tech: string): string | null =>
 	STACK.find((t) => t.name === tech)?.icon ?? null;
 ---
 
 {
 	techs.length > 0 && (
-		<section class="detail-section" aria-label={title}>
-			<h2 class="detail-h2">{title}</h2>
+		<section class="detail-section" aria-label={heading}>
+			<h2 class="detail-h2">{heading}</h2>
 			<div class="tag-row">
 				{techs.map((tech) => {
 					const icon = iconFor(tech);

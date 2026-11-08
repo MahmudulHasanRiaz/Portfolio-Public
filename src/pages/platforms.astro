@@ -5,25 +5,30 @@
 // carries every URL in sameAs. Layout + copy match the React preview
 // exactly: 2-column compact card grid (sm:grid-cols-2), per-platform
 // descriptive subtitle, diagonal ↗ arrow, group sub-lines.
+// Group titles/blurbs from the dictionary (same keys as the /bn/ page).
 import Layout from "../layouts/Layout.astro";
 import BrandIcon from "../components/BrandIcon.astro";
 import { PLATFORMS, PROFILE, type Platform } from "../data/site";
+import { getDict, langUrl } from "../lib/i18n";
+
+const lang = "en" as const;
+const t = getDict(lang);
 
 const groups: { key: Platform["group"]; title: string; blurb: string }[] = [
 	{
 		key: "music",
-		title: "Music & Streaming",
-		blurb: "Where the nasheed lives — the channel and the artist profile.",
+		title: t.platformsMusic,
+		blurb: t.platformsMusicBlurb,
 	},
 	{
 		key: "social",
-		title: "Social Media",
-		blurb: "Day-to-day updates, community and public work.",
+		title: t.platformsSocial,
+		blurb: t.platformsSocialBlurb,
 	},
 	{
 		key: "professional",
-		title: "Professional / Code",
-		blurb: "The engineering work, in the open.",
+		title: t.platformsProfessional,
+		blurb: t.platformsProfessionalBlurb,
 	},
 ];
 
@@ -32,21 +37,23 @@ const jsonLd = {
 	"@context": "https://schema.org",
 	"@type": "Person",
 	name: PROFILE.name,
+	inLanguage: "en",
 	sameAs,
 };
 ---
 
 <Layout
-	title="All platforms — Mahmudul Hasan Riaz"
-	description="Everywhere to find Mahmudul Hasan Riaz — streaming, social media and professional profiles."
+	title={t.platformsPageTitle}
+	description={t.platformsPageDescription}
+	lang={lang}
 >
 	<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 
 	<section class="glass">
-		<p style="margin:0 0 8px;"><a href="/">← Back to home</a></p>
-		<h1 style="margin:0 0 8px;font-size:24px;">All platforms</h1>
+		<p style="margin:0 0 8px;"><a href={langUrl("/", lang)}>{t.backHome}</a></p>
+		<h1 style="margin:0 0 8px;font-size:24px;">{t.platformsTitle}</h1>
 		<p class="muted" style="margin:0;">
-			Every profile, in one place — grouped by where it lives.
+			{t.platformsIntro}
 		</p>
 	</section>
 

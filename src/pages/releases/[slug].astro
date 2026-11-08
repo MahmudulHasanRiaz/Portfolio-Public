@@ -11,15 +11,18 @@ import {
 	SITE_URL,
 	absUrl,
 	mergeDetail,
-	platformActionLabel,
 	yearOf,
 } from "../../lib/detail";
 import { PROFILE, WIKIMEDIA_LOGOS } from "../../data/site";
+import { getDict, langUrl, platformActionLabelLang } from "../../lib/i18n";
 
 // On-demand detail route — hybrid live-then-static.
 // Live entry first (Public Content API), then the build-time collection
 // entry. After the next scheduled rebuild the page becomes a static file.
 export const prerender = false;
+
+const lang = "en" as const;
+const t = getDict(lang);
 
 const { slug } = Astro.params;
 if (!slug) Astro.response.status = 404;
@@ -68,7 +71,7 @@ const next =
 const thumbOf = (r: (typeof releases)[number] | undefined) =>
 	r?.data.youtubeId ? youtubeThumb(r.data.youtubeId) : null;
 
-const title = data?.title ?? "Release not published yet";
+const title = data?.title ?? t.notFoundRelease;
 // Real description only — never the generic "A release by…" fallback.
 const description = data?.description?.trim()
 	? data.description
@@ -88,6 +91,16 @@ const coverImage = isVideo
 		: null;
 const firstPlatform = platforms[0];
 const year = yearOf(data?.publishedAt);
+
+const releaseTypeLabel = (() => {
+	const key = (data?.releaseType ?? "").toLowerCase();
+	if (key === "nasheed") return t.releaseTypeNasheed;
+	if (key === "tilawat") return t.releaseTypeTilawat;
+	if (key === "podcast") return t.releaseTypePodcast;
+	if (key === "lecture") return t.releaseTypeLecture;
+	if (key === "other") return t.releaseTypeOther;
+	return data?.releaseType ?? "";
+})();
 
 const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 	YouTube: "youtube",
@@ -109,6 +122,7 @@ const jsonLd = data
 							"@type": "VideoObject",
 							name: title,
 							...(description ? { description } : {}),
+							inLanguage: "en",
 							thumbnailUrl: youtubeThumb(youtubeId),
 							...(data.publishedAt
 								? { uploadDate: data.publishedAt }
@@ -119,6 +133,7 @@ const jsonLd = data
 							"@type": "AudioObject",
 							name: title,
 							...(description ? { description } : {}),
+							inLanguage: "en",
 							...(data.publishedAt
 								? { datePublished: data.publishedAt }
 								: {}),
@@ -139,7 +154,7 @@ const jsonLd = data
 						{
 							"@type": "ListItem",
 							position: 2,
-							name: "Releases",
+							name: t.allReleases,
 							item: `${SITE_URL}/releases`,
 						},
 						{
@@ -161,14 +176,15 @@ const jsonLd = data
 	ogType="website"
 	ogImage={coverImage}
 	canonical={pageUrl}
+	lang={lang}
 >
 	{!entry || !data ? (
 		<section class="glass">
-			<a href="/releases" class="back-link">
-				← All releases
+			<a href={langUrl("/releases", lang)} class="back-link">
+				{t.backAllReleases}
 			</a>
-			<h1 class="detail-title">Release not published yet</h1>
-			<p class="empty-state">This release is not published yet.</p>
+			<h1 class="detail-title">{t.notFoundRelease}</h1>
+			<p class="empty-state">{t.notPublishedRelease}</p>
 		</section>
 	) : (
 		<section class="glass">
@@ -176,12 +192,12 @@ const jsonLd = data
 				<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 			) : null}
 
-			<a href="/releases" class="back-link">
-				← All releases
+			<a href={langUrl("/releases", lang)} class="back-link">
+				{t.backAllReleases}
 			</a>
 
 			{isVideo && youtubeId ? (
-				<ReleasePlayer client:load youtubeId={youtubeId} title={title} />
+				<ReleasePlayer client:load youtubeId={youtubeId} title={title} lang={lang} dict={t} />
 			) : data.thumbnail ? (
 				<div class="detail-hero">
 					<img src={data.thumbnail} alt={title} />
@@ -215,23 +231,23 @@ const jsonLd = data
 				</div>
 			)}
 			<p class="detail-meta">
-				{data.releaseType ? (
-					<span class="type-tag">{data.releaseType}</span>
+				{releaseTypeLabel ? (
+					<span class="type-tag">{releaseTypeLabel}</span>
 				) : null}
 				{year ? ` · ${year}` : ""}
-				{` · ${isVideo ? "Video" : "Audio"}`}
+				{` · ${isVideo ? t.videoLabel : t.audioLabel}`}
 			</p>
 			<h1 class="detail-title">{title}</h1>
-			<p class="detail-meta">By {PROFILE.name}</p>
+			<p class="detail-meta">{t.authorBy} {PROFILE.name}</p>
 			{!isVideo ? (
 				<p style="margin:12px 0 0;">
-					<span class="audio-badge">Audio only — not on YouTube</span>
+					<span class="audio-badge">{t.audioOnly}</span>
 				</p>
 			) : null}
 
 			{description ? (
-				<section class="detail-section" aria-label="About this release">
-					<h2 class="detail-h2">About this release</h2>
+				<section class="detail-section" aria-label={t.aboutRelease}>
+					<h2 class="detail-h2">{t.aboutRelease}</h2>
 					<div class="detail-body">
 						<p>{description}</p>
 					</div>
@@ -242,13 +258,13 @@ const jsonLd = data
 				<div class="credits-grid">
 					{data.tune ? (
 						<div class="credit">
-							<div class="credit-label">Tune</div>
+							<div class="credit-label">{t.tune}</div>
 							<div class="credit-value">{data.tune}</div>
 						</div>
 					) : null}
 					{data.lyricist ? (
 						<div class="credit">
-							<div class="credit-label">Lyricist</div>
+							<div class="credit-label">{t.lyricist}</div>
 							<div class="credit-value">{data.lyricist}</div>
 						</div>
 					) : null}
@@ -256,15 +272,15 @@ const jsonLd = data
 			) : null}
 
 			{data.lyrics ? (
-				<section class="detail-section" aria-label="Lyrics">
-					<h2 class="detail-h2">Lyrics</h2>
+				<section class="detail-section" aria-label={t.lyrics}>
+					<h2 class="detail-h2">{t.lyrics}</h2>
 					<p class="lyrics">{data.lyrics}</p>
 				</section>
 			) : null}
 
 			{platforms.length > 0 ? (
-				<section class="detail-section" aria-label="Listen and watch">
-					<h2 class="detail-h2">Listen &amp; watch</h2>
+				<section class="detail-section" aria-label={t.listenWatch}>
+					<h2 class="detail-h2">{t.listenWatch}</h2>
 					<div class="platform-list">
 						{platforms.map((p) => {
 							const icon = RELEASE_PLATFORM_ICONS[p.name];
@@ -278,7 +294,7 @@ const jsonLd = data
 									{icon ? (
 										<BrandIcon icon={icon} name={p.name} size={22} />
 									) : null}
-									<span>{platformActionLabel(p.name)}</span>
+									<span>{platformActionLabelLang(p.name, lang)}</span>
 									<span aria-hidden="true">↗</span>
 								</a>
 							);
@@ -293,7 +309,7 @@ const jsonLd = data
 				prev={
 					prev
 						? {
-								href: `/releases/${prev.data.slug}`,
+								href: langUrl(`/releases/${prev.data.slug}`, lang),
 								title: prev.data.title,
 								thumb: thumbOf(prev),
 							}
@@ -302,12 +318,14 @@ const jsonLd = data
 				next={
 					next
 						? {
-								href: `/releases/${next.data.slug}`,
+								href: langUrl(`/releases/${next.data.slug}`, lang),
 								title: next.data.title,
 								thumb: thumbOf(next),
 							}
 						: null
 				}
+				lang={lang}
+				dict={t}
 			/>
 		</section>
 	)}

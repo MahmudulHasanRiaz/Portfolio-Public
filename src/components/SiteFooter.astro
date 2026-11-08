@@ -9,19 +9,27 @@
 // Bottom row: "Contact me →" text link left, "All platforms →" right.
 import BrandIcon from "./BrandIcon.astro";
 import { FOOTER_PRIMARIES, PROFILE } from "../data/site";
+import { langUrl, type Dict, type Lang } from "../lib/i18n";
 
 interface Props {
 	profile?: "se" | "knowme";
+	lang?: Lang;
+	dict?: Dict;
 }
 
-const { profile = "se" } = Astro.props;
+const { profile = "se", lang = "en", dict } = Astro.props;
 
 const sub =
 	profile === "knowme"
-		? "Software Engineer · Entrepreneur · Nasheed Artist · Hafiz-Alem · Public Figure — Dhaka, Bangladesh"
-		: "Software Engineer · Entrepreneur · Islamic Artist — Dhaka, Bangladesh";
+		? (dict?.footerSubKnowMe ??
+			"Software Engineer · Entrepreneur · Nasheed Artist · Hafiz-Alem · Public Figure — Dhaka, Bangladesh")
+		: (dict?.footerSubSe ??
+			"Software Engineer · Entrepreneur · Islamic Artist — Dhaka, Bangladesh");
 
 const year = new Date().getFullYear();
+const contactLabel = dict?.contactMe ?? "Contact me";
+const allPlatformsLabel = dict?.footerAllPlatforms ?? "All platforms →";
+const rightsLabel = dict?.footerRights ?? "All rights reserved.";
 ---
 
 <footer class="site-footer">
@@ -52,12 +60,12 @@ const year = new Date().getFullYear();
 		style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:space-between;"
 	>
 		<button type="button" class="footer-text-link" data-open-contact>
-			Contact me →
+			{contactLabel} →
 		</button>
-		<a href="/platforms">All platforms →</a>
+		<a href={langUrl("/platforms", lang)}>{allPlatformsLabel}</a>
 	</div>
 	<p class="footer-copyright">
-		© {year} {PROFILE.name}. All rights reserved.
+		© {year} {PROFILE.name}. {rightsLabel}
 	</p>
 </footer>
 

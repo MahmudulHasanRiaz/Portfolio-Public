@@ -1,13 +1,22 @@
 ---
 import { SERVICES } from "../data/site";
 import BrandIcon from "./BrandIcon.astro";
+import ServiceModal from "./ServiceModal";
+import { getDict, type Lang } from "../lib/i18n";
+
+interface Props {
+	lang?: Lang;
+}
+
+const { lang = "en" } = Astro.props;
+const t = getDict(lang);
 ---
 
 <section class="glass section" id="services">
 	<div class="section-head">
 		<div>
-			<h2>Services</h2>
-			<p>What I can build and improve for your business.</p>
+			<h2>{t.servicesTitle}</h2>
+			<p>{t.servicesSub}</p>
 		</div>
 	</div>
 	<div class="services-grid">
@@ -16,8 +25,9 @@ import BrandIcon from "./BrandIcon.astro";
 				type="button"
 				class="service-card"
 				style="text-align:left;"
-				data-service={service.name}
-				data-contact-source="services"
+				data-service-slug={service.slug}
+				aria-haspopup="dialog"
+				aria-label={`${t.learnMoreAbout} ${service.name}`}
 			>
 				<span class="service-icon">
 					{service.icon ? (
@@ -72,44 +82,37 @@ import BrandIcon from "./BrandIcon.astro";
 				</span>
 				<span style="min-width:0;flex:1;">
 					<h3>{service.name}</h3>
-					<p>{service.description}</p>
-					<span class="service-cue">Contact about this service
-						<svg
-							width="15"
-							height="15"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							aria-hidden="true"
-						>
-							<line x1="5" y1="12" x2="19" y2="12" />
-							<polyline points="12 5 19 12 12 19" />
-						</svg>
-					</span>
 				</span>
 			</button>
 		))}
 	</div>
+	{/* Service detail modal — the brief + CTA live here, not on the card. */}
+	<ServiceModal lang={lang} dict={t} client:load />
 </section>
 
+<style>
+	/* Cards show name + icon only: centre the name against the icon tile. */
+	.service-card {
+		align-items: center;
+	}
+</style>
+
 <script>
-	// Opens the contact modal (ContactModal island listens for "open-contact").
-	// Guarded against double-binding: Hero.astro runs the same script, so an
-	// element already bound by the other instance is skipped.
+	// Opens the service detail modal (ServiceModal island listens for
+	// "open-service"). Guarded against double-binding: Services.astro is
+	// rendered on both the home and Know Me pages, so an element already
+	// bound by the other instance is skipped.
 	document
-		.querySelectorAll("[data-contact-source]:not([data-contact-bound])")
+		.querySelectorAll("[data-service-slug]:not([data-service-bound])")
 		.forEach((el) => {
-			el.setAttribute("data-contact-bound", "");
+			el.setAttribute("data-service-bound", "");
 			el.addEventListener("click", () => {
 				const target = el as HTMLElement;
-				const detail: { service?: string; source?: string } = {};
-				if (target.dataset.service) detail.service = target.dataset.service;
-				if (target.dataset.contactSource)
-					detail.source = target.dataset.contactSource;
-				window.dispatchEvent(new CustomEvent("open-contact", { detail }));
+				window.dispatchEvent(
+					new CustomEvent("open-service", {
+						detail: { slug: target.dataset.serviceSlug },
+					}),
+				);
 			});
 		});
 </script>

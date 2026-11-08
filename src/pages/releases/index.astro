@@ -4,16 +4,22 @@ import BrandIcon from "../../components/BrandIcon.astro";
 import { WIKIMEDIA_LOGOS } from "../../data/site";
 import { getReleases } from "../../lib/content";
 import { youtubeThumb } from "../../lib/youtube";
+import { getDict, langUrl, showingLabel } from "../../lib/i18n";
+
+// Releases archive — fixed strings from the dictionary (same keys as
+// the /bn/ archive). Type labels come from the dict, never hardcoded.
+const lang = "en" as const;
+const t = getDict(lang);
 
 const releases = await getReleases();
 
 // Filter chips by release type — only types that exist.
 const typeLabels: Record<string, string> = {
-	nasheed: "Nasheed",
-	tilawat: "Tilawat",
-	podcast: "Podcast",
-	lecture: "Lecture",
-	other: "Other",
+	nasheed: t.releaseTypeNasheed,
+	tilawat: t.releaseTypeTilawat,
+	podcast: t.releaseTypePodcast,
+	lecture: t.releaseTypeLecture,
+	other: t.releaseTypeOther,
 };
 const presentTypes = [
 	...new Set(
@@ -43,18 +49,19 @@ function releaseYear(publishedAt?: string): string {
 ---
 
 <Layout
-	title="All releases — Mahmudul Hasan Riaz"
-	description="Nasheed, tilawat, podcast and lecture releases by Mahmudul Hasan Riaz."
+	title={t.releasesPageTitle}
+	description={t.releasesPageDescription}
+	lang={lang}
 >
 	<p>
-		<a href="/" class="back-link">← Back to home</a>
+		<a href={langUrl("/", lang)} class="back-link">{t.backHome}</a>
 	</p>
-	<h1 style="margin:0 0 8px;font-size:26px;line-height:1.25;">All releases</h1>
+	<h1 style="margin:0 0 8px;font-size:26px;line-height:1.25;">{t.allReleases}</h1>
 
 	{
 		releases.length === 0 ? (
 			<section class="glass section">
-				<p class="empty-state">No releases published yet.</p>
+				<p class="empty-state">{t.emptyReleases}</p>
 			</section>
 		) : (
 			<>
@@ -64,18 +71,18 @@ function releaseYear(publishedAt?: string): string {
 						id="release-filters"
 						style="margin-top:16px;"
 					>
-						<button type="button" class="chip active" data-type="all">
-							All
+						<button type="button" class="chip active" data-type="all" aria-pressed="true">
+							{t.allChip}
 						</button>
-						{presentTypes.map((t) => (
-							<button type="button" class="chip" data-type={t}>
-								{typeLabels[t] ?? t}
+						{presentTypes.map((type) => (
+							<button type="button" class="chip" data-type={type} aria-pressed="false">
+								{typeLabels[type] ?? type}
 							</button>
 						))}
 					</div>
 				) : null}
-				<p class="count-line" id="release-count">
-					Showing {releases.length} of {releases.length} releases
+				<p class="count-line" id="release-count" data-count-template={t.showingReleases}>
+					{showingLabel(t.showingReleases, releases.length, releases.length)}
 				</p>
 				<!-- Same card grid as the Know Me releases section (preview):
 				     aspect-video thumbnail + title, type · year, platform
@@ -104,8 +111,8 @@ function releaseYear(publishedAt?: string): string {
 							<li class="release-card" data-type={type}>
 								<a
 									class="release-card-link"
-									href={`/releases/${release.data.slug}`}
-									aria-label={`View details for ${release.data.title}`}
+									href={langUrl(`/releases/${release.data.slug}`, lang)}
+									aria-label={`${t.viewDetailsFor} ${release.data.title}`}
 								>
 									<span class="release-card-thumb">
 										{thumb ? (
@@ -157,7 +164,7 @@ function releaseYear(publishedAt?: string): string {
 											</span>
 											<span
 												class="release-card-platforms"
-												aria-label={`Available on ${release.data.platforms.map((p) => p.name).join(", ")}`}
+												aria-label={`${t.availableOn} ${release.data.platforms.map((p) => p.name).join(", ")}`}
 											>
 												{shownPlatforms.map((p) => {
 													const icon =
@@ -193,7 +200,7 @@ function releaseYear(publishedAt?: string): string {
 													<circle cx="6" cy="18" r="3" />
 													<circle cx="18" cy="16" r="3" />
 												</svg>
-												Audio only — not on YouTube
+												{t.audioOnly}
 											</span>
 										) : null}
 									</span>
@@ -213,10 +220,17 @@ function releaseYear(publishedAt?: string): string {
 	const cards = document.querySelectorAll("#release-list .release-card");
 	const count = document.getElementById("release-count");
 	const total = cards.length;
+	const template = count ? count.getAttribute("data-count-template") || "" : "";
+	const fmt = (n) =>
+		template.includes("টি") ? n.toLocaleString("bn-BD") : String(n);
 	chips.forEach((chip) => {
 		chip.addEventListener("click", () => {
-			chips.forEach((c) => c.classList.remove("active"));
+			chips.forEach((c) => {
+				c.classList.remove("active");
+				c.setAttribute("aria-pressed", "false");
+			});
 			chip.classList.add("active");
+			chip.setAttribute("aria-pressed", "true");
 			const type = chip.getAttribute("data-type");
 			let shown = 0;
 			cards.forEach((card) => {
@@ -226,7 +240,9 @@ function releaseYear(publishedAt?: string): string {
 				if (show) shown++;
 			});
 			if (count)
-				count.textContent = `Showing ${shown} of ${total} releases`;
+				count.textContent = template
+					? template.replace("{shown}", fmt(shown)).replace("{total}", fmt(total))
+					: `Showing ${shown} of ${total} releases`;
 		});
 	});
 </script>

@@ -37,6 +37,11 @@ const baseSchema = z.object({
 	// Thumbnail: image URL, or a video URL when thumbnailType is "video".
 	thumbnail: z.string().optional(),
 	thumbnailType: z.enum(["image", "video"]).optional(),
+	// Optional Bangla variant: same field names as the English top
+	// level (title, description, content, lyrics, ...). On /bn/ pages
+	// a present, non-empty Bangla field wins; English is the fallback
+	// (lib/i18n.ts localizeData) — a page never renders a blank.
+	bn: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const collections = {

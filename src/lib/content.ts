@@ -57,6 +57,26 @@ function mergeEntryData<T extends Record<string, unknown>>(
 ): T {
 	const out: Record<string, unknown> = { ...base };
 	for (const [key, value] of Object.entries(live)) {
+		if (key === "bn") {
+			// Bangla variant merges field-wise like the English fields:
+			// live `bn` wins where it has a value; build-time `bn` is
+			// kept where the live row is empty — so a half-filled live
+			// bn object can never strip a build-time Bangla field.
+			const baseBn =
+				base["bn"] && typeof base["bn"] === "object"
+					? (base["bn"] as Record<string, unknown>)
+					: {};
+			const liveBn =
+				value && typeof value === "object"
+					? (value as Record<string, unknown>)
+					: {};
+			const merged: Record<string, unknown> = { ...baseBn };
+			for (const [bk, bv] of Object.entries(liveBn)) {
+				if (!isEmptyValue(bv)) merged[bk] = bv;
+			}
+			if (Object.keys(merged).length > 0) out["bn"] = merged;
+			continue;
+		}
 		if (!isEmptyValue(value)) {
 			out[key] = value;
 		}
@@ -118,11 +138,14 @@ export async function getReleases(): Promise<Release[]> {
 	return mergeWithLive(await getCollection("releases"), "liveReleases");
 }
 
-export function formatDate(iso: string | undefined): string {
+export function formatDate(
+	iso: string | undefined,
+	lang: "en" | "bn" = "en",
+): string {
 	if (!iso) return "";
 	const d = new Date(iso);
 	if (Number.isNaN(d.getTime())) return "";
-	return d.toLocaleDateString("en-GB", {
+	return d.toLocaleDateString(lang === "bn" ? "bn-BD" : "en-GB", {
 		day: "numeric",
 		month: "short",
 		year: "numeric",

@@ -2,6 +2,9 @@
 title: "StyleNest"
 slug: "stylenest-fashion-ecommerce"
 description: "StyleNest ran a slow WooCommerce store with heavy cash-on-delivery fraud: fake orders, repeated numbers, and stock that never matched the shop floor."
+bn:
+  title: "StyleNest"
+  description: "স্টাইলনেস্টের ধীর WooCommerce স্টোরে ভারী ক্যাশ-অন-ডেলিভারি প্রতারণা চলত: ভুয়া অর্ডার, বারবার একই নম্বর, আর স্টক যা দোকানের সঙ্গে কখনো মিলত না।"
 tags: ["WooCommerce", "E-commerce", "Fraud"]
 techs: ["WooCommerce", "WordPress", "PHP"]
 thumbnail: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&q=80&auto=format&fit=crop"

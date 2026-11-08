@@ -1,0 +1,127 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import { getVentures, formatDate, truncateShort } from "../../../lib/content";
+import { getDict, langUrl, localizeData, showingLabel } from "../../../lib/i18n";
+
+const lang = "bn" as const;
+const t = getDict(lang);
+
+const venturesRaw = await getVentures();
+const ventures = venturesRaw.map((v) => ({
+	...v,
+	data: localizeData(v.data, lang),
+}));
+const allTags = [...new Set(ventures.flatMap((v) => v.data.tags ?? []))].sort();
+---
+
+<Layout
+	title={t.venturesPageTitle}
+	description={t.venturesPageDescription}
+	lang={lang}
+>
+	<p>
+		<a href={langUrl("/", lang)} class="back-link">{t.backHome}</a>
+	</p>
+	<h1 style="margin:0 0 8px;font-size:26px;line-height:1.25;">{t.allVentures}</h1>
+
+	{
+		ventures.length === 0 ? (
+			<section class="glass section">
+				<p class="empty-state">{t.emptyVentures}</p>
+			</section>
+		) : (
+			<>
+				{allTags.length > 0 ? (
+					<div class="chip-row" id="venture-filters" style="margin-top:16px;">
+						<button type="button" class="chip active" data-tag="all" aria-pressed="true">
+							{t.allChip}
+						</button>
+						{allTags.map((tag) => (
+							<button type="button" class="chip" data-tag={tag} aria-pressed="false">
+								{tag}
+							</button>
+						))}
+					</div>
+				) : null}
+				<p class="count-line" id="venture-count" data-count-template={t.showingVentures}>
+					{showingLabel(t.showingVentures, ventures.length, ventures.length)}
+				</p>
+				<section class="card-grid section" id="venture-grid">
+					{ventures.map((venture) => (
+						<a
+							class="grid-card"
+							href={langUrl(`/ventures/${venture.data.slug}`, lang)}
+							data-tags={(venture.data.tags ?? []).join(",")}
+						>
+							<div class="grid-thumb">
+								{venture.data.thumbnailType === "video" &&
+								venture.data.thumbnail ? (
+									<video
+										src={venture.data.thumbnail}
+										muted
+										playsinline
+										preload="metadata"
+									/>
+								) : venture.data.thumbnail ? (
+									<img
+										src={venture.data.thumbnail}
+										alt={venture.data.title}
+										loading="lazy"
+									/>
+								) : (
+									<div class="thumb-fallback">
+										{venture.data.title.charAt(0)}
+									</div>
+								)}
+							</div>
+							<div class="grid-body">
+								<h3>{venture.data.title}</h3>
+								{venture.data.description ? (
+									<p>{truncateShort(venture.data.description)}</p>
+								) : null}
+								<p class="grid-meta">
+									{formatDate(venture.data.publishedAt, lang)}
+								</p>
+							</div>
+						</a>
+					))}
+				</section>
+			</>
+		)
+	}
+</Layout>
+
+<script is:inline>
+	// Client-side tag filter (no framework).
+	const chips = document.querySelectorAll("#venture-filters .chip");
+	const cards = document.querySelectorAll("#venture-grid .grid-card");
+	const count = document.getElementById("venture-count");
+	const total = cards.length;
+	const template = count ? count.getAttribute("data-count-template") || "" : "";
+	const fmt = (n) =>
+		template.includes("টি") ? n.toLocaleString("bn-BD") : String(n);
+	chips.forEach((chip) => {
+		chip.addEventListener("click", () => {
+			chips.forEach((c) => {
+				c.classList.remove("active");
+				c.setAttribute("aria-pressed", "false");
+			});
+			chip.classList.add("active");
+			chip.setAttribute("aria-pressed", "true");
+			const tag = chip.getAttribute("data-tag");
+			let shown = 0;
+			cards.forEach((card) => {
+				const tags = (card.getAttribute("data-tags") || "")
+					.split(",")
+					.filter(Boolean);
+				const show = tag === "all" || tags.includes(tag || "");
+				card.style.display = show ? "" : "none";
+				if (show) shown++;
+			});
+			if (count)
+				count.textContent = template
+					? template.replace("{shown}", fmt(shown)).replace("{total}", fmt(total))
+					: `Showing ${shown} of ${total} ventures`;
+		});
+	});
+</script>

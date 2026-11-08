@@ -1,10 +1,18 @@
 ---
 import { CLIENTS } from "../data/site";
+import { getDict, type Lang } from "../lib/i18n";
+
+interface Props {
+	lang?: Lang;
+}
+
+const { lang = "en" } = Astro.props;
+const t = getDict(lang);
 ---
 
 <section class="glass section" id="clients">
 	<div class="section-head">
-		<h2>Clients</h2>
+		<h2>{t.clientsTitle}</h2>
 	</div>
 	<div class="clients-grid">
 		{CLIENTS.map((client) => (

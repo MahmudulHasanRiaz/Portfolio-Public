@@ -2,9 +2,14 @@
 import Layout from "../../layouts/Layout.astro";
 import ProjectCard from "../../components/ProjectCard.astro";
 import { getProjects } from "../../lib/content";
+import { getDict, langUrl, showingLabel } from "../../lib/i18n";
 
 // Static archive — filters are client-side, driven by the tags on the
 // cards themselves (no framework, tiny inline script below).
+// Fixed strings from the dictionary (same keys as the /bn/ archive).
+const lang = "en" as const;
+const t = getDict(lang);
+
 const projects = await getProjects();
 const tags = [...new Set(projects.flatMap((p) => p.data.tags))].sort((a, b) =>
 	a.localeCompare(b),
@@ -13,35 +18,37 @@ const total = projects.length;
 ---
 
 <Layout
-	title="All projects — Mahmudul Hasan Riaz"
-	description="All projects by Mahmudul Hasan Riaz — ERP, SaaS and e-commerce systems for businesses in Bangladesh and beyond."
+	title={t.projectsPageTitle}
+	description={t.projectsPageDescription}
+	lang={lang}
 >
 	<section class="glass">
 		<p style="margin:0 0 8px;">
-			<a class="back-link" href="/">← Back to home</a>
+			<a class="back-link" href={langUrl("/", lang)}>{t.backHome}</a>
 		</p>
-		<h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;">All projects</h1>
+		<h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;">{t.allProjects}</h1>
 		{
 			projects.length === 0 ? (
-				<p class="empty-state">No projects published yet.</p>
+				<p class="empty-state">{t.emptyProjects}</p>
 			) : (
 				<>
 					<div class="chip-row" data-filter-row>
-						<button type="button" class="chip active" data-filter="all">
-							All
+						<button type="button" class="chip active" data-filter="all" aria-pressed="true">
+							{t.allChip}
 						</button>
 						{tags.map((tag) => (
-							<button type="button" class="chip" data-filter={tag}>
+							<button type="button" class="chip" data-filter={tag} aria-pressed="false">
 								{tag}
 							</button>
 						))}
 					</div>
-					<p class="count-line" data-count-line>
-						Showing {total} of {total} projects
+					<p class="count-line" data-count-line data-count-template={t.showingProjects}>
+						{showingLabel(t.showingProjects, total, total)}
 					</p>
 					<div class="card-grid" data-project-grid style="margin-top:16px;">
 						{projects.map((p) => (
 							<ProjectCard
+								lang={lang}
 								project={{
 									slug: p.data.slug,
 									title: p.data.title,
@@ -66,6 +73,9 @@ const total = projects.length;
 		const countLine = document.querySelector("[data-count-line]");
 		if (!row || !grid || !countLine) return;
 		const total = grid.querySelectorAll(".grid-card").length;
+		const template = countLine.getAttribute("data-count-template") || "";
+		const fmt = (n) =>
+			template.includes("টি") ? n.toLocaleString("bn-BD") : String(n);
 		row.addEventListener("click", function (event) {
 			const target = event.target;
 			if (!(target instanceof HTMLElement)) return;
@@ -74,6 +84,7 @@ const total = projects.length;
 			const filter = chip.getAttribute("data-filter") ?? "all";
 			row.querySelectorAll(".chip").forEach(function (c) {
 				c.classList.toggle("active", c === chip);
+				c.setAttribute("aria-pressed", c === chip ? "true" : "false");
 			});
 			let visible = 0;
 			grid.querySelectorAll(".grid-card").forEach(function (card) {
@@ -84,7 +95,9 @@ const total = projects.length;
 				(card as HTMLElement).style.display = show ? "" : "none";
 				if (show) visible += 1;
 			});
-			countLine.textContent = "Showing " + visible + " of " + total + " projects";
+			countLine.textContent = template
+				? template.replace("{shown}", fmt(visible)).replace("{total}", fmt(total))
+				: "Showing " + visible + " of " + total + " projects";
 		});
 	})();
 </script>

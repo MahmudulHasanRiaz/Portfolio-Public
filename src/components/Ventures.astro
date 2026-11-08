@@ -1,21 +1,33 @@
 ---
 import { getVentures, truncateShort } from "../lib/content";
+import { getDict, langUrl, localizeData, type Lang } from "../lib/i18n";
 
-const ventures = await getVentures();
+interface Props {
+	lang?: Lang;
+}
+
+const { lang = "en" } = Astro.props;
+const t = getDict(lang);
+
+const venturesRaw = await getVentures();
+const ventures = venturesRaw.map((v) => ({
+	...v,
+	data: localizeData(v.data, lang),
+}));
 ---
 
 <section class="glass section" id="ventures">
 	<div class="section-head">
-		<h2>Ventures</h2>
-		<a class="view-all" href="/ventures">View all ventures →</a>
+		<h2>{t.navVentures}</h2>
+		<a class="view-all" href={langUrl("/ventures", lang)}>{t.viewAllVentures}</a>
 	</div>
 	{
 		ventures.length === 0 ? (
-			<p class="empty-state">No ventures published yet.</p>
+			<p class="empty-state">{t.emptyVentures}</p>
 		) : (
 			<div class="card-grid">
 				{ventures.map((venture) => (
-					<a class="grid-card" href={`/ventures/${venture.data.slug}`}>
+					<a class="grid-card" href={langUrl(`/ventures/${venture.data.slug}`, lang)}>
 						<div class="grid-thumb">
 							{venture.data.thumbnailType === "video" &&
 							venture.data.thumbnail ? (

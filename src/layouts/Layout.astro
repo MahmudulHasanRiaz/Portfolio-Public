@@ -5,12 +5,16 @@ import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter.astro";
 import ContactModal from "../components/ContactModal";
 import { getSiteSettings } from "../lib/settings";
+import { enPath, getDict, type Lang } from "../lib/i18n";
+import { SITE_URL } from "../lib/detail";
 
 interface Props {
 	title?: string;
 	description?: string;
 	/** Which profile this page belongs to — drives the header switcher + footer line. */
 	profile?: "se" | "knowme";
+	/** Page language. English at /<page>, Bangla at /bn/<page>. */
+	lang?: Lang;
 	/** Open Graph image (absolute URL). Defaults to the speaker photo.
 	    Pass null to omit og:image entirely (detail pages whose subject
 	    has no cover art must never fall back to the portrait). */
@@ -25,10 +29,13 @@ const {
 	title = "Mahmudul Hasan Riaz",
 	description = "Software Engineer, Entrepreneur and Nasheed Artist — Dhaka, Bangladesh.",
 	profile = "se",
+	lang = "en",
 	ogImage,
 	ogType = "website",
 	canonical,
 } = Astro.props;
+
+const t = getDict(lang);
 
 // OG image: explicit prop wins, then the admin-managed portrait, then
 // the repo speaker photo. A relative admin URL is resolved against the
@@ -43,15 +50,40 @@ const ogImageUrl =
 	ogImage === null
 		? null
 		: (ogImage ?? settingsPortrait ?? `${Astro.url.origin}/speaker.jpg`);
+
+// --- Multilingual SEO (one URL per language, hreflang cluster) --------
+// Canonical = this page's OWN absolute URL, never the other language's
+// (Google: a canonical must point at a page in the SAME language).
+// hreflang: the identical set on BOTH versions — self + the other
+// language + x-default — all ABSOLUTE, built from Astro.site (the
+// workers.dev URL for now; the custom domain later), never hardcoded.
+// x-default = the ADMIN-CONFIGURED default language version: default
+// "bn" → the Bangla URL; "en" or "system" → the English URL. The
+// admin setting (settings.defaultLanguage) is read at build/request
+// time and never hardcoded here.
+// No noindex on either language (the dev-only robots meta below is
+// the launch gate for the whole site, both languages alike).
+const siteBase = (Astro.site?.toString() ?? SITE_URL).replace(/\/$/, "");
+const pathEn = enPath(Astro.url.pathname);
+const urlEn = `${siteBase}${pathEn === "/" ? "/" : pathEn}`;
+const urlBn = `${siteBase}${pathEn === "/" ? "/bn/" : `/bn${pathEn}`}`;
+const xDefaultUrl =
+	settings.defaultLanguage === "bn" ? urlBn : urlEn;
+const canonicalUrl = canonical ?? Astro.url.href;
+const ogLocale = lang === "bn" ? "bn_BD" : "en_US";
+const ogLocaleAlt = lang === "bn" ? "en_US" : "bn_BD";
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang}>
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="description" content={description} />
-		{canonical ? <link rel="canonical" href={canonical} /> : null}
+		<link rel="canonical" href={canonicalUrl} />
+		<link rel="alternate" hreflang="en" href={urlEn} />
+		<link rel="alternate" hreflang="bn" href={urlBn} />
+		<link rel="alternate" hreflang="x-default" href={xDefaultUrl} />
 		<!-- DEV ONLY: keep the in-progress site out of search indexes until launch. Remove at launch. -->
 		<meta name="robots" content="noindex, nofollow" />
 		<meta property="og:title" content={title} />
@@ -59,6 +91,8 @@ const ogImageUrl =
 		<meta property="og:type" content={ogType} />
 		<meta property="og:url" content={Astro.url.href} />
 		<meta property="og:site_name" content="Mahmudul Hasan Riaz" />
+		<meta property="og:locale" content={ogLocale} />
+		<meta property="og:locale:alternate" content={ogLocaleAlt} />
 		{ogImageUrl ? <meta property="og:image" content={ogImageUrl} /> : null}
 		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:title" content={title} />
@@ -72,6 +106,39 @@ const ogImageUrl =
 			rel="stylesheet"
 		 />
 		<title>{title}</title>
+		<script is:inline define:vars={{ defaultLanguage: settings.defaultLanguage }}>
+			// First-visit language resolution (client-side ONLY — no
+			// server/edge redirect, so crawlers always reach BOTH
+			// language URLs directly). Fires ONLY when the visitor has
+			// NO stored language preference: a stored choice always
+			// wins, and a /bn/* URL is an explicit choice that is never
+			// redirected away from. "system" reads navigator.language
+			// (bn / bn-BD → Bangla, anything else → English). Runs in
+			// <head> before paint so there is no flash of the wrong
+			// language; without JS nothing happens (noscript-safe).
+			(function () {
+				try {
+					var stored = null;
+					try {
+						stored = localStorage.getItem("site-lang");
+					} catch (e) {}
+					if (stored === "en" || stored === "bn") return;
+					var target = null;
+					if (defaultLanguage === "bn") {
+						target = "bn";
+					} else if (defaultLanguage === "system") {
+						var l = (navigator.language || "").toLowerCase();
+						if (l.indexOf("bn") === 0) target = "bn";
+					}
+					if (target !== "bn") return;
+					var p = location.pathname;
+					if (p === "/bn" || p.indexOf("/bn/") === 0) return;
+					location.replace(
+						"/bn" + p + location.search + location.hash,
+					);
+				} catch (e) {}
+			})();
+		</script>
 		<script is:inline>
 			// Theme: system preference by default; manual toggle overrides + remembered.
 			try {
@@ -87,17 +154,46 @@ const ogImageUrl =
 				/* storage unavailable — CSS media query handles it */
 			}
 		</script>
+		<style is:global>
+			/* Scroll stability (worker H, 2026-11-08) — footer
+			   bounce-back fix. No JavaScript on the page scrolls the
+			   window (verified: no scrollTo/scrollIntoView anywhere;
+			   the header stuck loop from commit 665a988c is gone —
+			   constant header height, transform-only stuck move), and
+			   the footer has no height-changing animation. What moved
+			   the page was the browser's own overscroll: swiping down
+			   past the bottom (below the footer) rubber-banded and
+			   sprang the page back up, and `html { scroll-behavior:
+			   smooth }` stretched that spring-back into a slow
+			   auto-scroll. overscroll-behavior-y: none stops the
+			   overscroll at both edges (Android Chrome + iOS Safari
+			   16+); the page now simply stops at the bottom and stays
+			   where the visitor left it. (The matching glass.css rule
+			   belongs in src/styles/glass.css next to the html rule —
+			   see the round report; this block lands the fix without
+			   touching that file.) */
+			html,
+			body {
+				overscroll-behavior-y: none;
+			}
+		</style>
 	</head>
 	<body>
 		{/* Bottom padding removed so the footer attaches flush to the page edge. */}
 		<div class="page" style="padding-bottom:0;">
-			<SiteHeader current={profile} client:load />
+			<SiteHeader
+				current={profile}
+				lang={lang}
+				currentPath={Astro.url.pathname}
+				dict={t}
+				client:load
+			/>
 			<main>
 				<slot />
 			</main>
-			<SiteFooter profile={profile} />
+			<SiteFooter profile={profile} lang={lang} dict={t} />
 		</div>
-		<ContactModal client:load />
+		<ContactModal lang={lang} dict={t} client:load />
 		<div id="page-progress" aria-hidden="true"></div>
 		<noscript>
 			<style>
