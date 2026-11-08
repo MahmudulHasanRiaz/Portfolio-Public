@@ -135,6 +135,24 @@ textarea {
 	padding: 16px;
 }
 
+/* Header-to-hero gap (preview, measured 2026-11-08 via artifact
+   inspection 4858a00c): 20px at 390px, 24px at 768px and above.
+   The gap is padding only — the preview puts it on <main>
+   (pt-5 = 20px below 640px, sm:pt-6 = 24px at 640px+), with no
+   bottom margin on the header and no top margin on the hero. The
+   pill is the lowest header edge at every width, so this padding
+   is exactly the pill-bottom → hero-top distance. The hero's own
+   24px internal padding-top is separate and stays untouched. */
+main {
+	padding-top: 20px;
+}
+
+@media (min-width: 640px) {
+	main {
+		padding-top: 24px;
+	}
+}
+
 .glass {
 	background: var(--card);
 	border: 1px solid var(--card-border);
