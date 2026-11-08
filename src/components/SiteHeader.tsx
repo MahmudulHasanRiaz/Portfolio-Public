@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	Check,
 	ChevronDown,
 	Code,
 	Menu,
 	Moon,
-	Pause,
 	Play,
 	Sun,
 	User,
@@ -31,15 +30,21 @@ const NAV_LINKS = [
 	{ label: "Contact", href: "/#contact" },
 ];
 
-// Auto-rotation (preview): the pill cycles between the two profiles
-// every ~2.8s, with a smooth vertical slide + fade (~450ms). In the
-// preview this swaps the whole page view; in Astro the profiles are
-// real routes (/ and /know-me), so rotating navigates to the other
-// profile's route. Tapping a profile pauses rotation on that profile;
-// "Resume auto-rotation" (picker + pill toggle) resumes it. The paused
-// state survives the navigations via sessionStorage (each rotation is
-// a full page load, so component state alone would reset).
-const ROTATION_MS = 2800;
+// Label animation (preview, CORRECTED 2026-11-08 ~18:42): the pill LABEL
+// only ANIMATES — it cycles between the two profile names with a smooth
+// vertical slide + fade (~2.8s each, ~450ms transition). Text animation
+// ONLY; the page NEVER navigates by itself. There is NO auto-rotation
+// timer and NO navigation: the two profiles were "just animating there".
+// (An earlier round misread this as a 2.8s NAVIGATION timer — that timer
+// bounced visitors off every page, including post/release detail pages,
+// after 2.8s. It is removed entirely; do not re-add it.)
+// Tapping a profile in the picker PAUSES the label animation on that
+// profile (the tap itself navigates to that profile's route — the
+// visitor's deliberate choice). The play/resume button in the pill is
+// ONLY visible while paused; while the animation runs (the default) it
+// is HIDDEN. "Resume auto-rotation" restarts the label animation; the
+// current/default profile stays as it is.
+const LABEL_CYCLE_MS = 2800;
 const ROTATION_PAUSED_KEY = "profile-rotation-paused";
 
 /**
@@ -50,8 +55,9 @@ const ROTATION_PAUSED_KEY = "profile-rotation-paused";
  * On scroll the header becomes one unified sticky row: the two corner
  * buttons join the pill on the same baseline, at the far edges.
  *
- * The pill auto-rotates between the two profiles (~2.8s) exactly like
- * the React preview; the pill label slides + fades on each rotation.
+ * The pill LABEL animates between the two profile names (~2.8s each,
+ * slide + fade ~450ms) exactly like the React preview; the label NEVER
+ * navigates the page. Tapping a profile pauses the animation on it.
  */
 export default function SiteHeader({ current }: { current: ProfileId }) {
 	const [stuck, setStuck] = useState(false);
@@ -60,7 +66,11 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 	const [langHint, setLangHint] = useState(false);
 	const [theme, setTheme] = useState<"light" | "dark">("light");
 	const [rotationPaused, setRotationPaused] = useState(false);
-	const rotationTimer = useRef<number | null>(null);
+	// The profile name the pill label currently shows. While the label
+	// animation runs it alternates between the two profiles; while
+	// paused it sits on the current profile.
+	const [displayedProfile, setDisplayedProfile] =
+		useState<ProfileId>(current);
 
 	useEffect(() => {
 		const onScroll = () => setStuck(window.scrollY > 24);
@@ -121,23 +131,23 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 		}
 	}, []);
 
-	// Auto-rotation: after ROTATION_MS on the current profile, navigate
-	// to the other profile's route. Paused while the picker is open (so
-	// the page never navigates away mid-choice) and while the user has
-	// paused it. Each rotation is a fresh page load, so the timer
-	// restarts on the new page — the cycle continues until paused.
+	// Label animation: while running, the pill label alternates between
+	// the two profile names every LABEL_CYCLE_MS. Text only — the page
+	// NEVER navigates. While paused, the label sits on the current
+	// profile and the interval stays cleared.
 	useEffect(() => {
-		if (rotationPaused || pickerOpen) return;
-		const other = current === "se" ? PROFILES[1]! : PROFILES[0]!;
-		rotationTimer.current = window.setTimeout(() => {
-			window.location.href = other.href;
-		}, ROTATION_MS);
-		return () => {
-			if (rotationTimer.current !== null) {
-				window.clearTimeout(rotationTimer.current);
-			}
-		};
-	}, [rotationPaused, pickerOpen, current]);
+		if (rotationPaused) {
+			setDisplayedProfile(current);
+			return;
+		}
+		setDisplayedProfile(current);
+		const t = window.setInterval(() => {
+			setDisplayedProfile((prev) =>
+				prev === "se" ? "knowme" : "se",
+			);
+		}, LABEL_CYCLE_MS);
+		return () => window.clearInterval(t);
+	}, [rotationPaused, current]);
 
 	const pauseRotation = () => {
 		setRotationPaused(true);
@@ -187,7 +197,11 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 
 	const currentProfile =
 		PROFILES.find((p) => p.id === current) ?? PROFILES[0]!;
-	const CurrentIcon = currentProfile.icon;
+	// The pill shows the ANIMATED profile (label + icon cycle together);
+	// the key replays the 450ms slide+fade on every cycle.
+	const displayed =
+		PROFILES.find((p) => p.id === displayedProfile) ?? currentProfile;
+	const DisplayedIcon = displayed.icon;
 
 	const langBtn = (
 		<button
@@ -238,38 +252,37 @@ export default function SiteHeader({ current }: { current: ProfileId }) {
 				className="pill-menu-btn"
 				onClick={() => setPickerOpen((v) => !v)}
 				aria-label="Choose a profile"
-				style={{ gap: 8, display: "inline-flex", alignItems: "center" }}
+				style={{ gap: 6, display: "inline-flex", alignItems: "center" }}
 			>
-				<span className="pill-icon">
-					<CurrentIcon size={16} />
+				<span className="pill-icon" key={`icon-${displayed.id}`}>
+					<DisplayedIcon size={16} />
 				</span>
-				{/* The label slides + fades on each rotation (preview: smooth
-				    vertical slide + fade, ~450ms ease-in-out). The animation
-				    runs on mount, so every rotation's navigation replays it. */}
-				<span className="pill-label pill-label-anim">
-					{currentProfile.label}
+				{/* The label cycles between the two profile names while the
+				    animation runs (preview: smooth vertical slide + fade,
+				    ~450ms ease-in-out). The key replays the animation on
+				    every cycle; the page never navigates. */}
+				<span
+					className="pill-label pill-label-anim"
+					key={`label-${displayed.id}`}
+				>
+					{displayed.label}
 				</span>
 				<span className="pill-dot" aria-hidden="true" />
 			</button>
-			{/* Rotation toggle (preview: teal play button in the pill).
-			    Play = rotation paused, tap to resume; Pause = rotating. */}
-			<button
-				type="button"
-				className="pill-rotate-btn"
-				onClick={rotationPaused ? resumeRotation : pauseRotation}
-				aria-label={
-					rotationPaused
-						? "Resume auto-rotation"
-						: "Pause auto-rotation"
-				}
-				title={
-					rotationPaused
-						? "Resume auto-rotation"
-						: "Pause auto-rotation"
-				}
-			>
-				{rotationPaused ? <Play size={13} /> : <Pause size={13} />}
-			</button>
+			{/* Resume button (preview: teal play button in the pill) — ONLY
+			    visible while the label animation is PAUSED. While the
+			    animation runs (the default state) it is HIDDEN. */}
+			{rotationPaused ? (
+				<button
+					type="button"
+					className="pill-rotate-btn"
+					onClick={resumeRotation}
+					aria-label="Resume auto-rotation"
+					title="Resume auto-rotation"
+				>
+					<Play size={13} />
+				</button>
+			) : null}
 			<button
 				type="button"
 				className="pill-menu-btn"

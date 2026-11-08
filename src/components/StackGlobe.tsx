@@ -134,6 +134,16 @@ const SPREAD = 42;
 const LANDING_MS = 1600;
 const MAX_VEL = 0.12;
 const INERTIA_DECAY = 0.9;
+// Auto-rotation speed (CORRECTED 2026-11-08 ~18:43): the old code added
+// a FIXED 0.0035 rad per animation frame with NO delta-time, so the
+// speed depended on the display refresh rate (60fps ≈ 1 rev/30s, 120Hz
+// ≈ 1 rev/15s) and the "Now:" front label flipped ~every 0.7s — the
+// user saw "a thousand percent speed". The globe now turns at a slow,
+// steady, TIME-based rate: one full revolution per 60 seconds, identical
+// on 60Hz and 120Hz displays. Spin is unchanged (two extra turns over
+// 1.5s, then a ~2.6s hold before auto-rotate resumes).
+const AUTO_ROTATE_RAD_PER_SEC = (2 * Math.PI) / 60;
+const CLUSTER_ROTATE_RAD_PER_SEC = 0.12;
 
 // Ambient dust: 16 deterministic particles (seeded by index, so every
 // render and every visitor sees the same calm field — no per-render
@@ -211,6 +221,7 @@ export default function StackGlobe() {
 	const lastPointerRef = useRef({ x: 0, y: 0 });
 	const frontIdxRef = useRef(0);
 	const frontNameRef = useRef(STACK[0].name);
+	const lastNowRef = useRef<number | null>(null);
 	const filterRef = useRef("All");
 	const selectedRef = useRef<StackTech | null>(null);
 	const reducedRef = useRef(false);
@@ -231,6 +242,19 @@ export default function StackGlobe() {
 		let raf = 0;
 
 		const loop = (now: number) => {
+			// Delta time (seconds since the previous frame, clamped to
+			// 50ms so a tab-switch never causes a jump). dt60 is the
+			// same span expressed in 60fps frames — every per-frame
+			// increment below is scaled by it, so the globe moves at
+			// the same WALL-CLOCK speed on 60Hz and 120Hz displays.
+			const last = lastNowRef.current;
+			const dt =
+				last === null
+					? 0
+					: Math.min(0.05, Math.max(0, (now - last) / 1000));
+			lastNowRef.current = now;
+			const dt60 = dt * 60;
+
 			const rot = rotRef.current;
 			const vel = velRef.current;
 			const paused =
@@ -253,6 +277,8 @@ export default function StackGlobe() {
 				}
 			} else if (flyToRef.current !== null) {
 				// Magnetic fly-to-front (tap a tech, or snap after a drag).
+				// Scaled by dt60: same wall-clock convergence at any
+				// refresh rate.
 				const target = rotatePoint(
 					BASE_POINTS[flyToRef.current],
 					rot.x,
@@ -263,10 +289,10 @@ export default function StackGlobe() {
 					target.y,
 					Math.hypot(target.x, target.z),
 				);
-				rot.y += deltaY * 0.14;
+				rot.y += deltaY * 0.14 * dt60;
 				rot.x = Math.max(
 					-1.2,
-					Math.min(1.2, rot.x + deltaX * 0.14),
+					Math.min(1.2, rot.x + deltaX * 0.14 * dt60),
 				);
 				// rot.x is clamped to ±1.2: if the target needs more tilt
 				// than the clamp allows, the X axis can never converge —
@@ -289,8 +315,8 @@ export default function StackGlobe() {
 				// While a detail card is open the globe holds still:
 				// leftover velocity decays fast and is never applied.
 				if (selectedRef.current !== null) {
-					vel.x *= 0.5;
-					vel.y *= 0.5;
+					vel.x *= Math.pow(0.5, dt60);
+					vel.y *= Math.pow(0.5, dt60);
 					if (Math.abs(vel.x) < 0.0004) vel.x = 0;
 					if (Math.abs(vel.y) < 0.0004) vel.y = 0;
 				} else if (
@@ -298,10 +324,16 @@ export default function StackGlobe() {
 					Math.abs(vel.y) > 0.0004
 				) {
 					// Inertia decay after a drag; then magnetic snap.
-					rot.x = Math.max(-1.2, Math.min(1.2, rot.x + vel.x));
-					rot.y += vel.y;
-					vel.x *= INERTIA_DECAY;
-					vel.y *= INERTIA_DECAY;
+					// Velocity is applied and decayed by dt60, so a flick
+					// behaves the same at 60Hz and 120Hz and can never
+					// run away: Spin/drag/tap all reset it to 0 first.
+					rot.x = Math.max(
+						-1.2,
+						Math.min(1.2, rot.x + vel.x * dt60),
+					);
+					rot.y += vel.y * dt60;
+					vel.x *= Math.pow(INERTIA_DECAY, dt60);
+					vel.y *= Math.pow(INERTIA_DECAY, dt60);
 				} else if (snapAfterInertiaRef.current) {
 					snapAfterInertiaRef.current = false;
 					vel.x = 0;
@@ -313,6 +345,8 @@ export default function StackGlobe() {
 
 			// Auto-rotation: never stops by default, only paused while a
 			// card is open, while dragging/flying, or briefly after resume.
+			// TIME-based (rad/sec), not per-frame — the same slow, steady
+			// ~60s/rev on every display.
 			const still =
 				Math.abs(vel.x) < 0.0004 && Math.abs(vel.y) < 0.0004;
 			if (
@@ -321,15 +355,16 @@ export default function StackGlobe() {
 				still &&
 				now >= resumeAtRef.current
 			) {
-				rot.y += 0.0035;
+				rot.y += AUTO_ROTATE_RAD_PER_SEC * dt;
 			}
 
 			// Filter cluster: frozen ~1.6s for landing, then it keeps
-			// turning as one compact group.
+			// turning as one compact group (time-based, same rate as before
+			// at 60fps: 0.002/frame = 0.12 rad/s).
 			const filterActive = filterRef.current !== "All";
 			const landing = now < landingUntilRef.current;
 			if (filterActive && !landing) {
-				clusterAngleRef.current += 0.002;
+				clusterAngleRef.current += CLUSTER_ROTATE_RAD_PER_SEC * dt;
 			}
 
 			const matching = matchingRef.current;
@@ -360,9 +395,11 @@ export default function StackGlobe() {
 
 				if (landing) {
 					// Glide into place during the landing window.
-					cur[i].x += (target.x - cur[i].x) * 0.08;
-					cur[i].y += (target.y - cur[i].y) * 0.08;
-					cur[i].z += (target.z - cur[i].z) * 0.08;
+					// Time-based: same wall-clock glide at any refresh rate.
+					const glide = Math.min(1, 0.08 * dt60);
+					cur[i].x += (target.x - cur[i].x) * glide;
+					cur[i].y += (target.y - cur[i].y) * glide;
+					cur[i].z += (target.z - cur[i].z) * glide;
 				} else {
 					cur[i] = target;
 				}

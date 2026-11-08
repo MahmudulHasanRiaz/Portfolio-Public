@@ -267,7 +267,11 @@ textarea {
 	justify-content: space-between;
 	align-items: flex-start;
 	height: 32px;
-	padding: 0 4px;
+	/* No side padding: the corner buttons sit flush with the header
+	   edges (preview probe: lang x=16, theme x=326 at 390px). The 4px
+	   padding pushed them inward and stole 8px from the pill's room —
+	   part of why the pill overlapped the buttons when stuck. */
+	padding: 0;
 	overflow: hidden;
 	transition:
 		height 350ms ease,
@@ -388,9 +392,14 @@ textarea {
 	pointer-events: auto;
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	/* Tight spacing (measured): the pill must fit between the corner
+	   buttons in the stuck row at 390px (262px available) and 768px
+	   (608px available) in BOTH states — running and paused (when the
+	   teal resume button appears). Padding 8px + gap 6px keeps the
+	   paused-state pill inside those bounds with slack to spare. */
+	gap: 6px;
 	height: 38px;
-	padding: 0 10px;
+	padding: 0 8px;
 	border-radius: var(--radius-sm);
 	background: var(--card);
 	/* Single luminous teal border (NOT a double border): the border
@@ -563,7 +572,9 @@ textarea {
 .pill-menu-btn {
 	background: none;
 	border: 0;
-	padding: 4px;
+	/* Tight (2px) so the pill fits between the corner buttons at 390px
+	   in the paused state too — see .sticky-pill. */
+	padding: 2px;
 	color: var(--ink);
 	display: inline-flex;
 	align-items: center;
@@ -711,7 +722,9 @@ textarea {
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
-	padding: 0 4px;
+	/* No side padding — same as .header-top: buttons flush with the
+	   header edges (preview probe x=16 / x=326 at 390px). */
+	padding: 0;
 	pointer-events: none;
 	opacity: 0;
 	transition: opacity 250ms ease;
@@ -746,8 +759,8 @@ textarea {
 	display: none;
 	align-items: center;
 	gap: 2px;
-	margin-left: 6px;
-	padding-left: 10px;
+	margin-left: 4px;
+	padding-left: 8px;
 	border-left: 1px solid var(--card-border);
 }
 
@@ -762,7 +775,9 @@ textarea {
 	font-weight: 500;
 	color: var(--ink-dim);
 	text-decoration: none;
-	padding: 4px 8px;
+	/* 7px horizontal (was 8px): part of the measured shave that keeps
+	   the pill inside the stuck row at 768px in the paused state. */
+	padding: 4px 7px;
 	border-radius: var(--radius-xs);
 	white-space: nowrap;
 }
