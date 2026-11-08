@@ -507,8 +507,15 @@ export default function StackGlobe() {
 				// Clamp tightened (±10 x / ±8 y, was ±14 / ±10) to match
 				// the wider SPREAD: nudged tags stay on the sphere and
 				// inside the stage instead of being pushed past its edge.
-				offX[i] = Math.max(-10, Math.min(10, offX[i]));
-				offY[i] = Math.max(-8, Math.min(8, offY[i]));
+				// On SMALL stages (<400px, e.g. ~308px at 390px) the
+				// clamp loosens (±14 / ±12): tags are wider relative to
+				// the ball there, so they need more room to escape the
+				// centre pile — the tight clamp is what kept them
+				// stacked.
+				const clampX = stageW < 400 ? 14 : 10;
+				const clampY = stageW < 400 ? 12 : 8;
+				offX[i] = Math.max(-clampX, Math.min(clampX, offX[i]));
+				offY[i] = Math.max(-clampY, Math.min(clampY, offY[i]));
 				posX[i] += offX[i];
 				posY[i] += offY[i];
 			}

@@ -245,12 +245,29 @@ textarea {
 /* ---------- Header ---------- */
 .site-header {
 	position: sticky;
-	/* Preview: sticky top-3 (12px) — the pill row sticks 12px below
-	   the viewport top, leaving room for the arcs above it. */
-	top: 12px;
+	/* Preview: sticky top-2 (8px) mobile, top-3 (12px) at sm+ — the
+	   pill row sticks 8/12px below the viewport top. The old single
+	   12px value put the stuck row 4px too low on mobile. */
+	top: 8px;
 	z-index: 40;
-	padding-top: 8px;
+	/* NO top padding: the page container already supplies 16px, so the
+	   corner buttons land at y=16 mobile / y=20 sm+ (preview probe).
+	   The old 8px padding pushed everything 8px too low. */
+	padding-top: 0;
 	pointer-events: none;
+}
+
+/* Preview container is px-6 (24px) at sm+: the header's content edges
+   sit 8px further in than the page's 16px padding, so the corner
+   buttons land at x=24 (768px) / x=104 (1280px) / x=184 (1440px).
+   Header-only padding (the .page padding stays 16px — other sections
+   are out of scope this round); symmetric, so the pill stays centred. */
+@media (min-width: 640px) {
+	.site-header {
+		top: 12px;
+		padding-left: 8px;
+		padding-right: 8px;
+	}
 }
 
 /* NO full-width sticky band and NO background on the sticky row
@@ -266,6 +283,9 @@ textarea {
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
+	/* Preview: top row pt-4 (16px) mobile, pt-5 (20px) sm+ — the
+	   buttons land at y=16 / y=20. The 4px sm+ top padding lives here
+	   (not on the header), so the stuck collapse can zero it. */
 	height: 32px;
 	/* No side padding: the corner buttons sit flush with the header
 	   edges (preview probe: lang x=16, theme x=326 at 390px). The 4px
@@ -275,11 +295,23 @@ textarea {
 	overflow: hidden;
 	transition:
 		height 350ms ease,
+		padding-top 350ms ease,
 		opacity 250ms ease;
+}
+
+@media (min-width: 640px) {
+	.header-top {
+		/* 44px total (border-box: 4px top padding + 40px buttons) so
+		   the row bottom lands at 60px and the pill at y=44 (preview).
+		   The old 40px total put the pill 4px too high (y=40). */
+		height: 44px;
+		padding-top: 4px;
+	}
 }
 
 .site-header.is-stuck .header-top {
 	height: 0;
+	padding-top: 0;
 	opacity: 0;
 }
 
@@ -298,6 +330,10 @@ textarea {
 	height: 32px;
 	width: 48px;
 	pointer-events: auto;
+	/* padding: 0 — Chrome's UA default button padding (6px/side) sat
+	   OUTSIDE the collapsed width:0, holding the hidden stuck buttons
+	   at 14px wide (12px padding + 2px border) instead of 0. */
+	padding: 0;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -325,15 +361,12 @@ textarea {
 		0 0 0 4px var(--accent);
 }
 
-/* Desktop corner buttons are 40x64px at sm+ (the 32px top row grows
-   with them so the buttons are not clipped). */
-@media (min-width: 768px) {
+/* Desktop corner buttons are 40x64px at sm+ (640px, preview — the old
+   768px breakpoint showed the small 32x48 buttons at 640–767px). */
+@media (min-width: 640px) {
 	.corner-btn {
 		height: 40px;
 		width: 64px;
-	}
-	.header-top {
-		height: 40px;
 	}
 }
 
@@ -374,16 +407,26 @@ textarea {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	/* The pull-up margin animates in sync with the top-row collapse
+	   (both 350ms ease) so the pill glides smoothly from y=36 to y=8
+	   instead of jumping down 4–12px when the margin snaps to 0. */
+	transition: margin-top 350ms ease;
 }
 
-/* Preview: at lg the pill is pulled up 28px (-mt-7) so it tucks
-   vertically between/under the corner buttons while staying
-   horizontally clear of them — one composition, not two separate
-   rows. Only when UNSTUCK: once scrolled, the top row has collapsed
-   and the pill sits at the top of the sticky row. */
-@media (min-width: 1024px) {
+/* Preview: the pill is pulled up into the top-row band at ALL widths
+   (-mt-3 = -12px mobile, sm:-mt-4 = -16px) so pill + corner buttons
+   read as ONE row, not two separate rows. The old rule pulled up only
+   at ≥1024px (-28px, too much), which is why mobile showed a clear
+   two-row header (pill y=82 vs preview y=36). Only when UNSTUCK:
+   once scrolled, the top row has collapsed and the pill sits at the
+   top of the sticky row. */
+.site-header:not(.is-stuck) .pill-stack {
+	margin-top: -12px;
+}
+
+@media (min-width: 640px) {
 	.site-header:not(.is-stuck) .pill-stack {
-		margin-top: -28px;
+		margin-top: -16px;
 	}
 }
 
@@ -392,14 +435,13 @@ textarea {
 	pointer-events: auto;
 	display: flex;
 	align-items: center;
-	/* Tight spacing (measured): the pill must fit between the corner
-	   buttons in the stuck row at 390px (262px available) and 768px
-	   (608px available) in BOTH states — running and paused (when the
-	   teal resume button appears). Padding 8px + gap 6px keeps the
-	   paused-state pill inside those bounds with slack to spare. */
-	gap: 6px;
-	height: 38px;
-	padding: 0 8px;
+	/* Preview proportions (measured): 36px tall, 4px gaps, 4px side
+	   padding — hamburger 22 + gap 4 + profile button 160 + gap 4 +
+	   chevron 22 + padding 8 = 220px at 390px. The old 38px/6px/8px
+	   made the pill taller and wider than the preview. */
+	gap: 4px;
+	height: 36px;
+	padding: 0 4px;
 	border-radius: var(--radius-sm);
 	background: var(--card);
 	/* Single luminous teal border (NOT a double border): the border
@@ -497,34 +539,79 @@ textarea {
 	color: var(--accent);
 }
 
-.sticky-pill .pill-label {
+/* Profile label button — FIXED width (preview w-40/44/56: 160px mobile,
+   176px sm, 224px lg), content centred. The width never changes when
+   the label cycles between "Software Engineer" and "Know Me", so the
+   pill width never shifts and the surrounding elements never move. */
+.pill-profile-btn {
+	flex: none;
+	width: 160px;
+	height: 22px;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--ink);
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+@media (min-width: 640px) {
+	.pill-profile-btn {
+		width: 176px;
+	}
+}
+
+@media (min-width: 1024px) {
+	.pill-profile-btn {
+		width: 224px;
+	}
+}
+
+/* Label crossfade (preview): both profile labels stay mounted; the
+   active one is visible, the previous one slides UP (-8px) and fades
+   while the new one slides up FROM below (+8px) — 450ms ease-in-out.
+   No remount, so scrolling never resets or flickers the animation. */
+.pill-label-stack {
+	position: relative;
+	display: block;
+	width: 100%;
+	height: 22px;
+	overflow: hidden;
+}
+
+.pill-label-slide {
+	position: absolute;
+	inset: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
 	font-size: 13px;
 	font-weight: 600;
 	white-space: nowrap;
+	opacity: 0;
+	transform: translateY(8px);
+	transition:
+		opacity 450ms ease-in-out,
+		transform 450ms ease-in-out;
+	pointer-events: none;
 }
 
-/* Auto-rotation label change (preview): smooth vertical slide + fade,
-   ~450ms ease-in-out. Runs on mount, so every rotation's navigation
-   replays the label sliding in. */
-.pill-label-anim {
-	display: inline-block;
-	animation: pill-label-in 450ms ease-in-out both;
+.pill-label-slide.active {
+	opacity: 1;
+	transform: translateY(0);
 }
 
-@keyframes pill-label-in {
-	from {
-		opacity: 0;
-		transform: translateY(8px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
+.pill-label-slide.leaving {
+	opacity: 0;
+	transform: translateY(-8px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.pill-label-anim {
-		animation: none;
+	.pill-label-slide {
+		transition: none;
 	}
 }
 
@@ -534,8 +621,9 @@ textarea {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 22px;
-	height: 22px;
+	/* Preview: the in-pill resume button is 20x20px. */
+	width: 20px;
+	height: 20px;
 	flex: none;
 	padding: 0;
 	border: 0;
@@ -572,44 +660,88 @@ textarea {
 .pill-menu-btn {
 	background: none;
 	border: 0;
-	/* Tight (2px) so the pill fits between the corner buttons at 390px
-	   in the paused state too — see .sticky-pill. */
+	/* 2px padding: the 18px hamburger icon makes a 22px button
+	   (preview). */
 	padding: 2px;
 	color: var(--ink);
 	display: inline-flex;
 	align-items: center;
 }
 
-/* Arcs hang above the pill (preview: svg h-54px, w-24 sm / w-28 lg,
-   -translate-y-72%, in BOTH states, never fading). They are a NARROW
-   centered decoration above the pill — NOT a full-width line: the old
-   width: 100% stretched the arcs across the whole header, so the arc
-   lines cut through page content scrolling underneath. */
-.header-arcs {
-	width: 96px;
-	height: 26px;
+/* Preview: at md (768px) the hamburger hides and the 5 nav links
+   show instead; the label button + chevron still open the picker. */
+@media (min-width: 768px) {
+	.pill-hamb-btn {
+		display: none;
+	}
+}
+
+/* The chevron button needs 4px padding so the 14px icon makes a 22px
+   button (preview), matching the hamburger's 22px. */
+.sticky-pill .pill-chev-btn {
+	padding: 4px;
+}
+
+/* Connecting arcs (preview): two arcs, one in each gap between the
+   pill and a corner button, arching UP (hill) from the pill to the
+   button — the three header pieces read as ONE connected composition.
+   Each arc is absolutely positioned on the pill (right/left: 100%),
+   54px tall, top: 50% shifted up 72% of its own height, so it hangs
+   above the pill row in BOTH states and never strikes through page
+   content. Base opacity 0.16, flowing light 0.55, dasharray 64/336
+   of pathLength 400, 4s loop, right arc half a cycle behind (-2s).
+   The old single 96px SVG centred above the pill connected to
+   NOTHING (base 0.12 / flow 0.45, wrong pathLength 110) — the
+   designer saw "no connecting lines" in all four states. */
+.header-arc {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-72%);
+	width: 32px;
+	height: 54px;
 	overflow: visible;
 	pointer-events: none;
+	z-index: 1;
+}
+
+.header-arc-left {
+	right: 100%;
+}
+
+.header-arc-right {
+	left: 100%;
+}
+
+@media (min-width: 420px) {
+	.header-arc {
+		width: 44px;
+	}
+}
+
+@media (min-width: 640px) {
+	.header-arc {
+		width: 96px;
+	}
 }
 
 @media (min-width: 1024px) {
-	.header-arcs {
+	.header-arc {
 		width: 112px;
 	}
 }
 
-.header-arcs .arc-base {
+.header-arc .arc-base {
 	fill: none;
 	stroke: var(--accent);
-	stroke-opacity: 0.12;
-	stroke-width: 1.25;
+	stroke-opacity: 0.16;
+	stroke-width: 2;
 }
 
-.header-arcs .arc-flow {
+.header-arc .arc-flow {
 	fill: none;
 	stroke: var(--accent);
-	stroke-opacity: 0.45;
-	stroke-width: 2;
+	stroke-opacity: 0.55;
+	stroke-width: 2.5;
 	stroke-linecap: round;
 	stroke-dasharray: 64 336;
 	filter: drop-shadow(0 0 4px var(--accent));
@@ -617,7 +749,7 @@ textarea {
 }
 
 /* The second arc runs the same 4s loop, half a cycle behind. */
-.header-arcs .arc-flow:last-of-type {
+.header-arc-right .arc-flow {
 	animation-delay: -2s;
 }
 
@@ -627,11 +759,19 @@ textarea {
 	}
 }
 
+@media (prefers-reduced-motion: reduce) {
+	.header-arc .arc-flow {
+		animation: none;
+	}
+}
+
 .header-picker {
 	position: absolute;
 	left: 50%;
 	transform: translateX(-50%);
-	top: calc(100% + 8px);
+	/* 6px below the pill (preview). The picker is positioned on the
+	   pill itself, so at sm+ it can anchor to the pill's left edge. */
+	top: calc(100% + 6px);
 	width: 328px;
 	max-width: calc(100vw - 32px);
 	background: var(--bg);
@@ -641,6 +781,16 @@ textarea {
 	padding: 8px;
 	z-index: 50;
 	pointer-events: auto;
+}
+
+/* Preview: at sm+ the picker is 288px wide, anchored to the pill's
+   left edge (not centred). */
+@media (min-width: 640px) {
+	.header-picker {
+		left: 0;
+		transform: none;
+		width: 288px;
+	}
 }
 
 .header-picker .picker-row {
@@ -710,13 +860,18 @@ textarea {
 		0 0 0 4px var(--accent);
 }
 
-/* Stuck (scrolled) header: the two corner buttons flank the pill at the
-   same x positions as the top row. The pill itself stays in .pill-stack
-   (it glides up as .header-top collapses). Top aligns the buttons with
-   the pill's stuck position (8px header padding + 26px arcs = 34px). */
+/* Stuck (scrolled) header: the two corner buttons flank the pill at
+   the same x positions as the top row. The pill itself stays in
+   .pill-stack (it glides up as .header-top collapses). The buttons
+   sit at top: 0 — the same y as the stuck pill (preview: buttons and
+   pill both start at y=8 mobile / y=12 sm+). They are ALWAYS rendered
+   (preview's in-row copies): unstuck they collapse to width 0 +
+   opacity 0, and when stuck they EXPAND to full width over 350ms
+   ease-out, so the normal→sticky transition is one smooth,
+   coordinated move — never an abrupt pop-in. */
 .stuck-corners {
 	position: absolute;
-	top: 34px;
+	top: 0;
 	left: 0;
 	right: 0;
 	display: flex;
@@ -726,26 +881,61 @@ textarea {
 	   header edges (preview probe x=16 / x=326 at 390px). */
 	padding: 0;
 	pointer-events: none;
-	opacity: 0;
-	transition: opacity 250ms ease;
 }
 
-.site-header.is-stuck .stuck-corners {
-	opacity: 1;
-	pointer-events: auto;
+/* At sm+ the header itself carries 8px side padding, and an
+   absolutely-positioned box ignores it (left: 0 = the padding-box
+   edge) — so the stuck buttons sat 8px too far out (x=16 vs 24).
+   Inset the corners by the same 8px. */
+@media (min-width: 640px) {
+	.stuck-corners {
+		left: 8px;
+		right: 8px;
+	}
 }
 
 .stuck-corners .corner-btn {
 	flex: none;
-	pointer-events: auto;
+	/* min-width: 0 — flex items refuse to shrink below content size
+	   (the "BN" text / icon held the collapsed buttons at 14px wide
+	   instead of 0). */
+	min-width: 0;
+	pointer-events: none;
+	width: 0;
+	opacity: 0;
+	overflow: hidden;
+	border-color: transparent;
+	/* border-width: 0 — with padding: 0 (see .corner-btn) the border
+	   alone still held the collapsed button at 2px; 0 makes it a true 0. */
+	border-width: 0;
+	transition:
+		width 350ms ease-out,
+		opacity 250ms ease,
+		border-color 250ms ease,
+		background-color 200ms ease;
 }
 
-/* Language button: mobile shows only the target language, desktop EN/BN. */
+.site-header.is-stuck .stuck-corners .corner-btn {
+	width: 48px;
+	opacity: 1;
+	pointer-events: auto;
+	border-color: var(--card-border);
+	border-width: 1px;
+}
+
+@media (min-width: 640px) {
+	.site-header.is-stuck .stuck-corners .corner-btn {
+		width: 64px;
+	}
+}
+
+/* Language button: mobile shows only the target language, desktop EN/BN
+   (preview: EN/BN from sm/640px, same breakpoint as the 64x40 buttons). */
 .lang-desktop {
 	display: none;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 640px) {
 	.lang-mobile {
 		display: none;
 	}
@@ -2019,8 +2209,12 @@ textarea {
 
 .globe-stage {
 	position: relative;
-	width: min(440px, 96vw);
-	height: min(440px, 96vw);
+	/* 100% of the card content (was 96vw): at 390px the 96vw stage
+	   was 374px wide in a ~308px card — it stuck out 41px past the
+	   card's right edge and the right-edge tags ("Prisma", "Rust")
+	   were cut off by the viewport. aspect-ratio keeps it square. */
+	width: min(440px, 100%);
+	aspect-ratio: 1;
 	margin: 0 auto;
 	touch-action: pan-y;
 }
@@ -2215,6 +2409,25 @@ textarea {
 	flex: none;
 	flex-shrink: 0;
 	display: block;
+}
+
+/* Small screens: the stage is ~308px at 390px, so the tags shrink
+   (9px, tighter padding) — otherwise 44 full-size pills cannot spread
+   without colliding in the small ball. */
+@media (max-width: 639px) {
+	.globe-tag {
+		font-size: 9px;
+		padding: 2px 6px;
+		gap: 3px;
+	}
+	.globe-tag img {
+		width: 10px;
+		height: 10px;
+	}
+	.globe-tag-dot {
+		width: 5px;
+		height: 5px;
+	}
 }
 
 /* Category color dot on every tag — the family marker (and the only
@@ -3435,7 +3648,7 @@ textarea {
 		scroll-behavior: auto;
 	}
 	.hero-badge .badge-cursor,
-	.header-arcs .arc-flow,
+	.header-arc .arc-flow,
 	.sticky-pill {
 		animation: none;
 	}
