@@ -128,6 +128,79 @@ async function fetchJson(
 	return (await res.json()) as unknown;
 }
 
+/** API contract for GET {PUBLIC_CONTENT_API_URL}/api/public/settings. */
+export type PrimaryIdentity = "developer" | "know-me";
+
+export interface PublicSettings {
+	portraitUrl: string | null;
+	primaryIdentity: PrimaryIdentity;
+}
+
+/** Fail-safe defaults: repo portrait + Software Engineer profile. */
+export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
+	portraitUrl: null,
+	primaryIdentity: "developer",
+};
+
+/**
+ * Resolve the optional read-only token for the Public Content API.
+ * Explicit argument wins, then Worker runtime env, then build-time env.
+ * Unset = public-read (the API serves settings without auth).
+ */
+async function resolveSettingsToken(
+	explicit?: string,
+): Promise<string | undefined> {
+	if (explicit) return explicit;
+	try {
+		const { env } = await import("cloudflare:workers");
+		const runtime = (env as Record<string, unknown>)
+			.PUBLIC_CONTENT_API_TOKEN;
+		if (typeof runtime === "string" && runtime) return runtime;
+	} catch {
+		// Not running in a Worker (local dev / build) — fall through.
+	}
+	const fromEnv = import.meta.env.PUBLIC_CONTENT_API_TOKEN as
+		| string
+		| undefined;
+	return fromEnv || undefined;
+}
+
+/**
+ * Fetch the admin-managed site settings (hero portrait URL + default
+ * profile) from the Public Content API. Never throws: on any failure —
+ * unset base URL, unreachable API, non-200, malformed payload — it
+ * returns the fail-safe defaults so the build and the page keep working
+ * on the repo portrait and the Software Engineer profile.
+ */
+export async function fetchPublicSettings(
+	base?: string,
+	token?: string,
+): Promise<PublicSettings> {
+	try {
+		const cached: ResolvedBase = { done: false };
+		const apiBase = await resolveApiBase({ apiUrl: base }, cached);
+		if (!apiBase) return { ...DEFAULT_PUBLIC_SETTINGS };
+		const resolvedToken = token ?? (await resolveSettingsToken());
+		const raw = await fetchJson(
+			`${apiBase}/api/public/settings`,
+			resolvedToken,
+		);
+		if (typeof raw !== "object" || raw === null) {
+			return { ...DEFAULT_PUBLIC_SETTINGS };
+		}
+		const record = raw as Record<string, unknown>;
+		const portraitUrl =
+			typeof record.portraitUrl === "string" && record.portraitUrl
+				? record.portraitUrl
+				: null;
+		const primaryIdentity: PrimaryIdentity =
+			record.primaryIdentity === "know-me" ? "know-me" : "developer";
+		return { portraitUrl, primaryIdentity };
+	} catch {
+		return { ...DEFAULT_PUBLIC_SETTINGS };
+	}
+}
+
 /** API-client live loader for one content type. */
 export function createPublicContentLoader(
 	type: PublicContentType,

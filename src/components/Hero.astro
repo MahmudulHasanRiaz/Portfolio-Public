@@ -1,5 +1,6 @@
 ---
 import { PROFILE } from "../data/site";
+import { getSiteSettings } from "../lib/settings";
 import HeroDesignation from "./HeroDesignation";
 
 interface Props {
@@ -8,17 +9,24 @@ interface Props {
 
 const { profile } = Astro.props;
 const isKnowMe = profile === "knowme";
+
+// Hero portrait from the admin panel (Public Content API settings).
+// Falls back to the build-time repo portrait when the API is unset or
+// unreachable, so the build never breaks.
+const settings = await getSiteSettings();
+const photoUrl = settings.portraitUrl ?? PROFILE.photo;
 ---
 
 <section class="glass hero" id="top">
 	<div class="hero-photo-wrap">
 		<div class="hero-photo-frame">
 			<img
-				src={PROFILE.photo}
+				src={photoUrl}
 				alt={PROFILE.photoAlt}
 				width="640"
 				height="800"
 				fetchpriority="high"
+				data-hero-photo
 			/>
 			<div class="hero-photo-gradient" aria-hidden="true" />
 			<svg
@@ -121,6 +129,38 @@ const isKnowMe = profile === "knowme";
 		</div>
 	</div>
 </section>
+
+<script is:inline>
+	// Live portrait swap (hybrid live-then-static, live half): after an
+	// admin portrait update, /api/settings returns the new URL and the
+	// hero photo swaps without waiting for a rebuild. Fails silently —
+	// no console errors, no visual change — when the fetch fails or the
+	// URL already matches the rendered photo.
+	(function () {
+		try {
+			fetch("/api/settings", { signal: AbortSignal.timeout(8000) })
+				.then(function (res) {
+					return res.ok ? res.json() : null;
+				})
+				.then(function (data) {
+					if (
+						!data ||
+						typeof data.portraitUrl !== "string" ||
+						!data.portraitUrl
+					)
+						return;
+					var img = document.querySelector("img[data-hero-photo]");
+					if (!img) return;
+					if (img.getAttribute("src") !== data.portraitUrl) {
+						img.setAttribute("src", data.portraitUrl);
+					}
+				})
+				.catch(function () {});
+		} catch {
+			/* fetch unavailable — rendered photo stays */
+		}
+	})();
+</script>
 
 <script>
 	// Opens the contact modal (ContactModal island listens for "open-contact").
