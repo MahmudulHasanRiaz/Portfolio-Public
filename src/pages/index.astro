@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Hero from "../components/Hero.astro";
+import KnowMeSections from "../components/KnowMeSections.astro";
 import Stats from "../components/Stats.astro";
 import Services from "../components/Services.astro";
 import ProjectsCarousel from "../components/ProjectsCarousel";
@@ -14,6 +15,12 @@ import { getSiteSettings } from "../lib/settings";
 import { resolveSiteUrl } from "../lib/detail";
 import { PROFILE } from "../data/site";
 
+// Primary identity (admin setting, Wave 2 A1): when the default is
+// "know-me", / BECOMES the Know Me page — it renders KnowMeSections
+// directly, NOT a redirect to /know-me (a redirect would split the
+// canonical homepage and break the / SEO already built). /know-me stays
+// the permanent canonical URL for that content. When the default is
+// Software Engineer, / renders exactly as before.
 // Software Engineer profile — the conversion-focused homepage.
 // Order: Hero → Stats → Services → Projects → Case studies → Stack →
 // Combined "Beyond the code" → Clients → Latest posts → Contact → Footer.
@@ -23,16 +30,27 @@ import { PROFILE } from "../data/site";
 const lang = "en" as const;
 const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
-const projects = await getProjects();
-const caseStudies = await getCaseStudies();
-const posts = await getPosts();
-const services = await getServices();
-
 // Canonical site URL for the Person JSON-LD: admin setting
 // (site_url) when set, else the live workers.dev base — never the
 // old riaz.com.bd domain while the site lives on workers.dev.
+// (Moved above the content fetches: the primary-identity branch
+// below needs `settings` before deciding what to fetch.)
 const settings = await getSiteSettings();
 const siteUrl = resolveSiteUrl(settings.siteUrl);
+
+const isKnowMe = settings.primaryIdentity === "know-me";
+const profile = isKnowMe ? "knowme" : "se";
+
+// The SE branch needs these rows; the Know Me branch fetches its own
+// rows inside KnowMeSections, so skip them there (no double fetch).
+// Services are fetched in BOTH branches: Layout + ContactForm need
+// the live rows in the SE branch, and Layout (contact modal) needs
+// them in the Know Me branch too — never pass [] (ContactForm /
+// ContactModal treat [] as a real, empty list, not "use defaults").
+const projects = isKnowMe ? [] : await getProjects();
+const caseStudies = isKnowMe ? [] : await getCaseStudies();
+const posts = isKnowMe ? [] : await getPosts();
+const services = await getServices();
 
 const carouselProjects = projects.map((p) => ({
 	slug: p.data.slug,
@@ -58,13 +76,17 @@ const personJsonLd = {
 ---
 
 <Layout
-	title={t.homeTitle}
-	description={t.homeDescription}
-	profile="se"
+	title={isKnowMe ? t.knowMeTitle : t.homeTitle}
+	description={isKnowMe ? t.knowMeDescription : t.homeDescription}
+	profile={profile}
 	lang={lang}
 	services={services}
 >
-	<script type="application/ld+json" set:html={JSON.stringify(personJsonLd)} />
+	{isKnowMe ? (
+		<KnowMeSections lang={lang} />
+	) : (
+		<>
+			<script type="application/ld+json" set:html={JSON.stringify(personJsonLd)} />
 
 	<Hero profile="se" lang={lang} />
 
@@ -246,4 +268,6 @@ const personJsonLd = {
 			<ContactForm inline source="homepage-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} services={services} client:load />
 		</div>
 	</section>
+		</>
+	)}
 </Layout>
