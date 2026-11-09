@@ -28,9 +28,9 @@ const VENTURE_SHORT: Record<string, string> = {
 };
 // Bangla mini-row copy (faithful translations of the English above).
 const VENTURE_SHORT_BN: Record<string, string> = {
-	hisabkit: "ছোট বাংলাদেশি ব্যবসার জন্য হিসাবরক্ষণ টুলকিট।",
+	hisabkit: "ছোট বাংলাদেশি বিজনেসের জন্য হিসাব রাখার টুলকিট।",
 	clouddesk: "দূরবর্তী দলের জন্য রিমোট-ওয়ার্ক টুল।",
-	skillbridge: "দক্ষ ফ্রিল্যান্সারদের সঙ্গে স্থানীয় ব্যবসার সংযোগ।",
+	skillbridge: "দক্ষ ফ্রিল্যান্সারদের সঙ্গে লোকাল বিজনেসের সংযোগ।",
 };
 const ventureShort = (slug: string) =>
 	lang === "bn"
@@ -100,8 +100,19 @@ const artistShortPoints = t.artistPoints;
 							href={langUrl(`/ventures/${venture.data.slug}`, lang)}
 						>
 							<span class="mini-thumb">
-								{venture.data.thumbnail ||
-								VENTURE_FALLBACK_THUMB[venture.data.slug] ? (
+								{venture.data.thumbnailType === "video" &&
+								venture.data.thumbnail ? (
+									<video
+										src={venture.data.thumbnail}
+										aria-label={venture.data.title}
+										muted
+										loop
+										playsinline
+										autoplay={venture.data.thumbnailAutoplay !== false}
+										preload="metadata"
+									/>
+								) : venture.data.thumbnail ||
+								  VENTURE_FALLBACK_THUMB[venture.data.slug] ? (
 									<img
 										src={
 											venture.data.thumbnail ??

@@ -160,15 +160,21 @@ button.is-navigating {
 	transition: opacity 300ms ease;
 }
 .grid-thumb img.img-loaded,
+.grid-thumb video.img-loaded,
 .deck-thumb img.img-loaded,
+.deck-thumb video.img-loaded,
 .release-card-thumb img.img-loaded,
-.mini-thumb img.img-loaded {
+.mini-thumb img.img-loaded,
+.mini-thumb video.img-loaded {
 	opacity: 1;
 }
 .grid-thumb:has(img.img-loaded),
+.grid-thumb:has(video.img-loaded),
 .deck-thumb:has(img.img-loaded),
+.deck-thumb:has(video.img-loaded),
 .release-card-thumb:has(img.img-loaded),
-.mini-thumb:has(img.img-loaded) {
+.mini-thumb:has(img.img-loaded),
+.mini-thumb:has(video.img-loaded) {
 	animation: none;
 	background: none;
 }
@@ -234,9 +240,12 @@ form[data-busy="true"] textarea {
 		border-top-color: rgba(255, 255, 255, 0.45);
 	}
 	.grid-thumb img,
+	.grid-thumb video,
 	.deck-thumb img,
+	.deck-thumb video,
 	.release-card-thumb img,
-	.mini-thumb img {
+	.mini-thumb img,
+	.mini-thumb video {
 		transition: none;
 		opacity: 1;
 	}

@@ -164,6 +164,15 @@ function toEntry(item: PublicContentItem, type: PublicContentType) {
 	// Case studies + ventures carry metrics: normalize to the Metric[]
 	// array the live schemas require (see normalizeMetrics).
 	const data: Record<string, unknown> = { ...item, type };
+	// Video-thumbnail autoplay: the API sends this as `autoplay`;
+	// the schemas declare it as `thumbnailAutoplay` (zod strips
+	// undeclared fields, so normalize before validation).
+	if (
+		data.thumbnailAutoplay === undefined &&
+		typeof item.autoplay === "boolean"
+	) {
+		data.thumbnailAutoplay = item.autoplay;
+	}
 	if (type === "case-studies" || type === "ventures") {
 		data.metrics = normalizeMetrics(item.metrics);
 	}

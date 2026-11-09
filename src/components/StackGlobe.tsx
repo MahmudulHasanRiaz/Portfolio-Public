@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { RotateCw, X } from "lucide-react";
 import { getDict, type Dict, type Lang } from "../lib/i18n";
 import {
@@ -232,6 +232,13 @@ export default function StackGlobe({
 	const snapAfterInertiaRef = useRef(false);
 	const draggingRef = useRef(false);
 	const movedRef = useRef(false);
+	// Filter-chip tap tracking (fix 2026-11-09): pointer-down position
+	// per chip, and a flag so the synthetic click that follows a
+	// pointer-up selection is ignored instead of selecting twice.
+	const chipDownRef = useRef<{ x: number; y: number; cat: string } | null>(
+		null,
+	);
+	const chipTapHandledRef = useRef(false);
 	const downIndexRef = useRef<number | null>(null);
 	const lastPointerRef = useRef({ x: 0, y: 0 });
 	const frontIdxRef = useRef(0);
@@ -482,6 +489,23 @@ export default function StackGlobe({
 			for (let pass = 0; pass < 12; pass++) {
 				for (let i = 0; i < STACK.length; i++) {
 					for (let j = i + 1; j < STACK.length; j++) {
+						// Filter cluster (fix 2026-11-09): matching tags
+						// must keep their exact cluster positions. The
+						// preview has NO collision pass at all — its
+						// cluster tags sit close together by design.
+						// Relaxing them here pushed the compact front
+						// cluster apart again (measured in simulation:
+						// Frontend y-span 32% → 47% of the stage at
+						// 390px), so a tap showed no regrouping. Skip
+						// any pair touching a matching tag; dimmed tags
+						// also never push cluster tags. Non-matching
+						// pairs still relax among themselves.
+						if (
+							filterActive &&
+							(matchingSet.has(i) || matchingSet.has(j))
+						) {
+							continue;
+						}
 						const elI = tagRefs.current[i];
 						const elJ = tagRefs.current[j];
 						const wI =
@@ -591,8 +615,13 @@ export default function StackGlobe({
 					// Back tags recede: opacity floor 0.38 (was 0.55),
 					// so back tags are faint and the front/mid tags
 					// dominate, like the preview.
+					// Dimmed tags fade to a whisper (preview: ×0.05) so
+					// the clustered family is unmistakable. The old ""
+					// left it to .globe-tag.dimmed at 0.55 in glass.css
+					// — still half-visible, so filtering looked like
+					// nothing had changed.
 					el.style.opacity = dimmed
-						? ""
+						? "0.08"
 						: String(0.38 + 0.62 * depth);
 					el.classList.toggle("front", i === frontIdx);
 					el.classList.toggle("dimmed", dimmed);
@@ -710,6 +739,52 @@ export default function StackGlobe({
 			selectedRef.current = null;
 			setSelected(null);
 		}
+	};
+
+	// Filter-chip selection (touch-robust, fix 2026-11-09): the chips sit
+	// OUTSIDE the globe stage, so the stage drag handlers never see their
+	// touches — but a plain onClick is still fragile on a phone, where a
+	// tap with a few px of finger drift is taken over for page scroll and
+	// no click is ever synthesized. Selection therefore happens on
+	// pointer-up, gated by a 10px movement threshold (a tap with tiny
+	// drift still counts), with pointer capture so the up event is
+	// reliably delivered to the chip. onClick remains only as the
+	// keyboard path (detail === 0); a pointer-up selection sets
+	// chipTapHandledRef so the synthetic click that follows it is
+	// ignored instead of toggling the filter twice. Tapping the
+	// already-active chip clears the filter (same as "All"), per the
+	// React preview.
+	const selectChip = (cat: string) => {
+		applyFilter(cat === filterRef.current ? "All" : cat);
+	};
+	const onChipPointerDown = (
+		e: PointerEvent<HTMLButtonElement>,
+		cat: string,
+	) => {
+		chipDownRef.current = { x: e.clientX, y: e.clientY, cat };
+		e.currentTarget.setPointerCapture(e.pointerId);
+	};
+	const onChipPointerUp = (
+		e: PointerEvent<HTMLButtonElement>,
+		cat: string,
+	) => {
+		const down = chipDownRef.current;
+		chipDownRef.current = null;
+		if (!down || down.cat !== cat) return;
+		if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10) return;
+		chipTapHandledRef.current = true;
+		selectChip(cat);
+	};
+	const onChipPointerCancel = () => {
+		chipDownRef.current = null;
+	};
+	const onChipClick = (e: MouseEvent<HTMLButtonElement>, cat: string) => {
+		if (chipTapHandledRef.current) {
+			chipTapHandledRef.current = false;
+			return;
+		}
+		// Keyboard activation only — pointer taps selected above.
+		if (e.detail === 0) selectChip(cat);
 	};
 
 	const spin = () => {
@@ -866,7 +941,23 @@ export default function StackGlobe({
 					<button
 						type="button"
 						className={filter === "All" ? "chip active" : "chip"}
-						onClick={() => applyFilter("All")}
+						aria-pressed={filter === "All"}
+						style={{
+							// touch-action manipulation: no double-tap
+							// zoom delay, taps stay taps on touch.
+							touchAction: "manipulation",
+							// The preview's light-pill active state is
+							// low-contrast on its own — a teal ring
+							// makes the active chip unmistakable.
+							boxShadow:
+								filter === "All"
+									? "0 0 0 1.5px var(--accent)"
+									: undefined,
+						}}
+						onPointerDown={(e) => onChipPointerDown(e, "All")}
+						onPointerUp={(e) => onChipPointerUp(e, "All")}
+						onPointerCancel={onChipPointerCancel}
+						onClick={(e) => onChipClick(e, "All")}
 					>
 						{t.allChip}
 					</button>
@@ -877,7 +968,18 @@ export default function StackGlobe({
 							className={
 								filter === cat ? "chip active" : "chip"
 							}
-							onClick={() => applyFilter(cat)}
+							aria-pressed={filter === cat}
+							style={{
+								touchAction: "manipulation",
+								boxShadow:
+									filter === cat
+										? "0 0 0 1.5px var(--accent)"
+										: undefined,
+							}}
+							onPointerDown={(e) => onChipPointerDown(e, cat)}
+							onPointerUp={(e) => onChipPointerUp(e, cat)}
+							onPointerCancel={onChipPointerCancel}
+							onClick={(e) => onChipClick(e, cat)}
 						>
 							<span
 								aria-hidden="true"
@@ -906,7 +1008,7 @@ export default function StackGlobe({
 					onPointerMove={onPointerMove}
 					onPointerUp={onPointerUp}
 					onPointerCancel={onPointerCancel}
-					style={{ touchAction: "pan-y", cursor: "grab" }}
+					style={{ touchAction: "none", cursor: "grab" }}
 				>
 					<div className="globe-ball" aria-hidden="true" />
 					{!ready ? (

@@ -8,6 +8,7 @@ import {
 	Play,
 	Sun,
 	User,
+	X,
 } from "lucide-react";
 import {
 	langUrl,
@@ -96,7 +97,15 @@ export default function SiteHeader({
 	];
 
 	const [stuck, setStuck] = useState(false);
-	const [pickerOpen, setPickerOpen] = useState(false);
+	// TWO panels, ONE state (preview App.tsx:172): the hamburger opens
+	// the mobile nav MENU, the chevron / profile label opens the profile
+	// PICKER. A single `panel` value makes them mutually exclusive by
+	// construction — they can never be open together. (The live site
+	// previously had only a `pickerOpen` boolean and the hamburger
+	// toggled the picker, so mobile had no header navigation at all.)
+	const [panel, setPanel] = useState<"menu" | "picker" | null>(null);
+	const [panelShown, setPanelShown] = useState(false);
+	const closeTimer = useRef<number | null>(null);
 	const [theme, setTheme] = useState<"light" | "dark">("light");
 	const [rotationPaused, setRotationPaused] = useState(false);
 	// The profile name the pill label currently shows. While the label
@@ -183,13 +192,52 @@ export default function SiteHeader({
 		}
 	}, []);
 
+	// Panels fade in on open and out on close (~240ms, preview):
+	// mount first, flip `panelShown` a frame later; on close, reverse
+	// and unmount after the fade. The fade is opacity-only (inline
+	// style on each panel) so it never fights the picker's
+	// `translateX(-50%)` centering in glass.css.
 	useEffect(() => {
+		if (!panel) return;
+		const t = window.setTimeout(() => setPanelShown(true), 24);
+		return () => window.clearTimeout(t);
+	}, [panel]);
+
+	useEffect(() => {
+		return () => {
+			if (closeTimer.current) window.clearTimeout(closeTimer.current);
+		};
+	}, []);
+
+	const openPanel = (p: "menu" | "picker") => {
+		if (closeTimer.current) {
+			window.clearTimeout(closeTimer.current);
+			closeTimer.current = null;
+		}
+		setPanel(p);
+	};
+
+	const closePanel = () => {
+		setPanelShown(false);
+		if (closeTimer.current) window.clearTimeout(closeTimer.current);
+		closeTimer.current = window.setTimeout(() => setPanel(null), 240);
+	};
+
+	const togglePanel = (p: "menu" | "picker") => {
+		if (panel === p) closePanel();
+		else openPanel(p);
+	};
+
+	// Escape closes whichever panel is open (preview).
+	useEffect(() => {
+		if (!panel) return;
 		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") setPickerOpen(false);
+			if (e.key === "Escape") closePanel();
 		};
 		window.addEventListener("keydown", onKey);
 		return () => window.removeEventListener("keydown", onKey);
-	}, []);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [panel]);
 
 	// Rotation paused state: read once on mount (sessionStorage survives
 	// the full-page navigations each rotation performs).
@@ -214,7 +262,7 @@ export default function SiteHeader({
 	// the label and its dot keep flipping between the two profiles
 	// above the open picker.
 	useEffect(() => {
-		if (rotationPaused || pickerOpen) {
+		if (rotationPaused || panel === "picker") {
 			showProfile(current);
 			return;
 		}
@@ -225,7 +273,7 @@ export default function SiteHeader({
 			);
 		}, LABEL_CYCLE_MS);
 		return () => window.clearInterval(t);
-	}, [rotationPaused, pickerOpen, current, showProfile]);
+	}, [rotationPaused, panel, current, showProfile]);
 
 	const pauseRotation = () => {
 		setRotationPaused(true);
@@ -243,7 +291,7 @@ export default function SiteHeader({
 		} catch {
 			/* storage unavailable */
 		}
-		setPickerOpen(false);
+		closePanel();
 	};
 
 	const toggleTheme = () => {
@@ -274,7 +322,7 @@ export default function SiteHeader({
 	// (preview behavior) and navigates there if it is not current.
 	const pickProfile = (p: (typeof PROFILES)[number]) => {
 		pauseRotation();
-		setPickerOpen(false);
+		closePanel();
 		if (p.id !== current) {
 			window.location.href = p.href;
 		}
@@ -367,12 +415,22 @@ export default function SiteHeader({
 	);
 
 	// The picker holds ONLY the two profile options (preview): the nav
-	// links live in the pill itself, never duplicated in the dropdown.
-	// The selected profile carries a teal checkmark (not a dot), and the
-	// big full-width teal "Resume auto-rotation" button sits at the
+	// links live in the pill itself on desktop (and in the mobile menu
+	// panel below), never duplicated in the dropdown. The selected
+	// profile carries a teal checkmark (not a dot), and the big
+	// full-width teal "Resume auto-rotation" button sits at the
 	// bottom (preview).
-	const picker = pickerOpen ? (
-		<div className="header-picker" role="menu" aria-label={dict.chooseProfile}>
+	const picker = panel === "picker" ? (
+		<div
+			className="header-picker"
+			role="menu"
+			aria-label={dict.chooseProfile}
+			style={{
+				opacity: panelShown ? 1 : 0,
+				transition: "opacity 240ms ease-out",
+				pointerEvents: panelShown ? undefined : "none",
+			}}
+		>
 			<p
 				style={{
 					margin: "4px 10px 8px",
@@ -426,27 +484,70 @@ export default function SiteHeader({
 		</div>
 	) : null;
 
-	// The pill: hamburger + profile label (fixed width, crossfading) +
-	// teal dot + resume-when-paused + chevron + nav links. The two
+	// The mobile nav menu (preview, App.tsx:440-456): the SAME 5
+	// NAV_LINKS as the desktop pill nav — same dictionary labels, same
+	// language-aware hrefs — so mobile and desktop navigate identically.
+	// NOTE on hrefs: the preview is a single page, so its links are bare
+	// anchors (#projects / #ventures / #releases / #about / #contact).
+	// The live site is multi-route, so the live NAV_LINKS (which the
+	// desktop pill already uses) are absolute instead: Work → /#projects,
+	// Ventures → /#beyond (the homepage ventures section id), Nasheed →
+	// /releases (a route), About → /know-me (a route), Contact →
+	// /#contact — all via langUrl, so they work from any page and in
+	// either language. Bare #ventures / #releases / #about anchors do
+	// NOT exist live and must not be reintroduced here.
+	// The panel reuses .header-picker positioning/styling (absolute,
+	// below the pill, glass, z-50) and .picker-row rows; .header-menu
+	// only adds the mobile-only rule (see the <style> in the header
+	// return). Tapping a link closes the panel (preview).
+	const menu = panel === "menu" ? (
+		<nav
+			className="header-picker header-menu"
+			aria-label="Mobile"
+			style={{
+				opacity: panelShown ? 1 : 0,
+				transition: "opacity 240ms ease-out",
+				pointerEvents: panelShown ? undefined : "none",
+			}}
+		>
+			{NAV_LINKS.map((l) => (
+				<a
+					key={l.label}
+					href={l.href}
+					onClick={closePanel}
+					className="picker-row"
+				>
+					{l.label}
+				</a>
+			))}
+		</nav>
+	) : null;
+
+	// The pill: hamburger (mobile nav menu) + profile label (fixed
+	// width, crossfading) + teal dot + resume-when-paused + chevron
+	// (profile picker) + nav links. The two
 	// glowing arcs are the pill's own children, absolutely positioned
 	// in the gaps beside it (preview) — NOT a decoration above it.
 	const pill = (
 		<div className="sticky-pill">
 			{arcs}
+			{/* Hamburger — opens the mobile nav MENU (preview), never the
+			    picker. Shows an X while the menu is open (preview). */}
 			<button
 				type="button"
 				className="pill-menu-btn pill-hamb-btn"
-				onClick={() => setPickerOpen((v) => !v)}
-				aria-label={pickerOpen ? "Close menu" : "Open menu"}
-				aria-expanded={pickerOpen}
+				onClick={() => togglePanel("menu")}
+				aria-label={panel === "menu" ? "Close menu" : "Open menu"}
+				aria-expanded={panel === "menu"}
 			>
-				<Menu size={18} />
+				{panel === "menu" ? <X size={18} /> : <Menu size={18} />}
 			</button>
 			<button
 				type="button"
 				className="pill-profile-btn"
-				onClick={() => setPickerOpen((v) => !v)}
+				onClick={() => togglePanel("picker")}
 				aria-label={`${dict.chooseProfile} — ${displayed.label}`}
+				aria-expanded={panel === "picker"}
 			>
 				{/* Fixed-width label stack (preview w-40/44/56): both
 				    profile labels stay mounted with stable keys; the
@@ -490,14 +591,26 @@ export default function SiteHeader({
 					<Play size={13} />
 				</button>
 			) : null}
+			{/* Chevron — opens the profile PICKER (preview). Its label is
+			    the picker's own label, never "Open menu". Rotates 180°
+			    while the picker is open (preview). */}
 			<button
 				type="button"
 				className="pill-menu-btn pill-chev-btn"
-				onClick={() => setPickerOpen((v) => !v)}
-				aria-label={pickerOpen ? "Close menu" : "Open menu"}
-				aria-expanded={pickerOpen}
+				onClick={() => togglePanel("picker")}
+				aria-label={dict.chooseProfile}
+				aria-expanded={panel === "picker"}
 			>
-				<span className="pill-chev">
+				<span
+					className="pill-chev"
+					style={{
+						transform:
+							panel === "picker"
+								? "rotate(180deg)"
+								: undefined,
+						transition: "transform 300ms",
+					}}
+				>
 					<ChevronDown size={14} />
 				</span>
 			</button>
@@ -509,12 +622,34 @@ export default function SiteHeader({
 				))}
 			</nav>
 			{picker}
+			{menu}
 		</div>
 	);
 
 
 	return (
 		<header className={`site-header${stuck ? " is-stuck" : ""}`}>
+			{/* Mobile-only menu rule (preview `md:hidden`): the live
+			    stylesheet has no `md:hidden` utility and glass.css is
+			    out of scope for this fix, so the one rule lives here,
+			    in this file only — it hides the menu panel from md up,
+			    matching the hamburger itself (`.pill-hamb-btn` is
+			    `display: none` ≥768px in glass.css). The reduced-motion
+			    rule keeps the panels' opacity fade off for users who
+			    ask for it (preview `motion-reduce:transition-none`). */}
+			<style>{`
+				@media (min-width: 768px) {
+					.header-menu {
+						display: none;
+					}
+				}
+				@media (prefers-reduced-motion: reduce) {
+					.header-menu,
+					.header-picker {
+						transition: none !important;
+					}
+				}
+			`}</style>
 			<div className="header-top" aria-hidden={stuck || undefined}>
 				{langBtn(stuck)}
 				{themeBtn(stuck)}

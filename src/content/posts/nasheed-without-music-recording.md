@@ -4,7 +4,7 @@ slug: "nasheed-without-music-recording"
 excerpt: "No instruments, no arrangement — how a nasheed goes from a quiet room and a single voice to YouTube and Spotify."
 bn:
   title: "সংগীত ছাড়া নাশিদ: আমি যেভাবে রেকর্ড করি ও শেয়ার করি"
-  excerpt: "কোনো বাদ্যযন্ত্র নেই, কোনো অ্যারেঞ্জমেন্ট নেই — একটি নাশিদ কীভাবে একটি নীরব ঘর ও একটিমাত্র কণ্ঠ থেকে ইউটিউব ও স্পটিফায় পৌঁছায়।"
+  excerpt: "কোনো বাদ্যযন্ত্র নেই, কোনো অ্যারেঞ্জমেন্ট নেই — একটা নাশিদ কীভাবে একটা নীরব ঘর আর একটিমাত্র কণ্ঠ থেকে ইউটিউব আর স্পটিফায়ে পৌঁছায়।"
 tags: ["Nasheed", "Recording"]
 thumbnail: "/posts/nasheed-post.jpg"
 thumbnailType: "image"

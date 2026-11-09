@@ -37,6 +37,9 @@ const baseSchema = z.object({
 	// Thumbnail: image URL, or a video URL when thumbnailType is "video".
 	thumbnail: z.string().optional(),
 	thumbnailType: z.enum(["image", "video"]).optional(),
+	// Silent card-preview playback for a video thumbnail. Absent =
+	// autoplay (muted loop); false = show first frame only.
+	thumbnailAutoplay: z.boolean().optional(),
 	// Optional Bangla variant: same field names as the English top
 	// level (title, description, content, lyrics, ...). On /bn/ pages
 	// a present, non-empty Bangla field wins; English is the fallback

@@ -157,8 +157,7 @@ export function readingTimeLabel(
 }
 
 /**
- * "Showing X of Y projects" / "মোট Yটি প্রকল্পের মধ্যে Xটি দেখানো
- * হচ্ছে" — `template` comes from the dictionary with {shown} and
+ * "Showing X of Y projects" / "মোট Yটি প্রজেক্টের মধ্যে Xটি দেখাচ্ছে" — `template` comes from the dictionary with {shown} and
  * {total} placeholders, so the client-side filter scripts can reuse
  * the same string (see the data-count-template attribute).
  */

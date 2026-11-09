@@ -4,7 +4,7 @@ slug: "surgicalx"
 description: "A WordPress e-commerce store for surgical products, built on Flatsome — fast, clear and easy to order from."
 bn:
   title: "SurgicalX"
-  description: "সার্জিক্যাল পণ্যের জন্য একটি ওয়ার্ডপ্রেস ই-কমার্স স্টোর, Flatsome-এ তৈরি — দ্রুত, পরিষ্কার ও সহজে অর্ডার করা যায়।"
+  description: "সার্জিক্যাল প্রোডাক্টের জন্য একটা ওয়ার্ডপ্রেস ই-কমার্স স্টোর, Flatsome-এ বানানো — দ্রুত, পরিষ্কার আর সহজে অর্ডার করা যায়।"
 tags: ["WordPress", "E-commerce"]
 techs: ["WordPress", "WooCommerce"]
 thumbnail: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&q=80&auto=format&fit=crop"

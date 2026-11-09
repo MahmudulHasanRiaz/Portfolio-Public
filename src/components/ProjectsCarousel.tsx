@@ -22,6 +22,9 @@ export interface CarouselProject {
 	techs: string[];
 	thumbnail?: string | null;
 	thumbnailType?: string | null;
+	/** Silent card-preview playback for a video thumbnail. Absent =
+	    autoplay (muted loop); false = first frame only. */
+	thumbnailAutoplay?: boolean | null;
 }
 
 interface Props {
@@ -224,14 +227,29 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 					>
 						<div className="grid-thumb">
 							{project.thumbnail ? (
-								<img
-									src={project.thumbnail}
-									alt={project.title}
-									loading="lazy"
-									className={loadedThumbs[project.slug] ? "img-loaded" : undefined}
-									onLoad={() => markThumbLoaded(project.slug)}
-									onError={() => markThumbLoaded(project.slug)}
-								/>
+								project.thumbnailType === "video" ? (
+									<video
+										src={project.thumbnail}
+										aria-label={project.title}
+										muted
+										loop
+										playsInline
+										autoPlay={project.thumbnailAutoplay !== false}
+										preload="metadata"
+										className={loadedThumbs[project.slug] ? "img-loaded" : undefined}
+										onLoadedData={() => markThumbLoaded(project.slug)}
+										onError={() => markThumbLoaded(project.slug)}
+									/>
+								) : (
+									<img
+										src={project.thumbnail}
+										alt={project.title}
+										loading="lazy"
+										className={loadedThumbs[project.slug] ? "img-loaded" : undefined}
+										onLoad={() => markThumbLoaded(project.slug)}
+										onError={() => markThumbLoaded(project.slug)}
+									/>
+								)
 							) : (
 								<span className="thumb-fallback" aria-hidden="true">
 									{project.title.charAt(0)}
@@ -337,12 +355,25 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 							}}
 						>
 							{peek.thumbnail ? (
-								<div
-									className="deck-peek-thumb"
-									style={{
-										backgroundImage: `url(${peek.thumbnail})`,
-									}}
-								/>
+								peek.thumbnailType === "video" ? (
+									<div className="deck-peek-thumb">
+										<video
+											src={peek.thumbnail}
+											aria-hidden="true"
+											muted
+											loop
+											playsInline
+											preload="metadata"
+										/>
+									</div>
+								) : (
+									<div
+										className="deck-peek-thumb"
+										style={{
+											backgroundImage: `url(${peek.thumbnail})`,
+										}}
+									/>
+								)
 							) : (
 								<div className="deck-peek-thumb deck-peek-thumb--empty" />
 							)}
@@ -373,14 +404,29 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 				>
 					<div className="deck-thumb">
 						{current.thumbnail ? (
-							<img
-								src={current.thumbnail}
-								alt={current.title}
-								loading="lazy"
-								className={loadedThumbs[current.slug] ? "img-loaded" : undefined}
-								onLoad={() => markThumbLoaded(current.slug)}
-								onError={() => markThumbLoaded(current.slug)}
-							/>
+							current.thumbnailType === "video" ? (
+								<video
+									src={current.thumbnail}
+									aria-label={current.title}
+									muted
+									loop
+									playsInline
+									autoPlay={current.thumbnailAutoplay !== false}
+									preload="metadata"
+									className={loadedThumbs[current.slug] ? "img-loaded" : undefined}
+									onLoadedData={() => markThumbLoaded(current.slug)}
+									onError={() => markThumbLoaded(current.slug)}
+								/>
+							) : (
+								<img
+									src={current.thumbnail}
+									alt={current.title}
+									loading="lazy"
+									className={loadedThumbs[current.slug] ? "img-loaded" : undefined}
+									onLoad={() => markThumbLoaded(current.slug)}
+									onError={() => markThumbLoaded(current.slug)}
+								/>
+							)
 						) : (
 							<span className="thumb-fallback" aria-hidden="true">
 								{current.title.charAt(0)}

@@ -33,8 +33,11 @@ const ventures = venturesRaw.map((v) => ({
 							venture.data.thumbnail ? (
 								<video
 									src={venture.data.thumbnail}
+									aria-label={venture.data.title}
 									muted
+									loop
 									playsinline
+									autoplay={venture.data.thumbnailAutoplay !== false}
 									preload="metadata"
 								/>
 							) : venture.data.thumbnail ? (

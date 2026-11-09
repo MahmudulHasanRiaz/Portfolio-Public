@@ -1823,7 +1823,8 @@ main {
 	background: var(--bg-wash);
 }
 
-.deck-card .deck-thumb img {
+.deck-card .deck-thumb img,
+.deck-card .deck-thumb video {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
@@ -1893,6 +1894,14 @@ main {
 	background-size: cover;
 	background-position: center;
 	opacity: 0.45;
+}
+
+/* Peek video thumbnail: same fill as the background-image thumb. */
+.deck-peek .deck-peek-thumb video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
 }
 
 .deck-peek .deck-peek-thumb--empty {
@@ -2110,7 +2119,8 @@ main {
 	background: var(--bg-wash);
 }
 
-.grid-card .grid-thumb img {
+.grid-card .grid-thumb img,
+.grid-card .grid-thumb video {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
@@ -3363,7 +3373,8 @@ main {
 	background: var(--bg-wash);
 }
 
-.mini-row .mini-thumb img {
+.mini-row .mini-thumb img,
+.mini-row .mini-thumb video {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;

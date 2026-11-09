@@ -212,7 +212,17 @@ const publicFigureTexts = [
 					{projects.map((project) => (
 						<a class="grid-card" href={langUrl(`/projects/${project.data.slug}`, lang)}>
 							<div class="grid-thumb">
-								{project.data.thumbnail ? (
+								{project.data.thumbnailType === "video" && project.data.thumbnail ? (
+									<video
+										src={project.data.thumbnail}
+										aria-label={project.data.title}
+										muted
+										loop
+										playsinline
+										autoplay={project.data.thumbnailAutoplay !== false}
+										preload="metadata"
+									/>
+								) : project.data.thumbnail ? (
 									<img
 										src={project.data.thumbnail}
 										alt={project.data.title}
@@ -255,7 +265,17 @@ const publicFigureTexts = [
 						return (
 							<a class="grid-card" href={langUrl(`/posts/${post.data.slug}`, lang)}>
 								<div class="grid-thumb">
-									{post.data.thumbnail ? (
+									{post.data.thumbnailType === "video" && post.data.thumbnail ? (
+										<video
+											src={post.data.thumbnail}
+											aria-label={post.data.title}
+											muted
+											loop
+											playsinline
+											autoplay={post.data.thumbnailAutoplay !== false}
+											preload="metadata"
+										/>
+									) : post.data.thumbnail ? (
 										<img
 											src={post.data.thumbnail}
 											alt={post.data.title}

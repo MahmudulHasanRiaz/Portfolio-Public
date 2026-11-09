@@ -2,6 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 import BrandIcon from "../../components/BrandIcon.astro";
 import DetailMedia from "../../components/DetailMedia.astro";
+import DetailVideoFacade from "../../components/DetailVideoFacade.astro";
 import PrevNext from "../../components/PrevNext.astro";
 import ReleasePlayer from "../../components/ReleasePlayer";
 import { getEntry, getLiveEntry } from "astro:content";
@@ -198,6 +199,16 @@ const jsonLd = data
 
 			{isVideo && youtubeId ? (
 				<ReleasePlayer client:load youtubeId={youtubeId} title={title} lang={lang} dict={t} />
+			) : data.thumbnailType === "video" && data.thumbnail ? (
+				<div class="detail-hero">
+					<DetailVideoFacade
+						src={data.thumbnail}
+						poster={null}
+						title={title}
+						lang={lang}
+						dict={t}
+					/>
+				</div>
 			) : data.thumbnail ? (
 				<div class="detail-hero">
 					<img src={data.thumbnail} alt={title} />

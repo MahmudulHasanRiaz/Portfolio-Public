@@ -35,7 +35,17 @@ const studies = studiesRaw.map((s) => ({
 					{studies.map((s) => (
 						<a class="grid-card" href={langUrl(`/case-studies/${s.data.slug}`, lang)}>
 							<div class="grid-thumb">
-								{s.data.thumbnail ? (
+								{s.data.thumbnailType === "video" && s.data.thumbnail ? (
+									<video
+										src={s.data.thumbnail}
+										aria-label={s.data.title}
+										muted
+										loop
+										playsinline
+										autoplay={s.data.thumbnailAutoplay !== false}
+										preload="metadata"
+									/>
+								) : s.data.thumbnail ? (
 									<img
 										src={s.data.thumbnail}
 										alt={s.data.title}

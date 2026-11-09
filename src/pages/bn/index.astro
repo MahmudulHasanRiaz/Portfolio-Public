@@ -44,6 +44,7 @@ const carouselProjects = projects.map((p) => ({
 	techs: p.data.techs ?? [],
 	thumbnail: p.data.thumbnail ?? null,
 	thumbnailType: p.data.thumbnailType ?? null,
+	thumbnailAutoplay: p.data.thumbnailAutoplay ?? null,
 }));
 
 const personJsonLd = {
@@ -103,7 +104,17 @@ const personJsonLd = {
 					{caseStudies.map((cs) => (
 						<a class="grid-card" href={langUrl(`/case-studies/${cs.data.slug}`, lang)}>
 							<div class="grid-thumb">
-								{cs.data.thumbnail ? (
+								{cs.data.thumbnailType === "video" && cs.data.thumbnail ? (
+									<video
+										src={cs.data.thumbnail}
+										aria-label={cs.data.title}
+										muted
+										loop
+										playsinline
+										autoplay={cs.data.thumbnailAutoplay !== false}
+										preload="metadata"
+									/>
+								) : cs.data.thumbnail ? (
 									<img
 										src={cs.data.thumbnail}
 										alt={cs.data.title}
@@ -175,7 +186,17 @@ const personJsonLd = {
 					return (
 						<a class="grid-card" href={langUrl(`/posts/${post.data.slug}`, lang)}>
 							<div class="grid-thumb">
-								{post.data.thumbnail ? (
+								{post.data.thumbnailType === "video" && post.data.thumbnail ? (
+									<video
+										src={post.data.thumbnail}
+										aria-label={post.data.title}
+										muted
+										loop
+										playsinline
+										autoplay={post.data.thumbnailAutoplay !== false}
+										preload="metadata"
+									/>
+								) : post.data.thumbnail ? (
 									<img
 										src={post.data.thumbnail}
 										alt={post.data.title}

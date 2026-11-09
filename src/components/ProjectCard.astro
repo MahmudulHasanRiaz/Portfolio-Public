@@ -10,6 +10,8 @@ interface Props {
 		description: string;
 		tags: string[];
 		thumbnail?: string | null;
+		thumbnailType?: string | null;
+		thumbnailAutoplay?: boolean | null;
 	};
 	lang?: Lang;
 }
@@ -20,7 +22,17 @@ const { project, lang = "en" } = Astro.props;
 <a class="grid-card" href={langUrl(`/projects/${project.slug}`, lang)}>
 	<div class="grid-thumb">
 		{
-			project.thumbnail ? (
+			project.thumbnailType === "video" && project.thumbnail ? (
+				<video
+					src={project.thumbnail}
+					aria-label={project.title}
+					muted
+					loop
+					playsinline
+					autoplay={project.thumbnailAutoplay !== false}
+					preload="metadata"
+				/>
+			) : project.thumbnail ? (
 				<img src={project.thumbnail} alt={project.title} loading="lazy" />
 			) : (
 				<span class="thumb-fallback" aria-hidden="true">

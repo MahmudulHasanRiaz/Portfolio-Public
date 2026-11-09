@@ -56,8 +56,11 @@ const allTags = [...new Set(ventures.flatMap((v) => v.data.tags ?? []))].sort();
 								venture.data.thumbnail ? (
 									<video
 										src={venture.data.thumbnail}
+										aria-label={venture.data.title}
 										muted
+										loop
 										playsinline
+										autoplay={venture.data.thumbnailAutoplay !== false}
 										preload="metadata"
 									/>
 								) : venture.data.thumbnail ? (

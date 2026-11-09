@@ -4,7 +4,7 @@ slug: "jannat-fashion-erp"
 description: "A Next.js ERP for Jannat Fashion — 2,000 to 5,000 orders a day across multiple WooCommerce stores, with payroll, accounting, fraud blocking, an SR portal and wholesale."
 bn:
   title: "Jannat Fashion ERP"
-  description: "জান্নাত ফ্যাশনের জন্য একটি Next.js ইআরপি — একাধিক WooCommerce স্টোর জুড়ে দিনে ২,০০০ থেকে ৫,০০০ অর্ডার, পে-রোল, অ্যাকাউন্টিং, প্রতারণা রোধ, এসআর পোর্টাল ও পাইকারি ব্যবস্থাসহ।"
+  description: "জান্নাত ফ্যাশনের জন্য একটা Next.js ERP — একাধিক WooCommerce স্টোর জুড়ে দিনে ২,০০০ থেকে ৫,০০০ অর্ডার, পে-রোল, অ্যাকাউন্টিং, ফ্রড রোধ, এসআর পোর্টাল আর পাইকারি ব্যবস্থাসহ।"
 tags: ["Next.js", "ERP", "E-commerce"]
 techs: ["Next.js", "React", "TypeScript", "PostgreSQL", "WooCommerce"]
 thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&q=80&auto=format&fit=crop"

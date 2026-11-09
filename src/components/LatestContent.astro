@@ -28,7 +28,18 @@ const latest = posts.slice(0, 3);
 				return (
 					<a class="grid-card" href={`/posts/${post.data.slug}`}>
 						<div class="grid-thumb">
-							{post.data.thumbnail ? (
+							{post.data.thumbnailType === "video" &&
+							post.data.thumbnail ? (
+								<video
+									src={post.data.thumbnail}
+									aria-label={post.data.title}
+									muted
+									loop
+									playsinline
+									autoplay={post.data.thumbnailAutoplay !== false}
+									preload="metadata"
+								/>
+							) : post.data.thumbnail ? (
 								<img
 									src={post.data.thumbnail}
 									alt={post.data.title}

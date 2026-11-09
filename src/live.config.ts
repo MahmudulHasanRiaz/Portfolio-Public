@@ -35,6 +35,10 @@ const baseSchema = z.object({
 	updatedAt: z.string().optional(),
 	thumbnail: z.string().optional(),
 	thumbnailType: z.enum(["image", "video"]).optional(),
+	// Silent card-preview playback for a video thumbnail. Absent =
+	// autoplay (muted loop); false = show first frame only. The API
+	// may send this as `autoplay` — the loader normalizes it here.
+	thumbnailAutoplay: z.boolean().optional(),
 	// Optional Bangla variant from the API (same field names as the
 	// English top level). Zod strips undeclared live fields, so this
 	// must be declared here or live `bn` never reaches the page.

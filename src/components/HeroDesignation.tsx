@@ -2,6 +2,26 @@ import { useEffect, useState } from "react";
 import { BookOpen, CodeXml, Megaphone, Mic, Rocket } from "lucide-react";
 import { PROFILE } from "../data/site";
 
+// Split a word into grapheme clusters (user-perceived characters) so the
+// typing animation never tears a Bengali conjunct / vowel sign / hasant
+// apart mid-typing. `Intl.Segmenter` with granularity "grapheme" keeps
+// clusters like "য়্যা", "ঞ্জি", "নি" intact; naive `slice`/`split("")`
+// counts UTF-16 code units and breaks them.
+// Fallback (no Segmenter): non-ASCII words render whole at once — never
+// split by code unit. ASCII-only words are safe to split per character.
+function segmentGraphemes(word: string): string[] {
+	try {
+		if (typeof Intl !== "undefined" && typeof Intl.Segmenter === "function") {
+			const segmenter = new Intl.Segmenter("bn", { granularity: "grapheme" });
+			return [...segmenter.segment(word)].map((s) => s.segment);
+		}
+	} catch {
+		// Fall through to the fallback below.
+	}
+	if (/[^\x00-\x7F]/.test(word)) return [word];
+	return word.split("");
+}
+
 // Icons in designation order (index-based, so Bangla designations get
 // the same icons as the English ones — never keyed by the word itself).
 const DESIGNATION_ICONS = [CodeXml, Rocket, Mic, BookOpen, Megaphone] as const;
@@ -18,9 +38,10 @@ export default function HeroDesignation({
 		designations?.length ? designations : [...PROFILE.designations];
 
 	// Longest designation — the badge sizer reserves this width so the pill
-	// never grows/shrinks while typing.
+	// never grows/shrinks while typing. Compared by grapheme count, not
+	// code-unit length, so Bengali conjuncts don't inflate the measure.
 	const LONGEST_DESIGNATION = DESIGNATIONS.reduce((a, b) =>
-		a.length >= b.length ? a : b,
+		segmentGraphemes(a).length >= segmentGraphemes(b).length ? a : b,
 	);
 
 	const TYPE_MS = 45;
@@ -36,7 +57,10 @@ export default function HeroDesignation({
 	// First paint shows the FULL first designation (SSR HTML contains the
 	// complete word) — never an empty pill with just an icon + cursor.
 	// The typing cycle still runs for every word after the first hold.
-	const [shown, setShown] = useState(DESIGNATIONS[0].length);
+	// `shown` counts grapheme clusters, not UTF-16 code units.
+	const [shown, setShown] = useState(
+		() => segmentGraphemes(DESIGNATIONS[0]).length,
+	);
 	const [exiting, setExiting] = useState(false);
 	const [reduced, setReduced] = useState(false);
 
@@ -60,7 +84,7 @@ export default function HeroDesignation({
 			}, EXIT_MS);
 			return () => window.clearTimeout(timer);
 		}
-		if (shown < word.length) {
+		if (shown < segmentGraphemes(word).length) {
 			const timer = window.setTimeout(
 				() => setShown((s) => s + 1),
 				TYPE_MS,
@@ -104,7 +128,7 @@ export default function HeroDesignation({
 		);
 	}
 
-	const letters = word.slice(0, shown).split("");
+	const letters = segmentGraphemes(word).slice(0, shown);
 
 	return (
 		<>
