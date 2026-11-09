@@ -73,6 +73,7 @@ const personJsonLd = {
 	description={t.homeDescription}
 	profile="se"
 	lang={lang}
+	services={services}
 >
 	<script type="application/ld+json" set:html={JSON.stringify(personJsonLd)} />
 
@@ -249,7 +250,7 @@ const personJsonLd = {
 			</p>
 		</div>
 		<div style="max-width:520px;margin:24px auto 0;">
-			<ContactForm inline source="homepage-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} client:load />
+			<ContactForm inline source="homepage-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} services={services} client:load />
 		</div>
 	</section>
 </Layout>

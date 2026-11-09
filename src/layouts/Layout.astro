@@ -9,6 +9,7 @@ import ContactModal from "../components/ContactModal";
 import { getSiteSettings } from "../lib/settings";
 import { applySiteCopy, enPath, getDict, langUrl, pickDict, CONTACT_MODAL_DICT_KEYS, SITE_HEADER_DICT_KEYS, type Lang } from "../lib/i18n";
 import { SITE_URL, resolveSiteUrl } from "../lib/detail";
+import { type Service } from "../data/site";
 
 interface Props {
 	title?: string;
@@ -25,6 +26,10 @@ interface Props {
 	ogType?: string;
 	/** Canonical URL. Detail pages pass the live-base URL explicitly. */
 	canonical?: string;
+	/** Live-merged services (getServices()) for the contact modal's
+	    service select — pages that already fetch services pass them;
+	    pages that don't leave the modal on build-time SERVICES. */
+	services?: Service[];
 }
 
 const {
@@ -35,6 +40,7 @@ const {
 	ogImage,
 	ogType = "website",
 	canonical,
+	services,
 } = Astro.props;
 
 // OG image: explicit prop wins, then the admin-managed portrait, then
@@ -212,7 +218,7 @@ const isHome =
 			</main>
 			<SiteFooter profile={profile} lang={lang} dict={t} />
 		</div>
-		<ContactModal lang={lang} dict={pickDict(t, CONTACT_MODAL_DICT_KEYS)} client:load />
+		<ContactModal lang={lang} dict={pickDict(t, CONTACT_MODAL_DICT_KEYS)} services={services} client:load />
 		{/* Floating home button — off-home pages only (see isHome
 		    above); the button itself is a plain link home, its
 		    inline script only controls when it is visible. */}

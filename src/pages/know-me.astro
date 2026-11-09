@@ -67,6 +67,7 @@ const publicFigureTexts = [
 	description={t.knowMeDescription}
 	profile="knowme"
 	lang={lang}
+	services={services}
 >
 	{/* Know Me hero wrapper: page-scoped clearance so the rotating-designation
 	    badge (which hangs 16px below the photo) is never clipped or crowded,
@@ -319,6 +320,6 @@ const publicFigureTexts = [
 		<p class="muted" style="margin:0 0 16px;font-size:14px;">
 			{t.reachOutSub}
 		</p>
-		<ContactForm client:load inline source="know-me-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} />
+		<ContactForm client:load inline source="know-me-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} services={services} />
 	</section>
 </Layout>
