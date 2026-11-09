@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { PROFILE, SERVICES } from "../data/site";
+import { PROFILE, SERVICES, type Service } from "../data/site";
 import { leadPayload, validateLead, type LeadError } from "../lib/lead";
 import { getDict, type ContactFormDict, type Lang } from "../lib/i18n";
 
@@ -11,6 +11,8 @@ interface ContactFormProps {
 	lang?: Lang;
 	/** Subset dict only (Issue 7B) — the 22 keys ContactForm reads. */
 	dict?: ContactFormDict;
+	/** Live-merged services (getServices(), passed down by the page) — defaults to build-time SERVICES. */
+	services?: Service[];
 }
 
 // The ONE shared contact form — used by the modal and inline in Contact.
@@ -27,14 +29,23 @@ export default function ContactForm({
 	inline = false,
 	lang = "en",
 	dict,
+	services,
 }: ContactFormProps) {
 	const t = dict ?? getDict(lang);
+	// Live services when the page passed them, else the build-time rows
+	// (same fallback pattern as Services.astro). The option VALUE stays
+	// the English service name — that is what the lead payload sends
+	// (projectType) and what the service modal pre-selects by.
+	const serviceOptions = services ?? SERVICES;
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
 	const [phone, setPhone] = useState("");
 	const [selectedService, setSelectedService] = useState(service ?? "");
 	const [message, setMessage] = useState("");
 	const [errors, setErrors] = useState<LeadError[]>([]);
+	// Server-side failure (rate limit, upstream/downstream error) — shown
+	// IN the form, never a browser popup. Cleared on the next submit.
+	const [serverError, setServerError] = useState<string | null>(null);
 	const [submitted, setSubmitted] = useState(false);
 	const [sending, setSending] = useState(false);
 
@@ -62,10 +73,11 @@ export default function ContactForm({
 		setSelectedService(service ?? "");
 		setMessage("");
 		setErrors([]);
+		setServerError(null);
 		setSubmitted(false);
 	};
 
-	const handleSubmit = (e: FormEvent) => {
+	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
 		if (sending) return;
 		const found = validateLead({
@@ -88,19 +100,51 @@ export default function ContactForm({
 			source,
 		});
 
-		// TODO: POST /api/leads — there is no leads endpoint yet. When the
-		// real leads endpoint lands with the Public Content API work, POST
-		// this payload there instead of showing success client-side only.
-		// Until then: validate and show success. Never fake a submission.
-		void payload;
-		// Loading state: disable the form + show a spinner while the send
-		// is in progress, so the tap is visibly acknowledged. The brief
-		// delay keeps the feedback perceptible instead of flashing past.
+		// Real submit: same-origin POST /api/contact — the server route
+		// validates again (lead.ts contract) and forwards to the
+		// dashboard's public leads endpoint with the integration token.
+		// The token never reaches the browser.
 		setSending(true);
-		window.setTimeout(() => {
+		setServerError(null);
+		try {
+			const res = await fetch("/api/contact", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			});
+			let data: unknown = null;
+			try {
+				data = await res.json();
+			} catch {
+				data = null;
+			}
+			const record =
+				data !== null && typeof data === "object"
+					? (data as Record<string, unknown>)
+					: {};
+			if (!res.ok) {
+				// Server-side field errors reuse the same per-field
+				// display as client-side validation.
+				if (Array.isArray(record.errors)) {
+					setErrors(record.errors as LeadError[]);
+				} else {
+					setServerError(
+						typeof record.error === "string" && record.error
+							? record.error
+							: "Failed to submit. Please try again later.",
+					);
+				}
+				setSending(false);
+				return;
+			}
 			setSending(false);
 			setSubmitted(true);
-		}, 600);
+		} catch {
+			// Network failure (offline, Worker unreachable) — in-form
+			// error, same wording as the server's own 500 copy.
+			setServerError("Failed to submit. Please try again later.");
+			setSending(false);
+		}
 	};
 
 	if (submitted) {
@@ -195,9 +239,9 @@ export default function ContactForm({
 					onChange={(e) => setSelectedService(e.target.value)}
 				>
 					<option value="">{t.formSelectService}</option>
-					{SERVICES.map((s) => (
+					{serviceOptions.map((s) => (
 						<option key={s.slug} value={s.name}>
-							{s.name}
+							{lang === "bn" && s.bn?.title ? s.bn.title : s.name}
 						</option>
 					))}
 				</select>
@@ -219,6 +263,13 @@ export default function ContactForm({
 					placeholder={t.formMessagePlaceholder}
 				/>
 			</div>
+
+			{/* Server-side failure — in-form text, never a popup. */}
+			{serverError && (
+				<p className="form-error" role="alert">
+					{serverError}
+				</p>
+			)}
 
 			<div className="form-field">
 				<button

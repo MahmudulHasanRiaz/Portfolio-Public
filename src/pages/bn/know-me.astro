@@ -73,6 +73,7 @@ const publicFigureTexts = [
 	description={t.knowMeDescription}
 	profile="knowme"
 	lang={lang}
+	services={services}
 >
 	<div class="knowme-hero">
 		<Hero profile="knowme" lang={lang} />
@@ -317,6 +318,6 @@ const publicFigureTexts = [
 		<p class="muted" style="margin:0 0 16px;font-size:14px;">
 			{t.reachOutSub}
 		</p>
-		<ContactForm client:load inline source="know-me-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} />
+		<ContactForm client:load inline source="know-me-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} services={services} />
 	</section>
 </Layout>
