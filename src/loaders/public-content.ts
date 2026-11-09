@@ -216,6 +216,18 @@ function toEntry(item: PublicContentItem, type: PublicContentType) {
  * runtime) and the fetch is skipped; every caller below already treats
  * "no live data" as "use build-time rows", so the output is identical.
  *
+ * DEPENDENCY — READ BEFORE TOUCHING (build c77c0055, 2026-11-09):
+ * this userAgent check is only correct because astro.config.mjs sets
+ * `prerenderEnvironment: "node"` on the Cloudflare adapter. The
+ * adapter DEFAULT is `"workerd"`: under it, `astro build` prerenders
+ * inside a workerd preview server, where navigator.userAgent IS
+ * "Cloudflare-Workers" — the gate opens, every page makes 2–4 live
+ * fetches, each hangs the full 8s timeout against the unreachable
+ * API (+16s/+24s/+32s per route, 29m 25s of Building, build FAILED
+ * after 30m 59s). There is no in-workerd signal that separates
+ * prerender from a real request, so do NOT flip the adapter back to
+ * "workerd" without reworking this gate first.
+ *
  * The decision is cached per module instance: the build shares one
  * module graph across page renders, so one decision covers the whole
  * build; in the Worker each isolate decides once. NOTE the settings
