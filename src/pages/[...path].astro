@@ -31,6 +31,7 @@ import ProjectDetail from "../components/details/ProjectDetail.astro";
 import ReleaseDetail from "../components/details/ReleaseDetail.astro";
 import VentureDetail from "../components/details/VentureDetail.astro";
 import { applySiteCopy, getDict, langFromPath, langUrl } from "../lib/i18n";
+import { resolveSiteUrl } from "../lib/detail";
 import { getSiteSettings } from "../lib/settings";
 import {
 	fetchLiveDetail,
@@ -43,7 +44,8 @@ export const prerender = false;
 
 const route = resolveTwinRoute(Astro.url.pathname);
 const lang = route?.lang ?? langFromPath(Astro.url.pathname);
-const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
+const settings = await getSiteSettings();
+const t = applySiteCopy(getDict(lang), lang, settings);
 
 let view: PreparedDetail | null = null;
 if (route) {
@@ -59,6 +61,8 @@ if (route) {
 		route.slug,
 		Astro.url.searchParams.get("from"),
 		t,
+		// Same settings fetch as above (memoised) — no second fetch.
+		resolveSiteUrl(settings.siteUrl),
 	);
 	if (!view.found) Astro.response.status = 404;
 } else {

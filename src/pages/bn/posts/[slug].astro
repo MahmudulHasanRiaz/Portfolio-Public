@@ -12,7 +12,7 @@ import DetailVideoFacade from "../../../components/DetailVideoFacade.astro";
 import PrevNext from "../../../components/PrevNext.astro";
 import { getPosts, formatDate, readingTimeFromText } from "../../../lib/content";
 import {
-	SITE_URL,
+	resolveSiteUrl,
 	absUrl,
 	mergeDetail,
 	parseBodyBlocks,
@@ -61,7 +61,8 @@ export async function getStaticPaths() {
 }
 
 const lang = "bn" as const;
-const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
+const settings = await getSiteSettings();
+const t = applySiteCopy(getDict(lang), lang, settings);
 
 const { slug } = Astro.params;
 if (!slug) Astro.response.status = 404;
@@ -163,7 +164,10 @@ const videoPoster =
 		: null;
 const coverImage = !isVideoThumb && thumb ? thumb : videoPoster;
 
-const pageUrl = `${SITE_URL}/bn/posts/${slug}`;
+// Canonical base: the admin site_url setting wins; resolveSiteUrl()
+// falls back to the live workers.dev base when it is absent/invalid.
+const siteBase = resolveSiteUrl(settings.siteUrl);
+const pageUrl = `${siteBase}/bn/posts/${slug}`;
 const jsonLd = data
 	? {
 			"@context": "https://schema.org",
@@ -173,7 +177,7 @@ const jsonLd = data
 					headline: title,
 					...(description ? { description } : {}),
 					inLanguage: "bn",
-					author: { "@type": "Person", name: PROFILE.name, url: SITE_URL },
+					author: { "@type": "Person", name: PROFILE.name, url: siteBase },
 					...(data.publishedAt
 						? { datePublished: data.publishedAt }
 						: {}),
@@ -187,13 +191,13 @@ const jsonLd = data
 							"@type": "ListItem",
 							position: 1,
 							name: "হোম",
-							item: SITE_URL,
+							item: siteBase,
 						},
 						{
 							"@type": "ListItem",
 							position: 2,
 							name: t.allPosts,
-							item: `${SITE_URL}/bn/posts`,
+							item: `${siteBase}/bn/posts`,
 						},
 						{
 							"@type": "ListItem",

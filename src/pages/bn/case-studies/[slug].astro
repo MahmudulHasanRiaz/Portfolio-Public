@@ -11,7 +11,7 @@ import PrevNext from "../../../components/PrevNext.astro";
 import TechChips from "../../../components/TechChips.astro";
 import { formatDate, getCaseStudies, getProjects } from "../../../lib/content";
 import {
-	SITE_URL,
+	resolveSiteUrl,
 	absUrl,
 	dedupeBlocks,
 	mergeDetail,
@@ -60,7 +60,8 @@ export async function getStaticPaths() {
 }
 
 const lang = "bn" as const;
-const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
+const settings = await getSiteSettings();
+const t = applySiteCopy(getDict(lang), lang, settings);
 
 const { slug } = Astro.params;
 const liveResult = slug
@@ -173,7 +174,10 @@ const thumbOf = (s: (typeof allStudies)[number] | undefined) =>
 		? s.data.thumbnail
 		: null;
 
-const pageUrl = `${SITE_URL}/bn/case-studies/${slug}`;
+// Canonical base: the admin site_url setting wins; resolveSiteUrl()
+// falls back to the live workers.dev base when it is absent/invalid.
+const siteBase = resolveSiteUrl(settings.siteUrl);
+const pageUrl = `${siteBase}/bn/case-studies/${slug}`;
 const jsonLd = d
 	? {
 			"@context": "https://schema.org",
@@ -186,7 +190,7 @@ const jsonLd = d
 					author: {
 						"@type": "Person",
 						name: "Mahmudul Hasan Riaz",
-						url: SITE_URL,
+						url: siteBase,
 					},
 					mainEntityOfPage: pageUrl,
 					...(coverImage ? { image: absUrl(coverImage) } : {}),
@@ -198,13 +202,13 @@ const jsonLd = d
 							"@type": "ListItem",
 							position: 1,
 							name: "হোম",
-							item: SITE_URL,
+							item: siteBase,
 						},
 						{
 							"@type": "ListItem",
 							position: 2,
 							name: t.allCaseStudies,
-							item: `${SITE_URL}/bn/case-studies`,
+							item: `${siteBase}/bn/case-studies`,
 						},
 						{
 							"@type": "ListItem",

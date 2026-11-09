@@ -10,7 +10,7 @@ import { createPublicContentLoader } from "../../loaders/public-content";
 import { getReleases } from "../../lib/content";
 import { youtubeEmbed, youtubeIdFromUrl, youtubeThumb } from "../../lib/youtube";
 import {
-	SITE_URL,
+	resolveSiteUrl,
 	absUrl,
 	mergeDetail,
 	yearOf,
@@ -56,7 +56,8 @@ export async function getStaticPaths() {
 }
 
 const lang = "en" as const;
-const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
+const settings = await getSiteSettings();
+const t = applySiteCopy(getDict(lang), lang, settings);
 
 const { slug } = Astro.params;
 if (!slug) Astro.response.status = 404;
@@ -146,7 +147,10 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 	SoundCloud: "soundcloud",
 };
 
-const pageUrl = `${SITE_URL}/releases/${slug}`;
+// Canonical base: the admin site_url setting wins; resolveSiteUrl()
+// falls back to the live workers.dev base when it is absent/invalid.
+const siteBase = resolveSiteUrl(settings.siteUrl);
+const pageUrl = `${siteBase}/releases/${slug}`;
 const jsonLd = data
 	? {
 			"@context": "https://schema.org",
@@ -183,13 +187,13 @@ const jsonLd = data
 							"@type": "ListItem",
 							position: 1,
 							name: "Home",
-							item: SITE_URL,
+							item: siteBase,
 						},
 						{
 							"@type": "ListItem",
 							position: 2,
 							name: t.allReleases,
-							item: `${SITE_URL}/releases`,
+							item: `${siteBase}/releases`,
 						},
 						{
 							"@type": "ListItem",
