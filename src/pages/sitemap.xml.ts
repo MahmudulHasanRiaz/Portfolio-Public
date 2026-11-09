@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
 import { getSiteSettings } from "../lib/settings";
 import { resolvePublicContentToken } from "../loaders/public-content";
-import { SITE_URL } from "../lib/detail";
+import { resolveSiteUrl } from "../lib/detail";
 
 // GET /sitemap.xml — on-demand (prerender = false) so detail pages
 // are included: they are on-demand routes, not in the static build,
@@ -90,6 +90,25 @@ async function liveSlugs(
 
 export const GET: APIRoute = async () => {
 	const settings = await getSiteSettings();
+	// Search-indexing gate (admin toggle
+	// "search_indexing_enabled"): OFF (default) → an EMPTY sitemap —
+	// crawlers get nothing to index. The live-slug fetch + token
+	// resolution below only run when indexing is ON.
+	if (!settings.searchIndexingEnabled) {
+		const emptyXml = [
+			'<?xml version="1.0" encoding="UTF-8"?>',
+			'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',
+			"</urlset>",
+			"",
+		].join("\n");
+		return new Response(emptyXml, {
+			headers: {
+				"Content-Type": "application/xml; charset=utf-8",
+				"Cache-Control": "public, max-age=3600",
+			},
+		});
+	}
+	const siteUrl = resolveSiteUrl(settings.siteUrl);
 	const base = apiBase();
 	// Resolved once per sitemap request (Worker runtime env, then
 	// build-time env) and passed to every liveSlugs call below.
@@ -115,8 +134,8 @@ export const GET: APIRoute = async () => {
 
 	const urlEntries = paths
 		.map((p) => {
-			const en = p === "/" ? `${SITE_URL}/` : `${SITE_URL}${p}`;
-			const bn = p === "/" ? `${SITE_URL}/bn/` : `${SITE_URL}/bn${p}`;
+			const en = p === "/" ? `${siteUrl}/` : `${siteUrl}${p}`;
+			const bn = p === "/" ? `${siteUrl}/bn/` : `${siteUrl}/bn${p}`;
 			const xDefault =
 				settings.defaultLanguage === "bn" ? bn : en;
 			return [
