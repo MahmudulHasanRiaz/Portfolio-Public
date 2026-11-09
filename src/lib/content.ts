@@ -12,7 +12,18 @@
 // hybrid: archives are static until the scheduled rebuild, detail pages
 // are on-demand and show live instantly.
 import { getCollection, getLiveCollection, type CollectionEntry } from "astro:content";
-import { SERVICES, STATS, type Service } from "../data/site";
+import {
+	CLIENTS,
+	PLATFORMS,
+	SERVICES,
+	STACK,
+	STATS,
+	type Client,
+	type Platform,
+	type Service,
+	type StackCategory,
+	type StackTech,
+} from "../data/site";
 import { getSiteSettings } from "./settings";
 
 // Text helpers (truncateShort, SHORT_DESC_MAX) live in lib/text.ts —
@@ -33,7 +44,10 @@ type LiveCollectionName =
 	| "liveCaseStudies"
 	| "liveVentures"
 	| "liveReleases"
-	| "liveServices";
+	| "liveServices"
+	| "livePlatforms"
+	| "liveTechnologies"
+	| "liveClients";
 
 function byDateDesc<T extends { data: { publishedAt?: string } }>(a: T, b: T) {
 	return (b.data.publishedAt ?? "").localeCompare(a.data.publishedAt ?? "");
@@ -287,6 +301,404 @@ export async function getStats(): Promise<Stat[]> {
 		else merged.push(clean);
 	}
 	return merged;
+}
+
+// ---------------------------------------------------------------------------
+// Platforms / technologies / clients — live over build-time site data.
+// ---------------------------------------------------------------------------
+//
+// Same pattern as getServices(): the build-time rows in src/data/site.ts
+// are the fallback; when the Public Content API serves the matching
+// type, live rows merge over them (live wins where it has a value) and
+// live-only rows are appended. Until the API type exists the live
+// loader returns empty, so the page renders exactly as today — no
+// regression, no empty sections.
+//
+// Identity is the STABLE field, never the slug alone: the services
+// slug bug (PR #92, 2026-11-09 — DB slugs differed from the
+// build-time ones) showed a slug-only match can append duplicates.
+// Platforms match by URL, technologies/clients by name; the slug is
+// only a secondary match. Field reads accept snake_case or camelCase,
+// top-level or under `meta`, so a naming choice on the dashboard side
+// can never silently drop a row.
+
+function slugify(value: string): string {
+	return value
+		.toLowerCase()
+		.trim()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+}
+
+function normName(value: string): string {
+	return value.toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+/** First non-empty value for any of the keys, top-level then `meta`. */
+function liveField(
+	d: Record<string, unknown>,
+	...keys: string[]
+): unknown {
+	for (const key of keys) {
+		const v = d[key];
+		if (v !== undefined && v !== null && v !== "") return v;
+	}
+	const meta = d.meta;
+	if (meta && typeof meta === "object") {
+		const m = meta as Record<string, unknown>;
+		for (const key of keys) {
+			const v = m[key];
+			if (v !== undefined && v !== null && v !== "") return v;
+		}
+	}
+	return undefined;
+}
+
+function asString(v: unknown): string | undefined {
+	return typeof v === "string" && v ? v : undefined;
+}
+
+function asNumber(v: unknown): number | undefined {
+	return typeof v === "number" && Number.isFinite(v) ? v : undefined;
+}
+
+function asBool(v: unknown): boolean | undefined {
+	return typeof v === "boolean" ? v : undefined;
+}
+
+/**
+ * Bangla overlay for a live row, whitelisted per type: only the listed
+ * keys survive, with `allowed` mapping API names to site-data names
+ * (title → name). Structural fields (platform `group`, tech
+ * `category`) are never overlaid — filter/group state keys stay
+ * English; only display copy is localised. Merged field-wise over
+ * the build-time `bn` by the callers.
+ */
+function normalizeLiveBn(
+	raw: unknown,
+	allowed: Record<string, string>,
+): Record<string, unknown> | undefined {
+	if (!raw || typeof raw !== "object") return undefined;
+	const out: Record<string, unknown> = {};
+	for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+		const target = allowed[k];
+		if (!target || isEmptyValue(v)) continue;
+		out[target] = v;
+	}
+	return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function mergeRowBn<T extends { bn?: Record<string, unknown> }>(
+	row: T,
+	liveBn: Record<string, unknown> | undefined,
+): void {
+	if (!liveBn) return;
+	row.bn = { ...(row.bn ?? {}), ...liveBn } as T["bn"];
+}
+
+async function getLiveRows(
+	liveName: LiveCollectionName,
+): Promise<Array<{ data: Record<string, unknown> }>> {
+	try {
+		const result = await getLiveCollection(liveName);
+		return (result?.entries ?? []) as Array<{
+			data: Record<string, unknown>;
+		}>;
+	} catch {
+		return [];
+	}
+}
+
+const PLATFORM_GROUPS = ["music", "social", "professional"] as const;
+
+function asPlatformGroup(v: unknown): Platform["group"] | undefined {
+	return typeof v === "string" &&
+		(PLATFORM_GROUPS as readonly string[]).includes(v)
+		? (v as Platform["group"])
+		: undefined;
+}
+
+/** Build-time slug candidates for a platform (slug is secondary). */
+function platformSlugs(p: Platform): string[] {
+	const slugs = [slugify(p.name)];
+	if (p.note) slugs.push(slugify(`${p.name} ${p.note}`));
+	return slugs;
+}
+
+/**
+ * Platforms, merged live over build-time PLATFORMS by URL (then slug).
+ * Live `title` is the platform name; `subtitle` / `handle` / `note`
+ * are the card copy (bn overlay where present). Ordering is by
+ * `sort_order` from the API (build-time rows keep seed order 0–16);
+ * live-only rows without one sort last.
+ */
+export async function getPlatforms(): Promise<Platform[]> {
+	const live = await getLiveRows("livePlatforms");
+	const byUrl = new Map<string, { platform: Platform; sortOrder: number }>();
+	const bySlug = new Map<
+		string,
+		{ platform: Platform; sortOrder: number }
+	>();
+	PLATFORMS.forEach((p, i) => {
+		const entry = { platform: { ...p }, sortOrder: i };
+		byUrl.set(p.url, entry);
+		for (const slug of platformSlugs(p)) bySlug.set(slug, entry);
+	});
+	for (const item of live) {
+		const d = item.data;
+		const url = asString(liveField(d, "url", "website"));
+		const slug = asString(d.slug);
+		const existing =
+			(url ? byUrl.get(url) : undefined) ??
+			(slug ? bySlug.get(slug) : undefined);
+		const name = asString(liveField(d, "title", "name"));
+		const group = asPlatformGroup(liveField(d, "group"));
+		const sortOrder =
+			asNumber(liveField(d, "sort_order", "sortOrder")) ??
+			existing?.sortOrder ??
+			99;
+		const bn = normalizeLiveBn(d.bn, {
+			title: "name",
+			name: "name",
+			subtitle: "subtitle",
+			handle: "handle",
+			note: "note",
+		});
+		if (existing) {
+			const p = existing.platform;
+			if (name) p.name = name;
+			if (url) p.url = url;
+			const handle = asString(liveField(d, "handle"));
+			if (handle) p.handle = handle;
+			const icon = liveField(d, "icon");
+			if (typeof icon === "string") p.icon = icon || null;
+			else if (icon === null) p.icon = null;
+			if (group) p.group = group;
+			const note = asString(liveField(d, "note"));
+			if (note) p.note = note;
+			const subtitle = asString(liveField(d, "subtitle"));
+			if (subtitle) p.subtitle = subtitle;
+			const isPrimary = asBool(
+				liveField(d, "is_primary", "isPrimary"),
+			);
+			if (isPrimary !== undefined) p.is_primary = isPrimary;
+			const liveSort = asNumber(liveField(d, "sort_order", "sortOrder"));
+			if (liveSort !== undefined) p.sort_order = liveSort;
+			mergeRowBn(p, bn);
+			existing.sortOrder = sortOrder;
+			if (url) byUrl.set(url, existing);
+		} else {
+			// Live-only platform: without a URL it cannot link
+			// anywhere, and without a valid group no section can
+			// place it — skip rather than render a dead row.
+			if (!name || !url || !group) continue;
+			const icon = liveField(d, "icon");
+			const p: Platform = {
+				name,
+				url,
+				icon:
+					typeof icon === "string"
+						? icon || null
+						: null,
+				group,
+			};
+			const handle = asString(liveField(d, "handle"));
+			if (handle) p.handle = handle;
+			const note = asString(liveField(d, "note"));
+			if (note) p.note = note;
+			const subtitle = asString(liveField(d, "subtitle"));
+			if (subtitle) p.subtitle = subtitle;
+			const isPrimary = asBool(
+				liveField(d, "is_primary", "isPrimary"),
+			);
+			if (isPrimary !== undefined) p.is_primary = isPrimary;
+			const liveSort = asNumber(liveField(d, "sort_order", "sortOrder"));
+			if (liveSort !== undefined) p.sort_order = liveSort;
+			mergeRowBn(p, bn);
+			const entry = { platform: p, sortOrder };
+			byUrl.set(url, entry);
+			if (slug) bySlug.set(slug, entry);
+		}
+	}
+	return [...byUrl.values()]
+		.sort((a, b) => a.sortOrder - b.sortOrder)
+		.map((x) => x.platform);
+}
+
+// Footer primary icons — exactly these 5, in this order. Derived from
+// the live `is_primary` flag + `sort_order`, never by display name
+// (two rows are both "Facebook"). Fallback when no row carries the
+// flag yet (API absent): the same five profiles, matched by URL —
+// the stable identity.
+const SEED_FOOTER_URLS = [
+	"https://www.linkedin.com/in/mahmudulhasanriaz",
+	"https://wa.me/8801601701567",
+	"https://www.facebook.com/MahmudulHasanRiaz.Official",
+	"https://github.com/MahmudulHasanRiaz",
+	"https://www.youtube.com/@MahmudRiazBD",
+];
+
+export function getFooterPrimaries(platforms: Platform[]): Platform[] {
+	const flagged = platforms.filter((p) => p.is_primary === true);
+	if (flagged.length > 0) {
+		return [...flagged]
+			.sort((a, b) => (a.sort_order ?? 99) - (b.sort_order ?? 99))
+			.slice(0, 5);
+	}
+	return SEED_FOOTER_URLS.flatMap((url) => {
+		const row = platforms.find((p) => p.url === url);
+		return row ? [row] : [];
+	});
+}
+
+/**
+ * Stack technologies, merged live over build-time STACK by name (then
+ * slug). Live `title` is the tech name; `category` / `icon` / `use`
+ * overlay where present. Ordering is by `sort_order` from the API
+ * (build-time rows keep seed order 0–43); live-only rows without one
+ * sort last. The globe derives its filter chips + constellation lines
+ * from the returned rows, so a new API category appears automatically.
+ */
+export async function getTechnologies(): Promise<StackTech[]> {
+	const live = await getLiveRows("liveTechnologies");
+	const byName = new Map<
+		string,
+		{ tech: StackTech; sortOrder: number }
+	>();
+	const bySlug = new Map<
+		string,
+		{ tech: StackTech; sortOrder: number }
+	>();
+	STACK.forEach((t, i) => {
+		const entry = { tech: { ...t }, sortOrder: i };
+		byName.set(normName(t.name), entry);
+		bySlug.set(slugify(t.name), entry);
+	});
+	for (const item of live) {
+		const d = item.data;
+		const name = asString(liveField(d, "title", "name"));
+		const slug = asString(d.slug);
+		const existing =
+			(name ? byName.get(normName(name)) : undefined) ??
+			(slug ? bySlug.get(slug) : undefined);
+		const category = asString(liveField(d, "category"));
+		const sortOrder =
+			asNumber(liveField(d, "sort_order", "sortOrder")) ??
+			existing?.sortOrder ??
+			99;
+		const bn = normalizeLiveBn(d.bn, {
+			title: "name",
+			name: "name",
+			use: "use",
+		});
+		if (existing) {
+			const t = existing.tech;
+			if (name) t.name = name;
+			// An unknown category is kept as-is (the globe falls back
+			// to the raw label + no colour dot) rather than dropping
+			// the row — the API owns the taxonomy.
+			if (category) t.category = category as StackCategory;
+			const icon = liveField(d, "icon");
+			if (typeof icon === "string") t.icon = icon || null;
+			else if (icon === null) t.icon = null;
+			const use = asString(liveField(d, "use"));
+			if (use) t.use = use;
+			mergeRowBn(t, bn);
+			existing.sortOrder = sortOrder;
+		} else {
+			// Live-only tech: nameless or category-less rows cannot
+			// be placed on the globe — skip rather than render a
+			// broken tag.
+			if (!name || !category) continue;
+			const icon = liveField(d, "icon");
+			const t: StackTech = {
+				name,
+				category: category as StackCategory,
+				icon:
+					typeof icon === "string"
+						? icon || null
+						: null,
+			};
+			const use = asString(liveField(d, "use"));
+			if (use) t.use = use;
+			mergeRowBn(t, bn);
+			const entry = { tech: t, sortOrder };
+			byName.set(normName(name), entry);
+			if (slug) bySlug.set(slug, entry);
+		}
+	}
+	return [...byName.values()]
+		.sort((a, b) => a.sortOrder - b.sortOrder)
+		.map((x) => x.tech);
+}
+
+/**
+ * Clients, merged live over build-time CLIENTS by name (then slug).
+ * Live `title` is the client name; `logo_url` renders the logo when
+ * present (else the text wordmark), `website` links the cell when
+ * present. Ordering is by `sort_order` from the API (build-time rows
+ * keep seed order); live-only rows without one sort last.
+ */
+export async function getClients(): Promise<Client[]> {
+	const live = await getLiveRows("liveClients");
+	const byName = new Map<
+		string,
+		{ client: Client; sortOrder: number }
+	>();
+	const bySlug = new Map<
+		string,
+		{ client: Client; sortOrder: number }
+	>();
+	CLIENTS.forEach((c, i) => {
+		const entry = { client: { ...c }, sortOrder: i };
+		byName.set(normName(c.name), entry);
+		bySlug.set(slugify(c.name), entry);
+	});
+	for (const item of live) {
+		const d = item.data;
+		const name = asString(liveField(d, "title", "name"));
+		const slug = asString(d.slug);
+		const existing =
+			(name ? byName.get(normName(name)) : undefined) ??
+			(slug ? bySlug.get(slug) : undefined);
+		const sortOrder =
+			asNumber(liveField(d, "sort_order", "sortOrder")) ??
+			existing?.sortOrder ??
+			99;
+		const bn = normalizeLiveBn(d.bn, { title: "name", name: "name" });
+		if (existing) {
+			const c = existing.client;
+			if (name) c.name = name;
+			const logo = asString(
+				liveField(d, "logo_url", "logoUrl", "logo", "thumbnail"),
+			);
+			if (logo) c.logo_url = logo;
+			const website = asString(liveField(d, "website", "url"));
+			if (website) c.website = website;
+			const liveSort = asNumber(liveField(d, "sort_order", "sortOrder"));
+			if (liveSort !== undefined) c.sort_order = liveSort;
+			mergeRowBn(c, bn);
+			existing.sortOrder = sortOrder;
+		} else {
+			if (!name) continue;
+			const c: Client = { name };
+			const logo = asString(
+				liveField(d, "logo_url", "logoUrl", "logo", "thumbnail"),
+			);
+			if (logo) c.logo_url = logo;
+			const website = asString(liveField(d, "website", "url"));
+			if (website) c.website = website;
+			const liveSort = asNumber(liveField(d, "sort_order", "sortOrder"));
+			if (liveSort !== undefined) c.sort_order = liveSort;
+			mergeRowBn(c, bn);
+			const entry = { client: c, sortOrder };
+			byName.set(normName(name), entry);
+			if (slug) bySlug.set(slug, entry);
+		}
+	}
+	return [...byName.values()]
+		.sort((a, b) => a.sortOrder - b.sortOrder)
+		.map((x) => x.client);
 }
 
 export function formatDate(
