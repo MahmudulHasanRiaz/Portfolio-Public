@@ -28,7 +28,15 @@ export type ProfileId = "se" | "knowme";
 // script in Layout.astro never overrides an explicit choice. The URL
 // the visitor is on always wins over any stored preference.
 interface SiteHeaderProps {
-	current: ProfileId;
+	/** Profile this page belongs to. Unset → `defaultProfile`. */
+	current?: ProfileId;
+	/** Admin-configured primary identity default, resolved in Layout
+	    from settings (Wave 2 A1). The pill's initial profile and the
+	    picker's active row sit on exactly this profile — or on the
+	    profile the visitor tapped (which arrives here as `current`
+	    via the page it navigated to). The label animation still
+	    cycles BOTH names; only the active marker follows this. */
+	defaultProfile?: ProfileId;
 	lang: Lang;
 	currentPath: string;
 	/** Subset dict only (Issue 7B) — the 12 nav/profile/theme keys. */
@@ -66,10 +74,17 @@ const ROTATION_PAUSED_KEY = "profile-rotation-paused";
  */
 export default function SiteHeader({
 	current,
+	defaultProfile = "se",
 	lang,
 	currentPath,
 	dict,
 }: SiteHeaderProps) {
+	// The active profile: the page's own profile when it declares one,
+	// else the admin default (Layout already resolves the same fallback
+	// into `current`; this keeps the header correct even if a future
+	// page renders it without one). Exactly ONE profile is active —
+	// the picker checkmark and the pill's initial label both use this.
+	const activeProfile: ProfileId = current ?? defaultProfile;
 	const PROFILES: Array<{
 		id: ProfileId;
 		label: string;
@@ -114,13 +129,13 @@ export default function SiteHeader({
 	// animation runs it alternates between the two profiles; while
 	// paused it sits on the current profile.
 	const [displayedProfile, setDisplayedProfile] =
-		useState<ProfileId>(current);
+		useState<ProfileId>(activeProfile);
 	// The profile the label is sliding AWAY from (previous cycle). The
 	// outgoing span slides up (-8px) and fades while the incoming span
 	// slides up from below (+8px) — the preview's crossfade. Cleared
 	// ~460ms after each change, once the 450ms transition has run.
 	const [prevProfile, setPrevProfile] = useState<ProfileId | null>(null);
-	const displayedRef = useRef<ProfileId>(current);
+	const displayedRef = useRef<ProfileId>(activeProfile);
 	const prevClearRef = useRef<number | null>(null);
 
 	// Crossfade the pill label to `next`. Both profile labels stay
@@ -276,17 +291,17 @@ export default function SiteHeader({
 	// above the open picker.
 	useEffect(() => {
 		if (rotationPaused || panel === "picker") {
-			showProfile(current);
+			showProfile(activeProfile);
 			return;
 		}
-		showProfile(current);
+		showProfile(activeProfile);
 		const t = window.setInterval(() => {
 			showProfile(
 				displayedRef.current === "se" ? "knowme" : "se",
 			);
 		}, LABEL_CYCLE_MS);
 		return () => window.clearInterval(t);
-	}, [rotationPaused, panel, current, showProfile]);
+	}, [rotationPaused, panel, activeProfile, showProfile]);
 
 	const pauseRotation = () => {
 		setRotationPaused(true);
@@ -336,13 +351,13 @@ export default function SiteHeader({
 	const pickProfile = (p: (typeof PROFILES)[number]) => {
 		pauseRotation();
 		closePanel();
-		if (p.id !== current) {
+		if (p.id !== activeProfile) {
 			window.location.href = p.href;
 		}
 	};
 
 	const currentProfile =
-		PROFILES.find((p) => p.id === current) ?? PROFILES[0]!;
+		PROFILES.find((p) => p.id === activeProfile) ?? PROFILES[0]!;
 	const displayed =
 		PROFILES.find((p) => p.id === displayedProfile) ?? currentProfile;
 
@@ -458,7 +473,7 @@ export default function SiteHeader({
 			</p>
 			{PROFILES.map((p) => {
 				const Icon = p.icon;
-				const active = p.id === current;
+				const active = p.id === activeProfile;
 				return (
 					<a
 						key={p.id}

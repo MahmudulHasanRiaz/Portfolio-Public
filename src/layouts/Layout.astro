@@ -14,7 +14,8 @@ import { type Service } from "../data/site";
 interface Props {
 	title?: string;
 	description?: string;
-	/** Which profile this page belongs to — drives the header switcher + footer line. */
+	/** Which profile this page belongs to — drives the header switcher + footer line.
+	    Unset → the admin-configured primary identity default (resolved in Layout). */
 	profile?: "se" | "knowme";
 	/** Page language. English at /<page>, Bangla at /bn/<page>. */
 	lang?: Lang;
@@ -35,7 +36,7 @@ interface Props {
 const {
 	title = "Mahmudul Hasan Riaz",
 	description = "Software Engineer, Entrepreneur and Nasheed Artist — Dhaka, Bangladesh.",
-	profile = "se",
+	profile,
 	lang = "en",
 	ogImage,
 	ogType = "website",
@@ -47,6 +48,16 @@ const {
 // the repo speaker photo. A relative admin URL is resolved against the
 // page origin (OG images must be absolute).
 const settings = await getSiteSettings();
+
+// Primary identity default (admin setting, Wave 2 A1): the resolved
+// default profile — "knowme" when settings.primaryIdentity is
+// "know-me", "se" otherwise (including API unset/unreachable, where
+// the fail-safe default is Software Engineer). Pages that declare no
+// profile (detail / archive pages) follow this default instead of a
+// hardcoded "se", so the header pill + footer always mark exactly the
+// default profile — or the profile page the visitor tapped to.
+const defaultProfile = settings.primaryIdentity === "know-me" ? "knowme" : "se";
+const effectiveProfile = profile ?? defaultProfile;
 const t = applySiteCopy(getDict(lang), lang, settings);
 const settingsPortrait = settings.portraitUrl
 	? settings.portraitUrl.startsWith("/")
@@ -207,7 +218,8 @@ const isHome =
 		{/* Bottom padding removed so the footer attaches flush to the page edge. */}
 		<div class="page" style="padding-bottom:0;">
 			<SiteHeader
-				current={profile}
+				current={effectiveProfile}
+				defaultProfile={defaultProfile}
 				lang={lang}
 				currentPath={Astro.url.pathname}
 				dict={pickDict(t, SITE_HEADER_DICT_KEYS)}
@@ -216,7 +228,7 @@ const isHome =
 			<main>
 				<slot />
 			</main>
-			<SiteFooter profile={profile} lang={lang} dict={t} />
+			<SiteFooter profile={effectiveProfile} lang={lang} dict={t} />
 		</div>
 		<ContactModal lang={lang} dict={pickDict(t, CONTACT_MODAL_DICT_KEYS)} services={services} client:load />
 		{/* Floating home button — off-home pages only (see isHome

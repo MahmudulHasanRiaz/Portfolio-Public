@@ -8,6 +8,7 @@ import StackGlobe from "../../components/StackGlobe";
 import Combined from "../../components/Combined.astro";
 import ClientsWall from "../../components/ClientsWall.astro";
 import ContactForm from "../../components/ContactForm";
+import KnowMeSections from "../../components/KnowMeSections.astro";
 import { getProjects, getCaseStudies, getPosts, getServices, getTechnologies, formatDate, readingTimeFromText, truncateShort } from "../../lib/content";
 import { applySiteCopy, getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, PROJECTS_CAROUSEL_DICT_KEYS, STACK_GLOBE_DICT_KEYS, readingTimeLabel } from "../../lib/i18n";
 import { getSiteSettings } from "../../lib/settings";
@@ -22,17 +23,44 @@ import { PROFILE } from "../../data/site";
 const lang = "bn" as const;
 const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
-const projectsRaw = await getProjects();
+// Primary identity (admin setting, Wave 2 A1): when the default is
+// "know-me", /bn/ BECOMES the Know Me page — it renders KnowMeSections
+// directly, NOT a redirect to /bn/know-me (a redirect would split the
+// canonical homepage and break the / SEO already built). /bn/know-me
+// stays the permanent canonical URL for that content. When the default
+// is Software Engineer, /bn/ renders exactly as before.
+
+// Canonical site URL for the Person JSON-LD: admin setting
+// (site_url) when set, else the live workers.dev base — never the
+// old riaz.com.bd domain while the site lives on workers.dev.
+// (Moved above the content fetches: the primary-identity branch
+// below needs `settings` before deciding what to fetch.)
+const settings = await getSiteSettings();
+const siteUrl = resolveSiteUrl(settings.siteUrl);
+
+const isKnowMe = settings.primaryIdentity === "know-me";
+const profile = isKnowMe ? "knowme" : "se";
+
+// The SE branch needs these rows; the Know Me branch fetches its own
+// rows inside KnowMeSections, so skip them there (no double fetch).
+// Services are fetched in BOTH branches: Layout + ContactForm need
+// the live rows in the SE branch, and Layout (contact modal) needs
+// them in the Know Me branch too — never pass [] (ContactForm /
+// ContactModal treat [] as a real, empty list, not "use defaults").
+// Technologies are fetched in both branches too (the globe reads
+// them as a prop; the fetch falls back to build-time rows when the
+// live API is unreachable).
+const projectsRaw = isKnowMe ? [] : await getProjects();
 const projects = projectsRaw.map((p) => ({
 	...p,
 	data: localizeData(p.data, lang),
 }));
-const caseStudiesRaw = await getCaseStudies();
+const caseStudiesRaw = isKnowMe ? [] : await getCaseStudies();
 const caseStudies = caseStudiesRaw.map((cs) => ({
 	...cs,
 	data: localizeData(cs.data, lang),
 }));
-const postsRaw = await getPosts();
+const postsRaw = isKnowMe ? [] : await getPosts();
 const posts = postsRaw.map((p) => ({
 	...p,
 	data: localizeData(p.data, lang),
@@ -44,12 +72,6 @@ const services = await getServices();
 const technologies = (await getTechnologies()).map((tech) =>
 	localizeData({ ...tech }, lang),
 );
-
-// Canonical site URL for the Person JSON-LD: admin setting
-// (site_url) when set, else the live workers.dev base — never the
-// old riaz.com.bd domain while the site lives on workers.dev.
-const settings = await getSiteSettings();
-const siteUrl = resolveSiteUrl(settings.siteUrl);
 
 const carouselProjects = projects.map((p) => ({
 	slug: p.data.slug,
@@ -75,13 +97,17 @@ const personJsonLd = {
 ---
 
 <Layout
-	title={t.homeTitle}
-	description={t.homeDescription}
-	profile="se"
+	title={isKnowMe ? t.knowMeTitle : t.homeTitle}
+	description={isKnowMe ? t.knowMeDescription : t.homeDescription}
+	profile={profile}
 	lang={lang}
 	services={services}
 >
-	<script type="application/ld+json" set:html={JSON.stringify(personJsonLd)} />
+	{isKnowMe ? (
+		<KnowMeSections lang={lang} />
+	) : (
+		<>
+			<script type="application/ld+json" set:html={JSON.stringify(personJsonLd)} />
 
 	<Hero profile="se" lang={lang} />
 
@@ -259,4 +285,6 @@ const personJsonLd = {
 			<ContactForm inline source="homepage-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} services={services} client:load />
 		</div>
 	</section>
+		</>
+	)}
 </Layout>
