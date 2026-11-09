@@ -8,7 +8,7 @@ import HomeButton from "../components/HomeButton.astro";
 import ContactModal from "../components/ContactModal";
 import { getSiteSettings } from "../lib/settings";
 import { applySiteCopy, enPath, getDict, langUrl, pickDict, CONTACT_MODAL_DICT_KEYS, SITE_HEADER_DICT_KEYS, type Lang } from "../lib/i18n";
-import { SITE_URL, resolveSiteUrl } from "../lib/detail";
+import { resolveCanonicalBase } from "../lib/detail";
 import { type Service } from "../data/site";
 
 interface Props {
@@ -76,8 +76,15 @@ const faviconUrl = settings.faviconUrl ?? "/favicon.svg";
 // Canonical = this page's OWN absolute URL, never the other language's
 // (Google: a canonical must point at a page in the SAME language).
 // hreflang: the identical set on BOTH versions — self + the other
-// language + x-default — all ABSOLUTE, built from Astro.site (the
-// workers.dev URL for now; the custom domain later), never hardcoded.
+// language + x-default — all ABSOLUTE, built from the canonical base
+// (resolveCanonicalBase): an explicit admin site_url wins (ONE
+// canonical for search engines no matter which host served the page);
+// without an admin override the request host wins (Astro.url.origin —
+// the host that actually served this render), so the page is
+// self-consistent on every domain; SITE_URL is the last resort. No
+// served output here contains a hardcoded domain. NOTE: prerendered
+// pages bake Astro.url.origin (= Astro.site) at BUILD time — only
+// on-demand renders see the live request host; see detail.ts.
 // x-default = the ADMIN-CONFIGURED default language version: default
 // "bn" → the Bangla URL; "en" or "system" → the English URL. The
 // admin setting (settings.defaultLanguage) is read at build/request
@@ -85,9 +92,7 @@ const faviconUrl = settings.faviconUrl ?? "/favicon.svg";
 // The robots meta below is the search-indexing gate for the whole
 // site, both languages alike — driven by the admin toggle
 // (settings.searchIndexingEnabled), not hardcoded.
-const siteBase = resolveSiteUrl(
-	settings.siteUrl ?? Astro.site?.toString() ?? SITE_URL,
-);
+const siteBase = resolveCanonicalBase(settings.siteUrl, Astro.url);
 const pathEn = enPath(Astro.url.pathname);
 const urlEn = `${siteBase}${pathEn === "/" ? "/" : pathEn}`;
 const urlBn = `${siteBase}${pathEn === "/" ? "/bn/" : `/bn${pathEn}`}`;

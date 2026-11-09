@@ -31,7 +31,7 @@ import ProjectDetail from "../components/details/ProjectDetail.astro";
 import ReleaseDetail from "../components/details/ReleaseDetail.astro";
 import VentureDetail from "../components/details/VentureDetail.astro";
 import { applySiteCopy, getDict, langFromPath, langUrl } from "../lib/i18n";
-import { resolveSiteUrl } from "../lib/detail";
+import { resolveCanonicalBase } from "../lib/detail";
 import { getSiteSettings } from "../lib/settings";
 import {
 	fetchLiveDetail,
@@ -62,7 +62,7 @@ if (route) {
 		Astro.url.searchParams.get("from"),
 		t,
 		// Same settings fetch as above (memoised) — no second fetch.
-		resolveSiteUrl(settings.siteUrl),
+		resolveCanonicalBase(settings.siteUrl, Astro.url),
 	);
 	if (!view.found) Astro.response.status = 404;
 } else {

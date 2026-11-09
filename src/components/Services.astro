@@ -57,7 +57,7 @@ const t = getDict(lang);
 	</div>
 	{/* Service detail modal — the brief + CTA live here, not on the card. */}
 	{/* Subset dict only (Issue 7B): 3 keys, not the whole dictionary. */}
-	<ServiceModal services={services} lang={lang} dict={pickDict(t, SERVICE_MODAL_DICT_KEYS)} client:load />
+	<ServiceModal services={services} lang={lang} dict={pickDict(t, SERVICE_MODAL_DICT_KEYS)} client:visible />
 </section>
 
 <style>

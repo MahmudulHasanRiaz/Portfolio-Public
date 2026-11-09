@@ -1,16 +1,23 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import { getVentures, formatDate, truncateShort } from "../../lib/content";
-import { applySiteCopy, getDict, langUrl, showingLabel } from "../../lib/i18n";
-import { getSiteSettings } from "../../lib/settings";
+import { getDict, langUrl, showingLabel } from "../../lib/i18n";
 
 // Ventures archive — fixed strings from the dictionary (same keys as
 // the /bn/ archive).
 const lang = "en" as const;
-const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
+const t = getDict(lang);
 
 const ventures = await getVentures();
 const allTags = [...new Set(ventures.flatMap((v) => v.data.tags ?? []))].sort();
+
+// Unsplash card thumbs ship at w=1200 in content/API rows but render at
+// ~360px wide (2x retina ≈ 720px) — request w=800/q=75 instead: measured
+// 124KB → 67KB per image (~46% less). Non-Unsplash URLs pass through.
+const sizedThumb = (url: string | null | undefined, w = 800) =>
+	url?.includes("images.unsplash.com")
+		? url.replace(/w=\d+/, `w=${w}`).replace(/q=\d+/, "q=75")
+		: url;
 ---
 
 <Layout
@@ -67,9 +74,12 @@ const allTags = [...new Set(ventures.flatMap((v) => v.data.tags ?? []))].sort();
 									/>
 								) : venture.data.thumbnail ? (
 									<img
-										src={venture.data.thumbnail}
+										src={sizedThumb(venture.data.thumbnail)}
 										alt={venture.data.title}
+										width="800"
+										height="500"
 										loading="lazy"
+										decoding="async"
 									/>
 								) : (
 									<div class="thumb-fallback">

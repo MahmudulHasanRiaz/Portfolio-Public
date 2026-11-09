@@ -12,7 +12,7 @@ import DetailVideoFacade from "../../../components/DetailVideoFacade.astro";
 import PrevNext from "../../../components/PrevNext.astro";
 import { getPosts, formatDate, readingTimeFromText } from "../../../lib/content";
 import {
-	resolveSiteUrl,
+	resolveCanonicalBase,
 	absUrl,
 	mergeDetail,
 	parseBodyBlocks,
@@ -164,9 +164,9 @@ const videoPoster =
 		: null;
 const coverImage = !isVideoThumb && thumb ? thumb : videoPoster;
 
-// Canonical base: the admin site_url setting wins; resolveSiteUrl()
-// falls back to the live workers.dev base when it is absent/invalid.
-const siteBase = resolveSiteUrl(settings.siteUrl);
+// Canonical base: explicit admin site_url wins; else the request
+// host (Astro.url), else the SITE_URL fallback — see detail.ts.
+const siteBase = resolveCanonicalBase(settings.siteUrl, Astro.url);
 const pageUrl = `${siteBase}/bn/posts/${slug}`;
 const jsonLd = data
 	? {
@@ -181,7 +181,7 @@ const jsonLd = data
 					...(data.publishedAt
 						? { datePublished: data.publishedAt }
 						: {}),
-					...(coverImage ? { image: absUrl(coverImage) } : {}),
+					...(coverImage ? { image: absUrl(coverImage, siteBase) } : {}),
 					mainEntityOfPage: pageUrl,
 				},
 				{
@@ -216,7 +216,7 @@ const jsonLd = data
 	title={`${title} — Mahmudul Hasan Riaz`}
 	description={description}
 	ogType="article"
-	ogImage={coverImage ? absUrl(coverImage) : null}
+	ogImage={coverImage ? absUrl(coverImage, siteBase) : null}
 	canonical={pageUrl}
 	lang={lang}
 >
@@ -251,7 +251,14 @@ const jsonLd = data
 					</div>
 				) : (
 					<div class="detail-hero">
-						<img src={thumb} alt={title} />
+						<img
+							src={thumb}
+							alt={title}
+							fetchpriority="high"
+							decoding="async"
+							srcset={thumb?.includes("images.unsplash.com") ? `${thumb.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${thumb.replace(/q=\d+/, "q=75")} 1200w` : undefined}
+							sizes="(max-width: 640px) 100vw, 1088px"
+						/>
 					</div>
 				))}
 			<h1 class="detail-title">{title}</h1>
@@ -318,6 +325,7 @@ const jsonLd = data
 					width="56"
 					height="56"
 					loading="lazy"
+					decoding="async"
 				/>
 				<div class="author-info">
 					<strong>{PROFILE.name}</strong>

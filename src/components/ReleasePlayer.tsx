@@ -41,7 +41,7 @@ export default function ReleasePlayer({
 					onClick={() => setPlaying(true)}
 					aria-label={playLabel}
 				>
-					{thumb ? <img src={thumb} alt={title} /> : null}
+					{thumb ? <img src={thumb} alt={title} loading="lazy" decoding="async" /> : null}
 					<span className="play-btn">
 						<Play size={28} fill="currentColor" />
 					</span>

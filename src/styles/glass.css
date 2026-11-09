@@ -41,10 +41,15 @@
 	--bg-wash: #f2f7f5;
 	--ink: #0c1a15;
 	--ink-dim: #5b6f67;
-	--ink-faint: #8a9a93;
+	/* A11y (2026-11-09): --ink-faint was #8a9a93 = 2.95:1 on white —
+	   axe flagged .grid-meta (12px). #5a7268 = 5.20:1 on white,
+	   4.80:1 on --bg-wash. --accent was #0d9488: white text on it is
+	   3.74:1 — axe flagged every .btn. #0b7c74 = 5.06:1, and as text
+	   on white also 5.06:1 (was 3.74:1). One step darker teal only. */
+	--ink-faint: #5a7268;
 	--card: rgba(255, 255, 255, 0.72);
 	--card-border: rgba(12, 26, 21, 0.08);
-	--accent: #0d9488;
+	--accent: #0b7c74;
 	--accent-strong: #0f766e;
 	--accent-soft: rgba(13, 148, 136, 0.1);
 	--accent-wash: rgba(13, 148, 136, 0.06);
@@ -64,7 +69,10 @@
 		--bg-wash: #08110d;
 		--ink: #eef5f2;
 		--ink-dim: #93a89e;
-		--ink-faint: #6b8078;
+		/* A11y (2026-11-09): --ink-faint was #6b8078 = 4.77:1 on the
+		   page bg but 4.19:1 on a dark glass card (~#141a17), where
+		   .grid-meta sits. #7d948a = 6.20:1 on bg, 5.44:1 on glass. */
+		--ink-faint: #7d948a;
 		--card: rgba(255, 255, 255, 0.06);
 		--card-border: rgba(255, 255, 255, 0.09);
 		--accent: #2dd4bf;
@@ -82,10 +90,11 @@
 	--bg-wash: #f2f7f5;
 	--ink: #0c1a15;
 	--ink-dim: #5b6f67;
-	--ink-faint: #8a9a93;
+	/* A11y (2026-11-09): see :root — same token fixes as above. */
+	--ink-faint: #5a7268;
 	--card: rgba(255, 255, 255, 0.72);
 	--card-border: rgba(12, 26, 21, 0.08);
-	--accent: #0d9488;
+	--accent: #0b7c74;
 	--accent-strong: #0f766e;
 	--accent-soft: rgba(13, 148, 136, 0.1);
 	--accent-wash: rgba(13, 148, 136, 0.06);
@@ -99,7 +108,8 @@
 	--bg-wash: #08110d;
 	--ink: #eef5f2;
 	--ink-dim: #93a89e;
-	--ink-faint: #6b8078;
+	/* A11y (2026-11-09): see prefers-color-scheme dark :root above. */
+	--ink-faint: #7d948a;
 	--card: rgba(255, 255, 255, 0.06);
 	--card-border: rgba(255, 255, 255, 0.09);
 	--accent: #2dd4bf;
@@ -215,6 +225,19 @@ main {
 	color: var(--accent-strong);
 }
 
+/* A11y (2026-11-09): keyboard focus — several links/buttons had no
+   visible focus style at all (.btn, nav links, .deck-card, globe
+   tags, picker rows). Every link/button now gets a teal ring on
+   keyboard focus. Components with their own :focus-visible ring
+   (corner-btn, pill-rotate-btn, chev-btn, deck-dot, home-fab,
+   picker-resume-btn, release-card-link) keep theirs — their
+   class-scoped rules outrank this one. */
+a:focus-visible,
+button:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
 /* ---------- Buttons (subtle hover, desktop-only) ---------- */
 .btn {
 	display: inline-block;
@@ -232,6 +255,50 @@ main {
 		transform 200ms ease,
 		box-shadow 200ms ease,
 		border-color 200ms ease;
+}
+
+/* A11y (2026-11-09): dark mode — white text on the bright teal
+   --accent (#2dd4bf) is 1.86:1. Every SOLID-teal control with light
+   text therefore goes dark (#03211c, 9.11:1 on #2dd4bf, 11.46:1 on the
+   #5eead4 hover) in dark mode, exactly like .hero-badge already did.
+   Light mode needs no override: the darkened --accent (#0b7c74)
+   gives white text 5.06:1.
+   SCOPE (fixed same day): .btn-ghost/.btn-quiet are TRANSPARENT
+   (ink text) and .globe-filters .chip.active is a LIGHT pill
+   (bg-wash + ink text) — the first version of this rule caught them
+   too and turned them near-invisible in dark mode (1.06:1 / 1.12:1).
+   .btn is therefore :not(.btn-ghost):not(.btn-quiet), and the globe
+   active chip gets its ink text back below. */
+[data-theme="dark"] .btn:not(.btn-ghost):not(.btn-quiet),
+[data-theme="dark"] .chip.active,
+[data-theme="dark"] .picker-resume-btn,
+[data-theme="dark"] .pill-rotate-btn,
+[data-theme="dark"] .audio-badge {
+	color: #03211c;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) .btn:not(.btn-ghost):not(.btn-quiet),
+	:root:not([data-theme="light"]) .chip.active,
+	:root:not([data-theme="light"]) .picker-resume-btn,
+	:root:not([data-theme="light"]) .pill-rotate-btn,
+	:root:not([data-theme="light"]) .audio-badge {
+		color: #03211c;
+	}
+}
+
+/* Globe active chip: a light pill, NOT solid teal — it keeps ink text
+   in dark mode. Specificity must beat the rules above, which is why
+   this repeats the theme selectors instead of relying on the plain
+   .globe-filters .chip.active rule further down the file. */
+[data-theme="dark"] .globe-filters .chip.active {
+	color: var(--ink);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) .globe-filters .chip.active {
+		color: var(--ink);
+	}
 }
 
 .btn-ghost {
@@ -1361,7 +1428,9 @@ main {
 	}
 
 	.hero-photo-float-card span {
-		font-size: 11px;
+		/* A11y (2026-11-09): 11px → 12px. Ink-dim already passes
+		   (5.36:1 light / 7.98:1 dark); only the size was sub-12px. */
+		font-size: 12px;
 		font-weight: 600;
 		color: var(--ink-dim);
 		white-space: nowrap;
@@ -1492,7 +1561,11 @@ main {
 	border: 1px solid rgba(255, 255, 255, 0.28);
 	background: var(--accent);
 	color: #ffffff;
-	font-size: 11px;
+	/* A11y (2026-11-09): 11px → 12px on mobile (≥640px already 13px).
+	   Contrast fixed by the darkened --accent (5.06:1). The width
+	   sizer reserves the longest designation at the same size, so the
+	   pill still never grows/shrinks while typing. */
+	font-size: 12px;
 	font-weight: 700;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
@@ -2091,14 +2164,22 @@ main {
 	gap: 8px;
 }
 
+/* A11y (2026-11-09): axe flagged every dot — 10px target, 12px safe
+   space (needs 24px). The VISIBLE dot stays exactly 10px: the button
+   is now a 24px hit area with a 7px transparent border and
+   background-clip: padding-box, so only the 10px centre paints.
+   (box-sizing is border-box, so width 24px = 10px dot + 2×7px
+   border.) Inactive opacity 0.55 → 0.8: the dot is a UI component
+   (non-text 3:1) — blended ink-dim on white was ~2.2:1, now 3.53:1. */
 .deck-dot {
-	width: 10px;
-	height: 10px;
+	width: 24px;
+	height: 24px;
 	border-radius: 50%;
-	border: 0;
+	border: 7px solid transparent;
+	background-clip: padding-box;
 	padding: 0;
-	background: var(--ink-dim);
-	opacity: 0.55;
+	background-color: var(--ink-dim);
+	opacity: 0.8;
 	transition:
 		width 200ms ease,
 		background-color 200ms ease,
@@ -2106,10 +2187,14 @@ main {
 }
 
 .deck-dot.active {
-	/* Preview active dot is 28px wide (10px tall). */
-	width: 28px;
+	/* Preview active dot is 28px wide (10px tall) — plus the 7px
+	   transparent border each side, so the hit area is 42×24px. */
+	width: 42px;
 	border-radius: 999px;
-	background: var(--accent);
+	/* background-color, NOT the background shorthand: the shorthand
+	   would reset background-clip to border-box and paint the accent
+	   over the transparent hit-area border too. */
+	background-color: var(--accent);
 	opacity: 1;
 }
 
@@ -3144,7 +3229,16 @@ main {
 
 /* Small screens: the stage is ~308px at 390px, so the tags shrink
    (9px, tighter padding) — otherwise 44 full-size pills cannot spread
-   without colliding in the small ball. */
+   without colliding in the small ball.
+   A11y (2026-11-09): the 10px / 9px sizes are KEPT deliberately.
+   12px pills do not fit the sphere (collision relaxation pushes them
+   off the ball), and a 24px-tall hit area per tag would do the same —
+   axe flags the tags under target-size, but enlarging them breaks the
+   globe itself, so this is the documented tradeoff: the tags stay
+   keyboard-operable (Tab + Enter), ink-on-opaque-pill contrast is
+   17.88:1 light / 18.17:1 dark at full opacity, and the front tag
+   (the one a visitor reads) renders ~35% larger. Do NOT "fix" the
+   size without a globe redesign. */
 @media (max-width: 639px) {
 	.globe-tag {
 		font-size: 9px;
@@ -3193,7 +3287,12 @@ main {
 }
 
 .globe-tag.dimmed {
-	opacity: 0.55;
+	/* A11y (2026-11-09): 0.55 blended the ink text to 4.00:1 on white
+	   (fails 4.5:1). 0.75 blends to 7.97:1 light / 10.20:1 dark. This
+	   class is a fallback: when the globe JS runs it sets an inline
+	   opacity per tag (0.08 for filtered-out tags — see StackGlobe),
+	   which wins over this rule. */
+	opacity: 0.75;
 }
 
 .globe-now {
@@ -3269,10 +3368,11 @@ main {
 	align-items: center;
 	flex: none;
 	white-space: nowrap;
-	/* Preview globe chips are deliberately tiny: px-2 py-0.5, 10px
-	   semibold — much smaller than the archive filter chips. */
-	padding: 2px 8px;
-	font-size: 10px;
+	/* A11y (2026-11-09): 10px → 12px, padding 2px 8px → 4px 10px.
+	   The row wraps, so the slightly taller chips change nothing
+	   except row height; the chips stay compact vs archive chips. */
+	padding: 4px 10px;
+	font-size: 12px;
 	font-weight: 600;
 }
 
@@ -3750,7 +3850,9 @@ main {
 	align-items: center;
 	gap: 6px;
 	margin-top: 12px;
-	font-size: 11px;
+	/* A11y (2026-11-09): 11px → 12px. Contrast fixed by the darkened
+	   --accent (5.06:1 light) + the dark-mode #03211c override. */
+	font-size: 12px;
 	font-weight: 700;
 	padding: 4px 12px;
 	border-radius: 999px;
@@ -3764,7 +3866,9 @@ main {
 }
 
 .type-tag {
-	font-size: 11px;
+	/* A11y (2026-11-09): 11px → 12px. Accent-strong already passes
+	   (5.47:1 light / 13.59:1 dark); only the size was sub-12px. */
+	font-size: 12px;
 	font-weight: 700;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;

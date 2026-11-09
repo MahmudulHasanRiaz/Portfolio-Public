@@ -21,6 +21,14 @@ interface Props {
 
 const { prev = null, next = null, lang = "en", dict } = Astro.props;
 const t = dict ?? getDict(lang);
+
+// Unsplash thumbs ship at w=1200 in content/API rows but the prev/next
+// thumb renders at 80×56 (2x retina ≈ 160px) — request w=320/q=75
+// instead. Non-Unsplash URLs pass through.
+const sizedThumb = (url: string | null | undefined, w = 320) =>
+	url?.includes("images.unsplash.com")
+		? url.replace(/w=\d+/, `w=${w}`).replace(/q=\d+/, "q=75")
+		: url;
 ---
 
 {
@@ -31,11 +39,12 @@ const t = dict ?? getDict(lang);
 					{prev.thumb ? (
 						<img
 							class="pn-thumb"
-							src={prev.thumb}
+							src={sizedThumb(prev.thumb)}
 							alt=""
 							width="80"
 							height="56"
 							loading="lazy"
+							decoding="async"
 						/>
 					) : null}
 					<span class="pn-body">
@@ -51,11 +60,12 @@ const t = dict ?? getDict(lang);
 					{next.thumb ? (
 						<img
 							class="pn-thumb"
-							src={next.thumb}
+							src={sizedThumb(next.thumb)}
 							alt=""
 							width="80"
 							height="56"
 							loading="lazy"
+							decoding="async"
 						/>
 					) : null}
 					<span class="pn-body">

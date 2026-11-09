@@ -520,7 +520,7 @@ async function prepareProject(
 						inLanguage: lang,
 						applicationCategory: "BusinessApplication",
 						url: pageUrl,
-						...(coverImage ? { image: absUrl(coverImage) } : {}),
+						...(coverImage ? { image: absUrl(coverImage, baseUrl) } : {}),
 						author: {
 							"@type": "Person",
 							name: "Mahmudul Hasan Riaz",
@@ -551,7 +551,7 @@ async function prepareProject(
 			: `${t.notFoundProject} — Mahmudul Hasan Riaz`,
 		description: d?.description,
 		ogType: "website",
-		ogImage: coverImage ? (absUrl(coverImage) ?? null) : null,
+		ogImage: coverImage ? (absUrl(coverImage, baseUrl) ?? null) : null,
 		canonical: pageUrl,
 		jsonLd,
 		d,
@@ -644,7 +644,7 @@ async function prepareCaseStudy(
 							url: baseUrl,
 						},
 						mainEntityOfPage: pageUrl,
-						...(coverImage ? { image: absUrl(coverImage) } : {}),
+						...(coverImage ? { image: absUrl(coverImage, baseUrl) } : {}),
 					},
 					breadcrumb(
 						t,
@@ -669,7 +669,7 @@ async function prepareCaseStudy(
 			: `${t.notFoundCaseStudy} — Mahmudul Hasan Riaz`,
 		description: d?.description,
 		ogType: "article",
-		ogImage: coverImage ? (absUrl(coverImage) ?? null) : null,
+		ogImage: coverImage ? (absUrl(coverImage, baseUrl) ?? null) : null,
 		canonical: pageUrl,
 		jsonLd,
 		d,
@@ -778,7 +778,7 @@ async function prepareVenture(
 		layoutTitle: `${title} — Mahmudul Hasan Riaz`,
 		description,
 		ogType: "website",
-		ogImage: coverImage ? (absUrl(coverImage) ?? null) : null,
+		ogImage: coverImage ? (absUrl(coverImage, baseUrl) ?? null) : null,
 		canonical: pageUrl,
 		jsonLd,
 		data,
@@ -856,7 +856,7 @@ async function prepareRelease(
 	const coverImage = isVideo
 		? youtubeThumb(youtubeId)
 		: data?.thumbnail
-			? (absUrl(data.thumbnail) ?? null)
+			? (absUrl(data.thumbnail, baseUrl) ?? null)
 			: null;
 	const firstPlatform = platforms[0];
 	const year = yearOf(data?.publishedAt);
@@ -1041,7 +1041,7 @@ async function preparePost(
 						...(data.publishedAt
 							? { datePublished: data.publishedAt }
 							: {}),
-						...(coverImage ? { image: absUrl(coverImage) } : {}),
+						...(coverImage ? { image: absUrl(coverImage, baseUrl) } : {}),
 						mainEntityOfPage: pageUrl,
 					},
 					breadcrumb(
@@ -1065,7 +1065,7 @@ async function preparePost(
 		layoutTitle: `${title} — Mahmudul Hasan Riaz`,
 		description,
 		ogType: "article",
-		ogImage: coverImage ? (absUrl(coverImage) ?? null) : null,
+		ogImage: coverImage ? (absUrl(coverImage, baseUrl) ?? null) : null,
 		canonical: pageUrl,
 		jsonLd,
 		data,
@@ -1096,8 +1096,8 @@ export async function prepareDetail(
 	slug: string,
 	fromParam: string | null,
 	t: Dict,
-	// Resolved canonical base (admin site_url via resolveSiteUrl(),
-	// SITE_URL fallback) — threaded from the route, which already
+	// Resolved canonical base (admin site_url via resolveCanonicalBase(),
+	// request host, then SITE_URL fallback) — threaded from the route, which already
 	// fetched the settings once; never fetched again here.
 	baseUrl: string = SITE_URL,
 ): Promise<PreparedDetail> {

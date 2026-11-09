@@ -34,6 +34,14 @@ interface Props {
 	dict?: ProjectsCarouselDict;
 }
 
+// Unsplash card thumbs ship at w=1200 in content/API rows but render at
+// ~360px wide (2x retina ≈ 720px) — request w=800/q=75 instead: measured
+// 124KB → 67KB per image (~46% less). Non-Unsplash URLs pass through.
+const sizedThumb = (url: string | null | undefined, w = 800) =>
+	url?.includes("images.unsplash.com")
+		? url.replace(/w=\d+/, `w=${w}`).replace(/q=\d+/, "q=75")
+		: (url ?? undefined);
+
 const SWIPE_THRESHOLD = 28;
 // Page-flip (preview): one 0.52s turn around the RIGHT edge (the spine),
 // rotateY 0 → +104deg, opacity 1 → 0.2, on a soft paper ease.
@@ -243,9 +251,12 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 									/>
 								) : (
 									<img
-										src={project.thumbnail}
+										src={sizedThumb(project.thumbnail)}
 										alt={project.title}
+										width="800"
+										height="500"
 										loading="lazy"
+										decoding="async"
 										className={loadedThumbs[project.slug] ? "img-loaded" : undefined}
 										onLoad={() => markThumbLoaded(project.slug)}
 										onError={() => markThumbLoaded(project.slug)}
@@ -371,7 +382,7 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 									<div
 										className="deck-peek-thumb"
 										style={{
-											backgroundImage: `url(${peek.thumbnail})`,
+											backgroundImage: `url(${sizedThumb(peek.thumbnail)})`,
 										}}
 									/>
 								)
@@ -420,9 +431,12 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 								/>
 							) : (
 								<img
-									src={current.thumbnail}
+									src={sizedThumb(current.thumbnail)}
 									alt={current.title}
+									width="800"
+									height="500"
 									loading="lazy"
+									decoding="async"
 									className={loadedThumbs[current.slug] ? "img-loaded" : undefined}
 									onLoad={() => markThumbLoaded(current.slug)}
 									onError={() => markThumbLoaded(current.slug)}

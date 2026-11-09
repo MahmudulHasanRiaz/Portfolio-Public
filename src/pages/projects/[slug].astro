@@ -18,7 +18,7 @@ import { formatDate, getProjects } from "../../lib/content";
 import { applySiteCopy, getDict, langUrl } from "../../lib/i18n";
 import { getSiteSettings } from "../../lib/settings";
 import {
-	resolveSiteUrl,
+	resolveCanonicalBase,
 	absUrl,
 	isRealUrl,
 	mergeDetail,
@@ -164,9 +164,9 @@ const thumbOf = (p: (typeof allProjects)[number] | undefined) =>
 		? p.data.thumbnail
 		: null;
 
-// Canonical base: the admin site_url setting wins; resolveSiteUrl()
-// falls back to the live workers.dev base when it is absent/invalid.
-const siteBase = resolveSiteUrl(settings.siteUrl);
+// Canonical base: explicit admin site_url wins; else the request
+// host (Astro.url), else the SITE_URL fallback — see detail.ts.
+const siteBase = resolveCanonicalBase(settings.siteUrl, Astro.url);
 const pageUrl = `${siteBase}/projects/${slug}`;
 const jsonLd = d
 	? {
@@ -179,7 +179,7 @@ const jsonLd = d
 					inLanguage: "en",
 					applicationCategory: "BusinessApplication",
 					url: pageUrl,
-					...(coverImage ? { image: absUrl(coverImage) } : {}),
+					...(coverImage ? { image: absUrl(coverImage, siteBase) } : {}),
 					author: {
 						"@type": "Person",
 						name: "Mahmudul Hasan Riaz",
@@ -221,7 +221,7 @@ const jsonLd = d
 	}
 	description={d?.description}
 	ogType="website"
-	ogImage={coverImage ? absUrl(coverImage) : null}
+	ogImage={coverImage ? absUrl(coverImage, siteBase) : null}
 	canonical={pageUrl}
 	lang={lang}
 >
@@ -251,7 +251,14 @@ const jsonLd = d
 						</div>
 					) : (
 						<div class="detail-hero">
-							<img src={d.thumbnail} alt={d.title} />
+							<img
+								src={d.thumbnail}
+								alt={d.title}
+								fetchpriority="high"
+								decoding="async"
+								srcset={d.thumbnail?.includes("images.unsplash.com") ? `${d.thumbnail.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${d.thumbnail.replace(/q=\d+/, "q=75")} 1200w` : undefined}
+								sizes="(max-width: 640px) 100vw, 1088px"
+							/>
 						</div>
 					))}
 				<h1 class="detail-title">{d.title}</h1>

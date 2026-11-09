@@ -462,7 +462,9 @@ export default function SiteHeader({
 			<p
 				style={{
 					margin: "4px 10px 8px",
-					fontSize: 11,
+					// A11y (2026-11-09): 11 → 12px. Ink-dim already
+					// passes contrast (5.36:1 light / 7.98:1 dark).
+					fontSize: 12,
 					fontWeight: 700,
 					letterSpacing: "0.06em",
 					textTransform: "uppercase",
