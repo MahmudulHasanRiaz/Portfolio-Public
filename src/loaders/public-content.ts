@@ -186,6 +186,68 @@ function toEntry(item: PublicContentItem, type: PublicContentType) {
 	};
 }
 
+/**
+ * Build-prerender live-fetch gate (Run #16 build log, 2026-11-09).
+ *
+ * WHY: during `astro build` every prerendered page paid exactly +16.02s
+ * (2 × the 8s timeout in fetchJson below) — the build machine cannot
+ * reach the Public Content API within 8s, so every build-time fetch
+ * timed out and every caller fell back to build-time .md data anyway.
+ * The build took ~20 min for output that is already 100% build-time
+ * data. Skipping the fetches at build time changes NOTHING in the
+ * output — it only removes the wasted 8s waits per fetch.
+ *
+ * WHEN live fetching is ALLOWED (any one of these):
+ *   - `astro dev` (import.meta.env.DEV) — a developer machine CAN
+ *     reach the API, so local dev keeps live data;
+ *   - running inside the deployed Cloudflare Worker (the
+ *     `cloudflare:workers` runtime env resolves) — on-demand routes
+ *     (/api/settings, /sitemap.xml, the twin SSR fallback) run in the
+ *     Worker and MUST keep fetching live;
+ *   - the PUBLIC_CONTENT_LIVE_BUILD escape hatch is set to "1" as a
+ *     BUILD-time variable (Cloudflare dashboard build vars or .env) —
+ *     for the day the build machine → API network path is fixed.
+ * Otherwise we are in `astro build` prerender (Node, PROD, no Worker
+ * runtime) and the fetch is skipped; every caller below already treats
+ * "no live data" as "use build-time rows", so the output is identical.
+ *
+ * The decision is cached per module instance: the build shares one
+ * module graph across page renders, so one decision covers the whole
+ * build; in the Worker each isolate decides once. NOTE the settings
+ * memo (60s TTL) is a different thing — it only dedupes calls WITHIN
+ * a page render / TTL window; it cannot help the live-collection
+ * fetches, which are unmemoised and were paid in full on every page.
+ * Request-time behaviour is unchanged: the loader, the 8s timeout and
+ * the build-time fallback all stay exactly as they are.
+ */
+let liveFetchDecision: boolean | undefined;
+
+async function isLiveFetchAllowed(): Promise<boolean> {
+	if (liveFetchDecision !== undefined) return liveFetchDecision;
+	const forceLiveBuild = import.meta.env.PUBLIC_CONTENT_LIVE_BUILD as
+		| string
+		| undefined;
+	if (forceLiveBuild === "1") {
+		liveFetchDecision = true;
+		return true;
+	}
+	if (import.meta.env.DEV) {
+		liveFetchDecision = true;
+		return true;
+	}
+	try {
+		// Worker runtime — dynamic import so the Node prerender build
+		// stays green (same pattern as resolveApiBase below).
+		await import("cloudflare:workers");
+		liveFetchDecision = true;
+	} catch {
+		// Not running in a Worker: `astro build` prerender in Node.
+		// Skip the live fetch; callers fall back to build-time data.
+		liveFetchDecision = false;
+	}
+	return liveFetchDecision;
+}
+
 async function fetchJson(
 	url: string,
 	token: string | undefined,
@@ -194,6 +256,9 @@ async function fetchJson(
 	// workerd, and a hanging fetch (TLS/network stall to the API host)
 	// used to stall the whole build for 7+ minutes until it failed.
 	// Failing fast lets the caller fall back to build-time rows.
+	// NOTE: build-time skipping happens at the loader entry points
+	// (isLiveFetchAllowed above) — fetchJson itself still fetches live
+	// whenever it is called, i.e. at request time in the Worker.
 	const res = await fetch(url, {
 		headers: token ? { Authorization: `Bearer ${token}` } : {},
 		signal: AbortSignal.timeout(8000),
@@ -333,6 +398,10 @@ async function fetchPublicSettingsUncached(
 	base?: string,
 	token?: string,
 ): Promise<PublicSettings> {
+	// Build-prerender skip (see isLiveFetchAllowed): the build machine
+	// cannot reach the API, so return the fail-safe defaults at once
+	// instead of waiting out the 8s timeout on every page.
+	if (!(await isLiveFetchAllowed())) return { ...DEFAULT_PUBLIC_SETTINGS };
 	try {
 		const cached: ResolvedBase = { done: false };
 		const apiBase = await resolveApiBase({ apiUrl: base }, cached);
@@ -424,6 +493,10 @@ export function createPublicContentLoader(
 	return {
 		name: `public-content-${type}`,
 		loadCollection: async () => {
+			// Build-prerender skip (see isLiveFetchAllowed): return the
+			// empty result the callers already treat as "no live data"
+			// instead of waiting out the 8s timeout on every page.
+			if (!(await isLiveFetchAllowed())) return { entries: [] };
 			const base = await resolveApiBase(options, cached);
 			if (!base) return { entries: [] };
 			const raw = await fetchJson(`${base}/api/public/content/${type}`, token);
@@ -440,6 +513,9 @@ export function createPublicContentLoader(
 			filter: { id: string };
 			collection: string;
 		}) => {
+			// Build-prerender skip (see isLiveFetchAllowed): same as
+			// loadCollection above — no live entry at build time.
+			if (!(await isLiveFetchAllowed())) return undefined;
 			const base = await resolveApiBase(options, cached);
 			if (!base) return undefined;
 			const raw = await fetchJson(
