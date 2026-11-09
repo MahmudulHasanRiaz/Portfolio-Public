@@ -366,7 +366,7 @@ export default function SiteHeader({
 	// users never tab into an invisible button.
 	// Accessible name must contain the visible label ("BN"/"EN" on
 	// mobile, "EN/BN" on desktop) — label-content-name-mismatch.
-	const langLabel = `${dict.switchLanguage} (EN/BN)`;
+	const langLabel = `${dict.switchLanguage} — EN/BN`;
 	const langBtn = (inert: boolean) => (
 		<a
 			className="corner-btn"
