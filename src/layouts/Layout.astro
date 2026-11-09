@@ -8,7 +8,7 @@ import HomeButton from "../components/HomeButton.astro";
 import ContactModal from "../components/ContactModal";
 import { getSiteSettings } from "../lib/settings";
 import { enPath, getDict, langUrl, pickDict, CONTACT_MODAL_DICT_KEYS, SITE_HEADER_DICT_KEYS, type Lang } from "../lib/i18n";
-import { SITE_URL } from "../lib/detail";
+import { SITE_URL, resolveSiteUrl } from "../lib/detail";
 
 interface Props {
 	title?: string;
@@ -77,15 +77,18 @@ const faviconUrl = settings.faviconUrl ?? "/favicon.svg";
 // "bn" → the Bangla URL; "en" or "system" → the English URL. The
 // admin setting (settings.defaultLanguage) is read at build/request
 // time and never hardcoded here.
-// No noindex on either language (the dev-only robots meta below is
-// the launch gate for the whole site, both languages alike).
-const siteBase = (Astro.site?.toString() ?? SITE_URL).replace(/\/$/, "");
+// The robots meta below is the search-indexing gate for the whole
+// site, both languages alike — driven by the admin toggle
+// (settings.searchIndexingEnabled), not hardcoded.
+const siteBase = resolveSiteUrl(
+	settings.siteUrl ?? Astro.site?.toString() ?? SITE_URL,
+);
 const pathEn = enPath(Astro.url.pathname);
 const urlEn = `${siteBase}${pathEn === "/" ? "/" : pathEn}`;
 const urlBn = `${siteBase}${pathEn === "/" ? "/bn/" : `/bn${pathEn}`}`;
 const xDefaultUrl =
 	settings.defaultLanguage === "bn" ? urlBn : urlEn;
-const canonicalUrl = canonical ?? Astro.url.href;
+const canonicalUrl = canonical ?? (lang === "bn" ? urlBn : urlEn);
 const ogLocale = lang === "bn" ? "bn_BD" : "en_US";
 const ogLocaleAlt = lang === "bn" ? "en_US" : "bn_BD";
 
@@ -111,12 +114,19 @@ const isHome =
 		<link rel="alternate" hreflang="en" href={urlEn} />
 		<link rel="alternate" hreflang="bn" href={urlBn} />
 		<link rel="alternate" hreflang="x-default" href={xDefaultUrl} />
-		<!-- DEV ONLY: keep the in-progress site out of search indexes until launch. Remove at launch. -->
-		<meta name="robots" content="noindex, nofollow" />
+		<!-- Search-indexing gate: admin toggle (settings key
+		     "search_indexing_enabled", read via getSiteSettings()
+		     above — no second fetch). OFF (default) keeps the
+		     in-progress site out of indexes; ON allows indexing.
+		     robots.txt + sitemap.xml.ts honor the same setting. -->
+		<meta
+			name="robots"
+			content={settings.searchIndexingEnabled ? "index, follow" : "noindex, nofollow"}
+		/>
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
 		<meta property="og:type" content={ogType} />
-		<meta property="og:url" content={Astro.url.href} />
+		<meta property="og:url" content={canonicalUrl} />
 		<meta property="og:site_name" content="Mahmudul Hasan Riaz" />
 		<meta property="og:locale" content={ogLocale} />
 		<meta property="og:locale:alternate" content={ogLocaleAlt} />

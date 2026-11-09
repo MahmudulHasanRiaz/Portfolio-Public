@@ -336,9 +336,18 @@ export interface PublicSettings {
 	 * Search-indexing switch (settings key
 	 * "search_indexing_enabled"). Only a real boolean true enables
 	 * indexing; default false = noindex. Consumed by robots meta /
-	 * sitemap — not wired yet.
+	 * robots.txt / sitemap.
 	 */
 	searchIndexingEnabled: boolean;
+	/**
+	 * Canonical site URL (settings key "site_url"; the API
+	 * camelCases it to "siteUrl"). Base for canonical links,
+	 * og:url, JSON-LD and sitemap URLs. Absent / invalid = the
+	 * live workers.dev URL (DEFAULT below). The custom domain
+	 * (mahmudulhasanriaz.com) stays disconnected until dev
+	 * finishes — never set it here.
+	 */
+	siteUrl: string;
 	/** Admin-managed favicon URL (settings key "favicon_url"). Null =
 	    no admin favicon — the public site falls back to its repo
 	    /favicon.svg. */
@@ -372,6 +381,7 @@ export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
 	defaultLanguage: "en",
 	availability: { available: false, badgeText: "Available for projects" },
 	searchIndexingEnabled: false,
+	siteUrl: "https://portfolio-public.riaaz.workers.dev",
 	heroHeadline: "I build products people rely on every day.",
 	heroDescription:
 		"ERP, e-commerce and SaaS systems for businesses in Bangladesh and beyond — designed to hold up at real-world scale.",
@@ -501,6 +511,21 @@ async function fetchPublicSettingsUncached(
 		};
 		const searchIndexingEnabled =
 			record.searchIndexingEnabled === true;
+		// `site_url` (dashboard key; the API camelCases it to
+		// `siteUrl` — accept both spellings). Only a valid http(s)
+		// URL counts; anything else falls back to the live
+		// workers.dev URL so a bad admin value can never poison
+		// canonicals / sitemap / robots.
+		const siteUrlRaw =
+			typeof record.siteUrl === "string" && record.siteUrl.trim()
+				? record.siteUrl.trim()
+				: typeof record.site_url === "string" &&
+					  record.site_url.trim()
+					? record.site_url.trim()
+					: "";
+		const siteUrl = /^https?:\/\/[^/]+\.[^/]{2,}/i.test(siteUrlRaw)
+			? siteUrlRaw.replace(/\/$/, "")
+			: DEFAULT_PUBLIC_SETTINGS.siteUrl;
 		const strField = (v: unknown, fallback: string): string =>
 			typeof v === "string" && v ? v : fallback;
 		const heroHeadline = strField(
@@ -549,6 +574,7 @@ async function fetchPublicSettingsUncached(
 			defaultLanguage,
 			availability,
 			searchIndexingEnabled,
+			siteUrl,
 			heroHeadline,
 			heroDescription,
 			knowMeHeadline,

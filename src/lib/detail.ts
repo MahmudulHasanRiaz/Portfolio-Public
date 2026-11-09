@@ -19,6 +19,24 @@
 export const SITE_URL =
 	"https://portfolio-public.riaaz.workers.dev";
 
+/**
+ * Resolve the site's canonical base URL from the admin setting
+ * (settings key "site_url", parsed as PublicSettings.siteUrl).
+ * Only a valid http(s) URL counts — anything else (absent,
+ * empty, malformed, wrong scheme) falls back to SITE_URL, the
+ * live workers.dev base, so a bad admin value can never poison
+ * canonicals, sitemap or robots. Never returns a trailing slash.
+ * The custom domain (mahmudulhasanriaz.com) stays disconnected
+ * until dev finishes — it arrives here only via the admin setting.
+ */
+export function resolveSiteUrl(siteUrl?: string | null): string {
+	if (typeof siteUrl === "string") {
+		const cleaned = siteUrl.trim().replace(/\/$/, "");
+		if (/^https?:\/\/[^/]+\.[^/]{2,}/i.test(cleaned)) return cleaned;
+	}
+	return SITE_URL;
+}
+
 /** Resolve a stored URL to an absolute URL against the live base. */
 export function absUrl(url: string | null | undefined): string | undefined {
 	if (!url) return undefined;
