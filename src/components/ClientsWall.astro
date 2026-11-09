@@ -1,13 +1,14 @@
 ---
 import { getClients } from "../lib/content";
-import { getDict, localizeData, type Lang } from "../lib/i18n";
+import { applySiteCopy, getDict, localizeData, type Lang } from "../lib/i18n";
+import { getSiteSettings } from "../lib/settings";
 
 interface Props {
 	lang?: Lang;
 }
 
 const { lang = "en" } = Astro.props;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 // Live clients over the build-time CLIENTS fallback — until the API
 // `clients` type exists this is the same 2 rows. Logo renders when

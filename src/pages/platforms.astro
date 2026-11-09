@@ -10,10 +10,11 @@ import Layout from "../layouts/Layout.astro";
 import BrandIcon from "../components/BrandIcon.astro";
 import { PROFILE, type Platform } from "../data/site";
 import { getPlatforms } from "../lib/content";
-import { getDict, langUrl } from "../lib/i18n";
+import { applySiteCopy, getDict, langUrl } from "../lib/i18n";
+import { getSiteSettings } from "../lib/settings";
 
 const lang = "en" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 // Live rows (getPlatforms) over the build-time PLATFORMS fallback —
 // until the API `platforms` type exists this is the same 17 rows.

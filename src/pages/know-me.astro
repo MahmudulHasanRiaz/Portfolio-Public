@@ -18,10 +18,11 @@ import ContactForm from "../components/ContactForm";
 import BrandIcon from "../components/BrandIcon.astro";
 import { PROFILE, PUBLIC_FIGURE_POINTS } from "../data/site";
 import { formatDate, getPlatforms, getPosts, getProjects, getReleases, getServices, readingTimeFromText, truncateShort } from "../lib/content";
-import { getDict, langUrl, pickDict, CONTACT_FORM_DICT_KEYS, readingTimeLabel } from "../lib/i18n";
+import { applySiteCopy, getDict, langUrl, pickDict, CONTACT_FORM_DICT_KEYS, readingTimeLabel } from "../lib/i18n";
+import { getSiteSettings } from "../lib/settings";
 
 const lang = "en" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const releases = (await getReleases()).map((r) => ({
 	slug: r.data.slug,
@@ -67,6 +68,7 @@ const publicFigureTexts = [
 	description={t.knowMeDescription}
 	profile="knowme"
 	lang={lang}
+	services={services}
 >
 	{/* Know Me hero wrapper: page-scoped clearance so the rotating-designation
 	    badge (which hangs 16px below the photo) is never clipped or crowded,
@@ -319,6 +321,6 @@ const publicFigureTexts = [
 		<p class="muted" style="margin:0 0 16px;font-size:14px;">
 			{t.reachOutSub}
 		</p>
-		<ContactForm client:load inline source="know-me-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} />
+		<ContactForm client:load inline source="know-me-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} services={services} />
 	</section>
 </Layout>

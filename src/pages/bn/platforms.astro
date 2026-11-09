@@ -6,10 +6,11 @@ import Layout from "../../layouts/Layout.astro";
 import BrandIcon from "../../components/BrandIcon.astro";
 import { PROFILE, type Platform } from "../../data/site";
 import { getPlatforms } from "../../lib/content";
-import { getDict, langUrl, localizeData } from "../../lib/i18n";
+import { applySiteCopy, getDict, langUrl, localizeData } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
 
 const lang = "bn" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 // Live rows over the build-time fallback; bn overlay per row
 // (subtitle / handle / note from the API `bn`, English fallback).

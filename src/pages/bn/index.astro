@@ -9,7 +9,7 @@ import Combined from "../../components/Combined.astro";
 import ClientsWall from "../../components/ClientsWall.astro";
 import ContactForm from "../../components/ContactForm";
 import { getProjects, getCaseStudies, getPosts, getServices, getTechnologies, formatDate, readingTimeFromText, truncateShort } from "../../lib/content";
-import { getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, PROJECTS_CAROUSEL_DICT_KEYS, STACK_GLOBE_DICT_KEYS, readingTimeLabel } from "../../lib/i18n";
+import { applySiteCopy, getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, PROJECTS_CAROUSEL_DICT_KEYS, STACK_GLOBE_DICT_KEYS, readingTimeLabel } from "../../lib/i18n";
 import { getSiteSettings } from "../../lib/settings";
 import { resolveSiteUrl } from "../../lib/detail";
 import { PROFILE } from "../../data/site";
@@ -20,7 +20,7 @@ import { PROFILE } from "../../data/site";
 // the visitor is here because the URL is /bn/ (or the first-visit
 // script / switcher sent them here).
 const lang = "bn" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const projectsRaw = await getProjects();
 const projects = projectsRaw.map((p) => ({
@@ -79,6 +79,7 @@ const personJsonLd = {
 	description={t.homeDescription}
 	profile="se"
 	lang={lang}
+	services={services}
 >
 	<script type="application/ld+json" set:html={JSON.stringify(personJsonLd)} />
 
@@ -255,7 +256,7 @@ const personJsonLd = {
 			</p>
 		</div>
 		<div style="max-width:520px;margin:24px auto 0;">
-			<ContactForm inline source="homepage-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} client:load />
+			<ContactForm inline source="homepage-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} services={services} client:load />
 		</div>
 	</section>
 </Layout>

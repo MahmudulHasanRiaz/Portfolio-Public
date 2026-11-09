@@ -13,10 +13,11 @@ import ContactForm from "../../components/ContactForm";
 import BrandIcon from "../../components/BrandIcon.astro";
 import { PROFILE, PUBLIC_FIGURE_POINTS } from "../../data/site";
 import { formatDate, getPlatforms, getPosts, getProjects, getReleases, getServices, readingTimeFromText, truncateShort } from "../../lib/content";
-import { getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, readingTimeLabel } from "../../lib/i18n";
+import { applySiteCopy, getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, readingTimeLabel } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
 
 const lang = "bn" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const releasesRaw = await getReleases();
 const releases = releasesRaw.map((r) => {
@@ -76,6 +77,7 @@ const publicFigureTexts = [
 	description={t.knowMeDescription}
 	profile="knowme"
 	lang={lang}
+	services={services}
 >
 	<div class="knowme-hero">
 		<Hero profile="knowme" lang={lang} />
@@ -320,6 +322,6 @@ const publicFigureTexts = [
 		<p class="muted" style="margin:0 0 16px;font-size:14px;">
 			{t.reachOutSub}
 		</p>
-		<ContactForm client:load inline source="know-me-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} />
+		<ContactForm client:load inline source="know-me-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} services={services} />
 	</section>
 </Layout>
