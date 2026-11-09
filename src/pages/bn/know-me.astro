@@ -11,8 +11,8 @@ import Releases from "../../components/Releases.astro";
 import Ventures from "../../components/Ventures.astro";
 import ContactForm from "../../components/ContactForm";
 import BrandIcon from "../../components/BrandIcon.astro";
-import { PLATFORMS, PROFILE, PUBLIC_FIGURE_POINTS } from "../../data/site";
-import { formatDate, getPosts, getProjects, getReleases, getServices, readingTimeFromText, truncateShort } from "../../lib/content";
+import { PROFILE, PUBLIC_FIGURE_POINTS } from "../../data/site";
+import { formatDate, getPlatforms, getPosts, getProjects, getReleases, getServices, readingTimeFromText, truncateShort } from "../../lib/content";
 import { applySiteCopy, getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, readingTimeLabel } from "../../lib/i18n";
 import { getSiteSettings } from "../../lib/settings";
 
@@ -44,8 +44,11 @@ const posts = postsRaw.map((p) => ({
 }));
 const services = await getServices();
 
-const socialPlatforms = PLATFORMS.filter((p) => p.group === "social");
-const musicPlatforms = PLATFORMS.filter((p) => p.group === "music");
+const platforms = (await getPlatforms()).map((p) =>
+	localizeData({ ...p }, lang),
+);
+const socialPlatforms = platforms.filter((p) => p.group === "social");
+const musicPlatforms = platforms.filter((p) => p.group === "music");
 
 // Identity cells: titles from the designation list, texts from the dict.
 const identityCells = [

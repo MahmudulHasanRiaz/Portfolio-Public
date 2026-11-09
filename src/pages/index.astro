@@ -8,7 +8,7 @@ import StackGlobe from "../components/StackGlobe";
 import Combined from "../components/Combined.astro";
 import ClientsWall from "../components/ClientsWall.astro";
 import ContactForm from "../components/ContactForm";
-import { getProjects, getCaseStudies, getPosts, getServices, formatDate, readingTimeFromText, truncateShort } from "../lib/content";
+import { getProjects, getCaseStudies, getPosts, getServices, getTechnologies, formatDate, readingTimeFromText, truncateShort } from "../lib/content";
 import { applySiteCopy, getDict, langUrl, pickDict, CONTACT_FORM_DICT_KEYS, PROJECTS_CAROUSEL_DICT_KEYS, STACK_GLOBE_DICT_KEYS, readingTimeLabel } from "../lib/i18n";
 import { getSiteSettings } from "../lib/settings";
 import { resolveSiteUrl } from "../lib/detail";
@@ -27,6 +27,9 @@ const projects = await getProjects();
 const caseStudies = await getCaseStudies();
 const posts = await getPosts();
 const services = await getServices();
+// Live stack techs over the build-time STACK fallback (globe reads
+// them as a prop — the island itself cannot call getLiveCollection).
+const technologies = await getTechnologies();
 
 // Canonical site URL for the Person JSON-LD: admin setting
 // (site_url) when set, else the live workers.dev base — never the
@@ -152,7 +155,7 @@ const personJsonLd = {
 		) : null
 	}
 
-	<StackGlobe lang={lang} dict={pickDict(t, STACK_GLOBE_DICT_KEYS)} client:load />
+	<StackGlobe lang={lang} dict={pickDict(t, STACK_GLOBE_DICT_KEYS)} techs={technologies} client:load />
 
 	<Combined lang={lang} />
 
