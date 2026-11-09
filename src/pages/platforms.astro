@@ -8,12 +8,17 @@
 // Group titles/blurbs from the dictionary (same keys as the /bn/ page).
 import Layout from "../layouts/Layout.astro";
 import BrandIcon from "../components/BrandIcon.astro";
-import { PLATFORMS, PROFILE, type Platform } from "../data/site";
+import { PROFILE, type Platform } from "../data/site";
+import { getPlatforms } from "../lib/content";
 import { applySiteCopy, getDict, langUrl } from "../lib/i18n";
 import { getSiteSettings } from "../lib/settings";
 
 const lang = "en" as const;
 const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
+
+// Live rows (getPlatforms) over the build-time PLATFORMS fallback —
+// until the API `platforms` type exists this is the same 17 rows.
+const platforms = await getPlatforms();
 
 const groups: { key: Platform["group"]; title: string; blurb: string }[] = [
 	{
@@ -33,7 +38,7 @@ const groups: { key: Platform["group"]; title: string; blurb: string }[] = [
 	},
 ];
 
-const sameAs = PLATFORMS.flatMap((p) => [p.url]);
+const sameAs = platforms.flatMap((p) => [p.url]);
 const jsonLd = {
 	"@context": "https://schema.org",
 	"@type": "Person",
@@ -60,7 +65,7 @@ const jsonLd = {
 
 	{
 		groups.map((group) => {
-			const rows = PLATFORMS.filter((p) => p.group === group.key);
+			const rows = platforms.filter((p) => p.group === group.key);
 			return (
 				<section class="glass section platform-group">
 					<h3>{group.title}</h3>

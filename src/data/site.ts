@@ -16,6 +16,20 @@ export interface Platform {
 	note?: string;
 	/** Descriptive subtitle shown on the All platforms card (preview copy). */
 	subtitle?: string;
+	/** Live flags from the Public Content API (`platforms` type):
+	 * footer primaries + ordering. Absent on build-time rows — the
+	 * footer falls back to the seed five, matched by URL. */
+	is_primary?: boolean;
+	sort_order?: number;
+	/** Optional Bangla variant from the API (same field names as the
+	 * English top level, title → name). Rendered when lang is bn. */
+	bn?: {
+		title?: string;
+		name?: string;
+		subtitle?: string;
+		handle?: string;
+		note?: string;
+	};
 }
 
 export const PROFILE = {
@@ -117,6 +131,9 @@ export interface StackTech {
 	icon: string | null;
 	/** Use, ONLY where he stated one in his own words. Never invent. */
 	use?: string;
+	/** Optional Bangla variant from the API (title → name, use → use).
+	 * `category` is NEVER overlaid — filter state keys stay English. */
+	bn?: { title?: string; name?: string; use?: string };
 }
 
 export const STACK_CATEGORIES: StackCategory[] = [
@@ -341,21 +358,27 @@ export const PLATFORMS: Platform[] = [
 	},
 ];
 
-// Footer primary icons — exactly these 5, in this order.
-export const FOOTER_PRIMARIES: Platform[] = [
-	PLATFORMS.find((p) => p.name === "LinkedIn")!,
-	PLATFORMS.find((p) => p.name === "WhatsApp")!,
-	PLATFORMS.find(
-		(p) => p.name === "Facebook" && p.note === "Professional",
-	)!,
-	PLATFORMS.find((p) => p.name === "GitHub")!,
-	PLATFORMS.find((p) => p.name === "YouTube")!,
-];
+// (No FOOTER_PRIMARIES here: the footer primaries are derived live
+// from the platforms' `is_primary` + `sort_order` — see
+// getFooterPrimaries() in lib/content.ts. The old list matched rows by
+// display name with .find(), which is fragile — two rows are both
+// "Facebook" — so it was deleted, not moved.)
 
-export const CLIENTS = [
+export interface Client {
+	name: string;
+	/** Logo image URL (admin media). Absent = text wordmark. */
+	logo_url?: string;
+	/** Live website URL. Present = the cell links out. */
+	website?: string;
+	sort_order?: number;
+	/** Optional Bangla variant from the API (title → name). */
+	bn?: { title?: string; name?: string };
+}
+
+export const CLIENTS: Client[] = [
 	{ name: "Fixed Plus" },
 	{ name: "Avelto" },
-] as const;
+];
 
 export const PUBLIC_FIGURE_POINTS = [
 	{

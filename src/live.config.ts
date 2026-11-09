@@ -5,7 +5,19 @@
 // fields (gallery, videos, platforms, credits) when the API exists.
 import { defineLiveCollection } from "astro:content";
 import { z } from "astro/zod";
-import { createPublicContentLoader } from "./loaders/public-content";
+import {
+	createPublicContentLoader,
+	type PublicContentType,
+} from "./loaders/public-content";
+
+// The loader's PublicContentType union is owned by T0 (parallel work
+// on src/loaders/public-content.ts); until it gains "platforms" |
+// "technologies" | "clients", bridge with a cast. The loader is
+// runtime-generic — `type` is only interpolated into the API URL — so
+// the cast changes no runtime behaviour. Remove liveType once the
+// union covers the new types.
+const liveType = (type: string): PublicContentType =>
+	type as unknown as PublicContentType;
 
 const platformSchema = z.object({
 	name: z.string(),
@@ -132,4 +144,57 @@ const liveServices = defineLiveCollection({
 	}),
 });
 
-export const collections = { livePosts, liveProjects, liveCaseStudies, liveVentures, liveReleases, liveServices };
+// Platforms / technologies / clients are NOT content collections —
+// their build-time rows live in src/data/site.ts (like SERVICES) and
+// the live rows come from the Public Content API (`platforms` /
+// `technologies` / `clients` types, dashboard side). Both snake_case
+// and camelCase variants are declared: zod strips undeclared live
+// fields, so a naming choice on the dashboard side must never
+// silently drop a row. `meta` is the same safety net — if the API
+// nests type-specific fields there, the merge in lib/content.ts reads
+// them from it.
+const livePlatforms = defineLiveCollection({
+	loader: createPublicContentLoader(liveType("platforms")),
+	schema: baseSchema.extend({
+		url: z.string().optional(),
+		website: z.string().optional(),
+		handle: z.string().optional(),
+		icon: z.string().nullable().optional(),
+		group: z.string().optional(),
+		note: z.string().optional(),
+		subtitle: z.string().optional(),
+		is_primary: z.boolean().optional(),
+		isPrimary: z.boolean().optional(),
+		sort_order: z.number().optional(),
+		sortOrder: z.number().optional(),
+		meta: z.record(z.string(), z.unknown()).optional(),
+	}),
+});
+
+const liveTechnologies = defineLiveCollection({
+	loader: createPublicContentLoader(liveType("technologies")),
+	schema: baseSchema.extend({
+		category: z.string().optional(),
+		icon: z.string().nullable().optional(),
+		use: z.string().optional(),
+		sort_order: z.number().optional(),
+		sortOrder: z.number().optional(),
+		meta: z.record(z.string(), z.unknown()).optional(),
+	}),
+});
+
+const liveClients = defineLiveCollection({
+	loader: createPublicContentLoader(liveType("clients")),
+	schema: baseSchema.extend({
+		logo_url: z.string().optional(),
+		logoUrl: z.string().optional(),
+		logo: z.string().optional(),
+		website: z.string().optional(),
+		url: z.string().optional(),
+		sort_order: z.number().optional(),
+		sortOrder: z.number().optional(),
+		meta: z.record(z.string(), z.unknown()).optional(),
+	}),
+});
+
+export const collections = { livePosts, liveProjects, liveCaseStudies, liveVentures, liveReleases, liveServices, livePlatforms, liveTechnologies, liveClients };

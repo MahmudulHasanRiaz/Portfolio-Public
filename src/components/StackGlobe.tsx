@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { RotateCw, X } from "lucide-react";
 import { getDict, type StackGlobeDict, type Lang } from "../lib/i18n";
 import {
@@ -52,8 +52,8 @@ function easeInOutCubic(t: number): number {
 
 // Rotation that brings technology i to front-and-center, taking the short
 // way from the current Y rotation (nearest equivalent angle).
-function frontTarget(i: number, rotY: number): { rx: number; ry: number } {
-	const p = BASE_POINTS[i];
+function frontTarget(points: Vec[], i: number, rotY: number): { rx: number; ry: number } {
+	const p = points[i];
 	const ryBase = Math.atan2(-p.x, p.z);
 	const rx = Math.atan2(p.y, Math.hypot(p.x, p.z));
 	let ry = ryBase;
@@ -62,7 +62,8 @@ function frontTarget(i: number, rotY: number): { rx: number; ry: number } {
 	return { rx, ry };
 }
 
-const BASE_POINTS = fibonacciSphere(STACK.length);
+// (Sphere points live in the component now — fibonacciSphere over the
+// live techs — so a live row count other than 44 still lays out.)
 
 // Dark-on-transparent logos that render white in dark mode.
 const DARK_INVERT_NAMES = new Set([
@@ -103,7 +104,8 @@ const CATEGORY_LABEL_KEYS: Record<string, keyof StackGlobeDict> = {
 };
 
 // Constellation lines: thin, faint hairlines between related
-// technologies — 20 named pairs, resolved to STACK indices once.
+// technologies — 20 named pairs, resolved to live-row indices inside
+// the component (a pair drops out if the API renames a tech).
 const CONSTELLATION_PAIRS: Array<[string, string]> = [
 	["Next.js", "React"],
 	["React", "TypeScript"],
@@ -127,13 +129,8 @@ const CONSTELLATION_PAIRS: Array<[string, string]> = [
 	["S3/R2", "Cloudflare"],
 ];
 
-const LINE_PAIRS: Array<[number, number]> = CONSTELLATION_PAIRS.flatMap(
-	([a, b]) => {
-		const ia = STACK.findIndex((t) => t.name === a);
-		const ib = STACK.findIndex((t) => t.name === b);
-		return ia >= 0 && ib >= 0 ? [[ia, ib] as [number, number]] : [];
-	},
-);
+// (Line pairs live in the component now — resolved from the live
+// techs — so a renamed / added tech cannot point at a stale index.)
 
 // Filter cluster: matching techs gather on a small sphere in front.
 const CLUSTER_CENTER: Vec = { x: 0, y: 0, z: 0.62 };
@@ -206,11 +203,55 @@ function TechLogo({ tech }: { tech: StackTech }) {
 export default function StackGlobe({
 	lang = "en",
 	dict,
+	techs: techsProp,
 }: {
 	lang?: Lang;
 	/** Subset dict only (Issue 7B) — the 8 keys the globe reads. */
 	dict?: StackGlobeDict;
+	/** Live-merged techs (getTechnologies()); defaults to build-time STACK. */
+	techs?: StackTech[];
 }) {
+	// Live rows win; build-time STACK is the fallback until the API
+	// `technologies` type exists. The prop is fixed for the island's
+	// lifetime (serialised once at SSR), so the sphere points, lines
+	// and categories below are computed once from it.
+	const techs = techsProp ?? STACK;
+	const basePoints = useMemo(
+		() => fibonacciSphere(techs.length),
+		[techs.length],
+	);
+	// Constellation lines: the 20 named pairs, resolved to indices in
+	// the live rows.
+	const linePairs = useMemo<Array<[number, number]>>(
+		() =>
+			CONSTELLATION_PAIRS.flatMap(([a, b]) => {
+				const ia = techs.findIndex((t) => t.name === a);
+				const ib = techs.findIndex((t) => t.name === b);
+				return ia >= 0 && ib >= 0
+					? [[ia, ib] as [number, number]]
+					: [];
+			}),
+		[techs],
+	);
+	// Filter chips derive from the live rows: the known categories in
+	// seed order, then any new category the API adds, in row order.
+	const categories = useMemo(() => {
+		const ordered: string[] = [];
+		const seen = new Set<string>();
+		for (const cat of STACK_CATEGORIES) {
+			if (techs.some((t) => t.category === cat) && !seen.has(cat)) {
+				seen.add(cat);
+				ordered.push(cat);
+			}
+		}
+		for (const t of techs) {
+			if (!seen.has(t.category)) {
+				seen.add(t.category);
+				ordered.push(t.category);
+			}
+		}
+		return ordered;
+	}, [techs]);
 	const t = dict ?? getDict(lang);
 	const catLabel = (cat: string): string => {
 		const key = CATEGORY_LABEL_KEYS[cat];
@@ -218,7 +259,7 @@ export default function StackGlobe({
 	};
 	const [filter, setFilter] = useState("All");
 	const [selected, setSelected] = useState<StackTech | null>(null);
-	const [frontName, setFrontName] = useState(STACK[0].name);
+	const [frontName, setFrontName] = useState(techs[0]?.name ?? "");
 	const [reduced, setReduced] = useState(false);
 	// Skeleton: false until the island has hydrated AND the first
 	// animation frame has positioned every tag. Before that the stage
@@ -232,7 +273,7 @@ export default function StackGlobe({
 	const lineRefs = useRef<Array<SVGLineElement | null>>([]);
 	const rotRef = useRef({ x: 0.25, y: 0 });
 	const velRef = useRef({ x: 0, y: 0 });
-	const curRef = useRef<Vec[]>(BASE_POINTS.map((p) => ({ ...p })));
+	const curRef = useRef<Vec[]>(basePoints.map((p) => ({ ...p })));
 	const resumeAtRef = useRef(0);
 	const readyRef = useRef(false);
 	const landingUntilRef = useRef(0);
@@ -260,7 +301,7 @@ export default function StackGlobe({
 	const downIndexRef = useRef<number | null>(null);
 	const lastPointerRef = useRef({ x: 0, y: 0 });
 	const frontIdxRef = useRef(0);
-	const frontNameRef = useRef(STACK[0].name);
+	const frontNameRef = useRef(techs[0]?.name ?? "");
 	const lastNowRef = useRef<number | null>(null);
 	const filterRef = useRef("All");
 	const selectedRef = useRef<StackTech | null>(null);
@@ -330,7 +371,7 @@ export default function StackGlobe({
 				// converge; flipped signs converge in 21–65 frames for
 				// 20 random starts/targets.
 				const target = rotatePoint(
-					BASE_POINTS[flyToRef.current],
+					basePoints[flyToRef.current],
 					rot.x,
 					rot.y,
 				);
@@ -429,7 +470,7 @@ export default function StackGlobe({
 			let frontIdx = 0;
 			let frontZ = -Infinity;
 
-			for (let i = 0; i < STACK.length; i++) {
+			for (let i = 0; i < techs.length; i++) {
 				let target: Vec;
 				if (filterActive && matchingSet.has(i)) {
 					const k = matching.indexOf(i);
@@ -440,7 +481,7 @@ export default function StackGlobe({
 						z: CLUSTER_CENTER.z + CLUSTER_RADIUS * local.z,
 					};
 				} else {
-					target = rotatePoint(BASE_POINTS[i], rot.x, rot.y);
+					target = rotatePoint(basePoints[i], rot.x, rot.y);
 				}
 
 				if (landing) {
@@ -483,13 +524,13 @@ export default function StackGlobe({
 			const stageW =
 				stageRef.current?.clientWidth || 440;
 			const stageH = stageW; // the stage is square
-			const scales: number[] = new Array(STACK.length);
-			const depths: number[] = new Array(STACK.length);
-			const posX: number[] = new Array(STACK.length);
-			const posY: number[] = new Array(STACK.length);
-			const offX: number[] = new Array(STACK.length).fill(0);
-			const offY: number[] = new Array(STACK.length).fill(0);
-			for (let i = 0; i < STACK.length; i++) {
+			const scales: number[] = new Array(techs.length);
+			const depths: number[] = new Array(techs.length);
+			const posX: number[] = new Array(techs.length);
+			const posY: number[] = new Array(techs.length);
+			const offX: number[] = new Array(techs.length).fill(0);
+			const offY: number[] = new Array(techs.length).fill(0);
+			for (let i = 0; i < techs.length; i++) {
 				const p = cur[i];
 				const depth = (p.z + 1) / 2;
 				depths[i] = depth;
@@ -505,8 +546,8 @@ export default function StackGlobe({
 				posY[i] = 50 + p.y * SPREAD;
 			}
 			for (let pass = 0; pass < 12; pass++) {
-				for (let i = 0; i < STACK.length; i++) {
-					for (let j = i + 1; j < STACK.length; j++) {
+				for (let i = 0; i < techs.length; i++) {
+					for (let j = i + 1; j < techs.length; j++) {
 						// Filter cluster (fix 2026-11-09): matching tags
 						// must keep their exact cluster positions. The
 						// preview has NO collision pass at all — its
@@ -578,7 +619,7 @@ export default function StackGlobe({
 					}
 				}
 			}
-			for (let i = 0; i < STACK.length; i++) {
+			for (let i = 0; i < techs.length; i++) {
 				// Clamp tightened (±10 x / ±8 y, was ±14 / ±10) to match
 				// the wider SPREAD: nudged tags stay on the sphere and
 				// inside the stage instead of being pushed past its edge.
@@ -615,7 +656,7 @@ export default function StackGlobe({
 			}
 
 			// Pass 3: apply positions, scale, opacity and z-order.
-			for (let i = 0; i < STACK.length; i++) {
+			for (let i = 0; i < techs.length; i++) {
 				const el = tagRefs.current[i];
 				if (el) {
 					const depth = depths[i];
@@ -647,18 +688,18 @@ export default function StackGlobe({
 			}
 
 			frontIdxRef.current = frontIdx;
-			if (STACK[frontIdx].name !== frontNameRef.current) {
-				frontNameRef.current = STACK[frontIdx].name;
-				setFrontName(STACK[frontIdx].name);
+			if (techs[frontIdx].name !== frontNameRef.current) {
+				frontNameRef.current = techs[frontIdx].name;
+				setFrontName(techs[frontIdx].name);
 			}
 
 			// Constellation lines follow their tags' final (post-nudge)
 			// positions, fading with depth (never brighter than 0.32)
 			// and with a non-matching filter.
-			for (let k = 0; k < LINE_PAIRS.length; k++) {
+			for (let k = 0; k < linePairs.length; k++) {
 				const line = lineRefs.current[k];
 				if (!line) continue;
-				const [a, b] = LINE_PAIRS[k];
+				const [a, b] = linePairs[k];
 				const pa = cur[a];
 				const pb = cur[b];
 				line.setAttribute("x1", String(posX[a]));
@@ -669,8 +710,8 @@ export default function StackGlobe({
 				let lineOp = 0.32 * Math.pow(Math.max(0, minDepth), 1.4);
 				if (
 					filterActive &&
-					(STACK[a].category !== filterRef.current ||
-						STACK[b].category !== filterRef.current)
+					(techs[a].category !== filterRef.current ||
+						techs[b].category !== filterRef.current)
 				) {
 					lineOp *= 0.2;
 				}
@@ -697,7 +738,7 @@ export default function StackGlobe({
 			movedRef.current = false;
 			return;
 		}
-		const tech = STACK[index];
+		const tech = techs[index];
 		selectedRef.current = tech;
 		setSelected(tech);
 		// Kill any leftover drag velocity at once: the globe must hold
@@ -728,7 +769,7 @@ export default function StackGlobe({
 			matchingRef.current = [];
 			clusterBaseRef.current = [];
 		} else {
-			const matching = STACK.map((t, i) =>
+			const matching = techs.map((t, i) =>
 				t.category === cat ? i : -1,
 			).filter((i) => i >= 0);
 			matchingRef.current = matching;
@@ -818,15 +859,15 @@ export default function StackGlobe({
 		// Fly TWO extra full turns onto a RANDOM tech over 1.5s, then
 		// hold ~2.6s before auto-rotation resumes (the tween's landing
 		// sets resumeAtRef). Repeat taps re-target; velocity never stacks.
-		const target = Math.floor(Math.random() * STACK.length);
+		const target = Math.floor(Math.random() * techs.length);
 		if (reducedRef.current) {
-			const { rx, ry } = frontTarget(target, rotRef.current.y);
+			const { rx, ry } = frontTarget(basePoints, target, rotRef.current.y);
 			rotRef.current.x = rx;
 			rotRef.current.y = ry;
 			resumeAtRef.current = performance.now() + 2600;
 			return;
 		}
-		const { rx, ry } = frontTarget(target, rotRef.current.y);
+		const { rx, ry } = frontTarget(basePoints, target, rotRef.current.y);
 		tweenRef.current = {
 			fx: rotRef.current.x,
 			fy: rotRef.current.y,
@@ -907,7 +948,7 @@ export default function StackGlobe({
 		downIndexRef.current = null;
 	};
 
-	const frontTech = STACK.find((t) => t.name === frontName);
+	const frontTech = techs.find((t) => t.name === frontName);
 
 	return (
 		<section className="glass section" id="stack">
@@ -979,7 +1020,7 @@ export default function StackGlobe({
 					>
 						{t.allChip}
 					</button>
-					{STACK_CATEGORIES.map((cat) => (
+					{categories.map((cat) => (
 						<button
 							key={cat}
 							type="button"
@@ -1054,7 +1095,7 @@ export default function StackGlobe({
 							pointerEvents: "none",
 						}}
 					>
-						{LINE_PAIRS.map(([a, b], k) => (
+						{linePairs.map(([a, b], k) => (
 							<line
 								key={`${a}-${b}`}
 								ref={(el) => {
@@ -1089,7 +1130,7 @@ export default function StackGlobe({
 								}}
 							/>
 						))}
-					{STACK.map((tech, i) => (
+					{techs.map((tech, i) => (
 						<button
 							key={tech.name}
 							type="button"
