@@ -10,6 +10,8 @@ import ClientsWall from "../../components/ClientsWall.astro";
 import ContactForm from "../../components/ContactForm";
 import { getProjects, getCaseStudies, getPosts, getServices, getTechnologies, formatDate, readingTimeFromText, truncateShort } from "../../lib/content";
 import { getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, PROJECTS_CAROUSEL_DICT_KEYS, STACK_GLOBE_DICT_KEYS, readingTimeLabel } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
+import { resolveSiteUrl } from "../../lib/detail";
 import { PROFILE } from "../../data/site";
 
 // Bangla homepage — same sections as the English homepage, in Bangla.
@@ -43,6 +45,12 @@ const technologies = (await getTechnologies()).map((tech) =>
 	localizeData({ ...tech }, lang),
 );
 
+// Canonical site URL for the Person JSON-LD: admin setting
+// (site_url) when set, else the live workers.dev base — never the
+// old riaz.com.bd domain while the site lives on workers.dev.
+const settings = await getSiteSettings();
+const siteUrl = resolveSiteUrl(settings.siteUrl);
+
 const carouselProjects = projects.map((p) => ({
 	slug: p.data.slug,
 	title: p.data.title,
@@ -59,7 +67,7 @@ const personJsonLd = {
 	"@type": "Person",
 	name: PROFILE.name,
 	jobTitle: PROFILE.designations,
-	url: "https://riaz.com.bd/",
+	url: `${siteUrl}/`,
 	email: PROFILE.email,
 	inLanguage: "bn",
 	address: { "@type": "PostalAddress", addressLocality: "Dhaka", addressCountry: "BD" },
