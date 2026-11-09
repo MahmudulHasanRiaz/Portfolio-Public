@@ -47,6 +47,17 @@
 			parseInt(slider.getAttribute("data-per-view") || "1", 10) || 1;
 		var pages = Math.max(1, Math.ceil(slides.length / perView));
 		var counter = slider.querySelector("[data-slider-counter]");
+		// Counter in the page language: the template ("{current} of
+		// {total}" / "{current} / {total}") + language ride on the
+		// slider's data attributes (DetailMedia.astro renders them
+		// from the dictionary); without them, fall back to English.
+		var counterTemplate =
+			slider.getAttribute("data-counter-template") ||
+			"{current} of {total}";
+		var counterLang = slider.getAttribute("data-counter-lang") || "en";
+		var fmtNum = function (n) {
+			return counterLang === "bn" ? n.toLocaleString("bn-BD") : String(n);
+		};
 		var progress = slider.querySelector("[data-slider-progress]");
 		var prev = slider.querySelector("[data-slider-prev]");
 		var next = slider.querySelector("[data-slider-next]");
@@ -68,7 +79,10 @@
 		}
 		function render() {
 			var page = currentPage();
-			if (counter) counter.textContent = page + " of " + pages;
+			if (counter)
+				counter.textContent = counterTemplate
+					.replace("{current}", fmtNum(page))
+					.replace("{total}", fmtNum(pages));
 			if (progress)
 				progress.style.width = (page / pages) * 100 + "%";
 			if (prev) prev.disabled = page <= 1;

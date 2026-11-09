@@ -13,6 +13,12 @@
 // at the top of the page) — a repeated hero slide was a live bug.
 // A video caption shows the video's own title when one exists — never a
 // hardcoded "Demo video" label; there is no demo flag in the data.
+// Slider chrome (aria-labels, prev/next, "N of M" counter, gallery alt
+// text) comes from the dictionary — the counter template + language ride
+// on data attributes so public/js/detail.js can re-render them in the
+// page language on scroll.
+import { getDict, type Dict, type Lang } from "../lib/i18n";
+
 interface VideoItem {
 	url: string;
 	title?: string;
@@ -25,9 +31,29 @@ interface Props {
 	exclude?: string | null;
 	/** Alt-text base for gallery images. */
 	altBase?: string;
+	lang?: Lang;
+	dict?: Dict;
 }
 
-const { gallery = [], videos = [], exclude, altBase = "Gallery image" } = Astro.props;
+const {
+	gallery = [],
+	videos = [],
+	exclude,
+	altBase,
+	lang = "en",
+	dict,
+} = Astro.props;
+const t = dict ?? getDict(lang);
+const base = altBase ?? t.galleryImage;
+
+// Counter text in the page language ("1 of 3" / "১ / ৩") — the same
+// template the client script re-renders from data-counter-template.
+const fmtNum = (n: number) =>
+	lang === "bn" ? n.toLocaleString("bn-BD") : String(n);
+const counterText = (current: number, total: number) =>
+	t.mediaCounter
+		.replace("{current}", fmtNum(current))
+		.replace("{total}", fmtNum(total));
 
 // Same image with different query params (?w=…&q=…) is still the same
 // image — compare without the query string.
@@ -62,13 +88,13 @@ const videoGridClass =
 		<div class="detail-media">
 			{cleanGallery.length > 0 &&
 				(gallerySlider ? (
-					<section class="media-slider" data-media-slider data-per-view={galleryPerView} aria-label="Gallery">
+					<section class="media-slider" data-media-slider data-per-view={galleryPerView} aria-label={t.galleryLabel} data-counter-template={t.mediaCounter} data-counter-lang={lang}>
 						<div class="media-track">
 							{cleanGallery.map((src, i) => (
 								<figure class="media-slide">
 									<img
 										src={src}
-										alt={`${altBase} ${i + 1} of ${cleanGallery.length}`}
+										alt={`${base} ${counterText(i + 1, cleanGallery.length)}`}
 										loading="lazy"
 									/>
 								</figure>
@@ -79,7 +105,7 @@ const videoGridClass =
 								type="button"
 								class="chev-btn"
 								data-slider-prev
-								aria-label="Previous images"
+								aria-label={t.prevImages}
 							>
 								‹
 							</button>
@@ -96,12 +122,12 @@ const videoGridClass =
 								type="button"
 								class="chev-btn"
 								data-slider-next
-								aria-label="Next images"
+								aria-label={t.nextImages}
 							>
 								›
 							</button>
 							<span data-slider-counter class="slider-counter">
-								1 of {Math.ceil(cleanGallery.length / galleryPerView)}
+								{counterText(1, Math.ceil(cleanGallery.length / galleryPerView))}
 							</span>
 						</div>
 					</section>
@@ -111,7 +137,7 @@ const videoGridClass =
 							<figure>
 								<img
 									src={src}
-									alt={`${altBase} ${i + 1} of ${cleanGallery.length}`}
+									alt={`${base} ${counterText(i + 1, cleanGallery.length)}`}
 									loading="lazy"
 								/>
 							</figure>
@@ -121,7 +147,7 @@ const videoGridClass =
 
 			{videos.length > 0 &&
 				(videoSlider ? (
-					<section class="media-slider" data-media-slider data-per-view="2" aria-label="Videos">
+					<section class="media-slider" data-media-slider data-per-view="2" aria-label={t.videosLabel} data-counter-template={t.mediaCounter} data-counter-lang={lang}>
 						<div class="media-track">
 							{videos.map((video) => (
 								<figure class="media-slide">
@@ -142,7 +168,7 @@ const videoGridClass =
 								type="button"
 								class="chev-btn"
 								data-slider-prev
-								aria-label="Previous videos"
+								aria-label={t.prevVideos}
 							>
 								‹
 							</button>
@@ -159,12 +185,12 @@ const videoGridClass =
 								type="button"
 								class="chev-btn"
 								data-slider-next
-								aria-label="Next videos"
+								aria-label={t.nextVideos}
 							>
 								›
 							</button>
 							<span data-slider-counter class="slider-counter">
-								1 of {Math.ceil(videos.length / 2)}
+								{counterText(1, Math.ceil(videos.length / 2))}
 							</span>
 						</div>
 					</section>

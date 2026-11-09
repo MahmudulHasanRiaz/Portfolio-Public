@@ -73,6 +73,10 @@ export const SITE_HEADER_DICT_KEYS = [
 	"switchToDark",
 	"chooseProfile",
 	"resumeRotation",
+	"openMenu",
+	"closeMenu",
+	"mobileNav",
+	"primaryNav",
 ] as const;
 export type SiteHeaderDict = Pick<
 	Dict,
@@ -155,10 +159,44 @@ export const STACK_GLOBE_DICT_KEYS = [
 	"spin",
 	"spinLabel",
 	"close",
+	"globeHint",
+	"catFrontend",
+	"catBackend",
+	"catDatabase",
+	"catCloudTools",
+	"catCmsEcommerce",
+	"catConcepts",
+	"catAuth",
 ] as const;
 export type StackGlobeDict = Pick<
 	Dict,
 	(typeof STACK_GLOBE_DICT_KEYS)[number]
+>;
+
+/** DetailMedia: gallery/video slider labels, counter + alt-text base. */
+export const DETAIL_MEDIA_DICT_KEYS = [
+	"galleryLabel",
+	"videosLabel",
+	"prevImages",
+	"nextImages",
+	"prevVideos",
+	"nextVideos",
+	"mediaCounter",
+	"galleryImage",
+] as const;
+export type DetailMediaDict = Pick<
+	Dict,
+	(typeof DETAIL_MEDIA_DICT_KEYS)[number]
+>;
+
+/** ThemeToggle: light/dark switch labels (aria-label only). */
+export const THEME_TOGGLE_DICT_KEYS = [
+	"switchToLight",
+	"switchToDark",
+] as const;
+export type ThemeToggleDict = Pick<
+	Dict,
+	(typeof THEME_TOGGLE_DICT_KEYS)[number]
 >;
 
 /** ServiceModal: close + handover CTA + spinner label (all optional). */

@@ -259,7 +259,7 @@ const jsonLd = data
 					<img src={data.thumbnail} alt={title} />
 				</div>
 			) : (
-				<div class="audio-tile" aria-label="Audio release">
+				<div class="audio-tile" aria-label={t.audioRelease}>
 					{firstPlatform &&
 					RELEASE_PLATFORM_ICONS[firstPlatform.name] ? (
 						<BrandIcon
@@ -359,7 +359,7 @@ const jsonLd = data
 				</section>
 			) : null}
 
-			<DetailMedia videos={data.videos ?? []} altBase={`${title} video`} />
+			<DetailMedia lang={lang} dict={t} videos={data.videos ?? []} altBase={`${title} video`} />
 
 			<PrevNext
 				prev={

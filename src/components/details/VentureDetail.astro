@@ -102,7 +102,7 @@ const data = view.data;
 		{data.metrics?.length ? (
 			<div
 				class="metrics-band"
-				aria-label={lang === "bn" ? t.allVentures : "Venture metrics"}
+				aria-label={t.ventureMetrics}
 			>
 				{data.metrics.map((metric) => (
 					<div class="metric-card">
@@ -121,10 +121,12 @@ const data = view.data;
 		) : null}
 
 		<DetailMedia
+				lang={lang}
+				dict={t}
 			gallery={data.gallery ?? []}
 			videos={data.videos ?? []}
 			exclude={data.thumbnail}
-			altBase={`${view.title} gallery image`}
+			altBase={`${view.title} ${t.galleryImage}`}
 		/>
 
 		<DetailCta

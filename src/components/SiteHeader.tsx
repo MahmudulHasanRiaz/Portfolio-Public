@@ -523,7 +523,7 @@ export default function SiteHeader({
 	const menu = panel === "menu" ? (
 		<nav
 			className="header-picker header-menu"
-			aria-label="Mobile"
+			aria-label={dict.mobileNav}
 			style={{
 				opacity: panelShown ? 1 : 0,
 				transition: "opacity 240ms ease-out",
@@ -571,7 +571,7 @@ export default function SiteHeader({
 				type="button"
 				className="pill-menu-btn pill-hamb-btn"
 				onClick={() => togglePanel("menu")}
-				aria-label={panel === "menu" ? "Close menu" : "Open menu"}
+				aria-label={panel === "menu" ? dict.closeMenu : dict.openMenu}
 				aria-expanded={panel === "menu"}
 			>
 				<span className="hamb-morph" aria-hidden="true">
@@ -663,7 +663,7 @@ export default function SiteHeader({
 					<ChevronDown size={14} />
 				</span>
 			</button>
-			<nav className="pill-nav" aria-label="Primary">
+			<nav className="pill-nav" aria-label={dict.primaryNav}>
 				{NAV_LINKS.map((l) => (
 					<a key={l.label} href={l.href}>
 						{l.label}

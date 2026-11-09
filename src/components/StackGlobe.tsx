@@ -89,6 +89,19 @@ const CATEGORY_COLORS: Record<string, string> = {
 	Concepts: "#9ca3af",
 };
 
+// Category labels in the page language — the filter STATE keys stay
+// the English names from site.ts (never translated in state), only the
+// rendered chip / card / aria-label text is localised via the dict.
+const CATEGORY_LABEL_KEYS: Record<string, keyof StackGlobeDict> = {
+	Frontend: "catFrontend",
+	Backend: "catBackend",
+	Database: "catDatabase",
+	"Cloud & Tools": "catCloudTools",
+	"CMS & E-commerce": "catCmsEcommerce",
+	Concepts: "catConcepts",
+	Auth: "catAuth",
+};
+
 // Constellation lines: thin, faint hairlines between related
 // technologies — 20 named pairs, resolved to STACK indices once.
 const CONSTELLATION_PAIRS: Array<[string, string]> = [
@@ -199,6 +212,10 @@ export default function StackGlobe({
 	dict?: StackGlobeDict;
 }) {
 	const t = dict ?? getDict(lang);
+	const catLabel = (cat: string): string => {
+		const key = CATEGORY_LABEL_KEYS[cat];
+		return key ? t[key] : cat;
+	};
 	const [filter, setFilter] = useState("All");
 	const [selected, setSelected] = useState<StackTech | null>(null);
 	const [frontName, setFrontName] = useState(STACK[0].name);
@@ -996,7 +1013,7 @@ export default function StackGlobe({
 									verticalAlign: "1px",
 								}}
 							/>
-							{cat}
+							{catLabel(cat)}
 						</button>
 					))}
 				</div>
@@ -1087,7 +1104,7 @@ export default function StackGlobe({
 								// keyboard activation.
 								if (e.detail === 0) handleTap(i);
 							}}
-							aria-label={`${tech.name} — ${tech.category}`}
+							aria-label={`${tech.name} — ${catLabel(tech.category)}`}
 						>
 							<span
 								aria-hidden="true"
@@ -1147,16 +1164,13 @@ export default function StackGlobe({
 							<TechLogo tech={selected} />
 							{selected.name}
 						</h3>
-						<p className="globe-cat">{selected.category}</p>
+						<p className="globe-cat">{catLabel(selected.category)}</p>
 						{selected.use ? (
 							<p className="globe-use">{selected.use}</p>
 						) : null}
 					</div>
 				) : null}
-				<p className="globe-hint">
-					Drag to spin · tap a tech for details — all 44
-					technologies are on the globe.
-				</p>
+				<p className="globe-hint">{t.globeHint}</p>
 			</div>
 		</section>
 	);

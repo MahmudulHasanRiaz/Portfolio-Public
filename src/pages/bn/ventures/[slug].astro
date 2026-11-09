@@ -287,7 +287,7 @@ const jsonLd = data
 			/>
 
 			{data.metrics?.length ? (
-				<div class="metrics-band" aria-label={t.allVentures}>
+				<div class="metrics-band" aria-label={t.ventureMetrics}>
 					{data.metrics.map((metric) => (
 						<div class="metric-card">
 							<strong>{metric.value}</strong>
@@ -305,10 +305,12 @@ const jsonLd = data
 			) : null}
 
 			<DetailMedia
+				lang={lang}
+				dict={t}
 				gallery={data.gallery ?? []}
 				videos={data.videos ?? []}
 				exclude={data.thumbnail}
-				altBase={`${title} gallery image`}
+				altBase={`${title} ${t.galleryImage}`}
 			/>
 
 			<DetailCta

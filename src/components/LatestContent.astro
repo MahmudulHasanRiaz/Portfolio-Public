@@ -4,6 +4,13 @@ import {
 	getPosts,
 	readingTimeFromText,
 } from "../lib/content";
+import {
+	getDict,
+	langUrl,
+	localizeData,
+	readingTimeLabel,
+	type Lang,
+} from "../lib/i18n";
 
 // "Latest" block — preview presentation: cards with thumbnail (or a
 // deliberate monogram tile when a post has none) + tag chip + title +
@@ -11,13 +18,24 @@ import {
 // shows title + other info only. Reading time is computed from the
 // actual post text (body, then live API content), never the stored
 // value on its own — the API ships readingTime: 1 for every post.
-const posts = await getPosts();
+interface Props {
+	lang?: Lang;
+}
+
+const { lang = "en" } = Astro.props;
+const t = getDict(lang);
+
+const postsRaw = await getPosts();
+const posts = postsRaw.map((p) => ({
+	...p,
+	data: localizeData(p.data, lang),
+}));
 const latest = posts.slice(0, 3);
 ---
 
 {
 	latest.length === 0 ? (
-		<p class="empty-state">No posts published yet.</p>
+		<p class="empty-state">{t.emptyPosts}</p>
 	) : (
 		<div class="card-grid">
 			{latest.map((post) => {
@@ -26,7 +44,7 @@ const latest = posts.slice(0, 3);
 				const readingTime =
 					readingTimeFromText(postText) ?? post.data.readingTime ?? undefined;
 				return (
-					<a class="grid-card" href={`/posts/${post.data.slug}`}>
+					<a class="grid-card" href={langUrl(`/posts/${post.data.slug}`, lang)}>
 						<div class="grid-thumb">
 							{post.data.thumbnailType === "video" &&
 							post.data.thumbnail ? (
@@ -59,8 +77,8 @@ const latest = posts.slice(0, 3);
 							) : null}
 							<h3>{post.data.title}</h3>
 							<p class="post-meta">
-								{formatDate(post.data.publishedAt)}
-								{readingTime ? ` · ${readingTime} min read` : ""}
+								{formatDate(post.data.publishedAt, lang)}
+								{readingTime ? ` · ${readingTimeLabel(readingTime, lang)}` : ""}
 							</p>
 						</div>
 					</a>
