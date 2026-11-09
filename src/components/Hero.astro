@@ -1,4 +1,10 @@
 ---
+import { Picture } from "astro:assets";
+// Fallback portrait — imported from public/ DELIBERATELY (not a
+// src/assets/ duplicate): the file stays the single source for the
+// fallback, the post-detail author avatar and the og:image fallback
+// (site.ts / Layout.astro), so no 147KB binary is committed twice.
+import speakerFallback from "../../public/speaker.jpg";
 import { PROFILE, STATS } from "../data/site";
 import { getStats } from "../lib/content";
 import { getSiteSettings, type SettingsBn } from "../lib/settings";
@@ -52,16 +58,39 @@ const designations =
 <section class="glass hero" id="top">
 	<div class="hero-photo-wrap">
 		<div class="hero-photo-frame">
-			<img
-				src={photoUrl}
-				alt={t.photoAlt}
-				width="640"
-				height="800"
-				loading="eager"
-				decoding="async"
-				fetchpriority="high"
-				data-hero-photo
-			/>
+			{/* Build-time fallback portrait: local asset, AVIF/WebP +
+			    responsive widths (PageSpeed 2026-11-10: the 147KB
+			    JPEG was the LCP element, 3.5s on mobile). `priority`
+			    sets loading=eager + decoding=sync + fetchpriority
+			    high; `sizes` is honest to the frame (22rem / 352px
+			    mobile, 5fr column / ~412px desktop). The admin
+			    portrait (live settings) is remote — it cannot go
+			    through the build-time pipeline, so it keeps the plain
+			    <img> (dev / on-demand renders only; the static build
+			    always takes the Picture branch). */}
+			{photoUrl === PROFILE.photo ? (
+				<Picture
+					src={speakerFallback}
+					formats={["avif", "webp"]}
+					widths={[352, 704, 1068]}
+					sizes="(max-width: 1023px) 352px, 412px"
+					quality={75}
+					priority
+					alt={t.photoAlt}
+					data-hero-photo
+				/>
+			) : (
+				<img
+					src={photoUrl}
+					alt={t.photoAlt}
+					width="640"
+					height="800"
+					loading="eager"
+					decoding="async"
+					fetchpriority="high"
+					data-hero-photo
+				/>
+			)}
 			<div class="hero-photo-gradient" aria-hidden="true" />
 			<svg
 				class="hero-runlight"
@@ -172,46 +201,67 @@ const designations =
 	// Live portrait + favicon swap (hybrid live-then-static, live half):
 	// after an admin portrait or favicon update, /api/settings returns
 	// the new URL(s) and the hero photo / browser-tab icon swap without
-	// waiting for a rebuild. Fails silently — no console errors, no
-	// visual change — when the fetch fails or a URL already matches
+	// waiting for a rebuild. DEFERRED until after window load —
+	// PageSpeed 2026-11-10: the /api/settings fetch (2.4s) was the
+	// longest critical-path item and the src swap re-painted the LCP
+	// element at ~3.5s. The fallback photo IS the same speaker photo,
+	// so swapping after load is visually identical and LCP stays on
+	// the fast build-time image. Fails silently — no console errors,
+	// no visual change — when the fetch fails or a URL already matches
 	// the rendered one.
 	(function () {
-		try {
-			fetch("/api/settings", { signal: AbortSignal.timeout(8000) })
-				.then(function (res) {
-					return res.ok ? res.json() : null;
-				})
-				.then(function (data) {
-					if (!data) return;
-					if (
-						typeof data.portraitUrl === "string" &&
-						data.portraitUrl
-					) {
-						var img = document.querySelector("img[data-hero-photo]");
+		function swap() {
+			try {
+				fetch("/api/settings", { signal: AbortSignal.timeout(8000) })
+					.then(function (res) {
+						return res.ok ? res.json() : null;
+					})
+					.then(function (data) {
+						if (!data) return;
 						if (
-							img &&
-							img.getAttribute("src") !== data.portraitUrl
+							typeof data.portraitUrl === "string" &&
+							data.portraitUrl
 						) {
-							img.setAttribute("src", data.portraitUrl);
+							var img = document.querySelector("img[data-hero-photo]");
+							if (
+								img &&
+								img.getAttribute("src") !== data.portraitUrl
+							) {
+								// The hero renders as a <picture>
+								// (AVIF/WebP sources); a bare img.src
+								// change is ignored while a <source>
+								// matches, so drop the sources first.
+								var pic = img.closest("picture");
+								if (pic) {
+									pic
+										.querySelectorAll("source")
+										.forEach(function (s) {
+											s.remove();
+										});
+								}
+								img.setAttribute("src", data.portraitUrl);
+							}
 						}
-					}
-					if (
-						typeof data.faviconUrl === "string" &&
-						data.faviconUrl
-					) {
-						var link = document.querySelector('link[rel="icon"]');
 						if (
-							link &&
-							link.getAttribute("href") !== data.faviconUrl
+							typeof data.faviconUrl === "string" &&
+							data.faviconUrl
 						) {
-							link.setAttribute("href", data.faviconUrl);
+							var link = document.querySelector('link[rel="icon"]');
+							if (
+								link &&
+								link.getAttribute("href") !== data.faviconUrl
+							) {
+								link.setAttribute("href", data.faviconUrl);
+							}
 						}
-					}
-				})
-				.catch(function () {});
-		} catch {
-			/* fetch unavailable — rendered photo / favicon stay */
+					})
+					.catch(function () {});
+			} catch {
+				/* fetch unavailable — rendered photo / favicon stay */
+			}
 		}
+		if (document.readyState === "complete") swap();
+		else window.addEventListener("load", swap);
 	})();
 </script>
 

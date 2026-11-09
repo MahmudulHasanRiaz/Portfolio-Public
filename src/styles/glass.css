@@ -6,7 +6,10 @@
 /* Li Ador Noirrit — Bangla webfont (user-supplied, self-hosted in
    public/fonts/). Plus Jakarta Sans has no Bengali glyphs, so Bengali
    text falls through to this font in the --font stack below; Latin text
-   stays in Plus Jakarta Sans. font-display: swap so text never blocks. */
+   stays in Plus Jakarta Sans Variable — self-hosted via Fontsource
+   (see Layout.astro), NOT Google Fonts, so no render-blocking
+   third-party stylesheet (PageSpeed 2026-11-10: 530ms). font-display:
+   swap so text never blocks. */
 @font-face {
 	font-family: "Li Ador Noirrit";
 	src: url("/fonts/li-ador-noirrit-300.woff2") format("woff2");
@@ -60,7 +63,7 @@
 	--radius-sm: 14px;
 	--radius-xs: 8px;
 	--max-col: 1120px;
-	--font: "Plus Jakarta Sans", "Li Ador Noirrit", system-ui, sans-serif;
+	--font: "Plus Jakarta Sans Variable", "Li Ador Noirrit", system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1332,6 +1335,16 @@ button:focus-visible {
 	   letters transform/opacity, so nothing here can move layout. */
 	contain: layout style;
 	isolation: isolate;
+}
+
+/* The hero <img> renders inside a <picture> (AVIF/WebP sources):
+   the wrapper must fill the frame exactly like the <img> did, or
+   the photo shrinks to the <picture>'s inline size. No visual
+   change — same box, same image. */
+.hero-photo-frame picture {
+	display: block;
+	width: 100%;
+	height: 100%;
 }
 
 /* Preview: the portrait is SHARP-cornered — border-radius 0, no rounding
