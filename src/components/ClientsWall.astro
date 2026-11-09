@@ -1,6 +1,6 @@
 ---
-import { CLIENTS } from "../data/site";
-import { getDict, type Lang } from "../lib/i18n";
+import { getClients } from "../lib/content";
+import { getDict, localizeData, type Lang } from "../lib/i18n";
 
 interface Props {
 	lang?: Lang;
@@ -8,6 +8,14 @@ interface Props {
 
 const { lang = "en" } = Astro.props;
 const t = getDict(lang);
+
+// Live clients over the build-time CLIENTS fallback — until the API
+// `clients` type exists this is the same 2 rows. Logo renders when
+// `logo_url` exists (CSS caps it at 36px), else the text wordmark;
+// the cell links out only when a real `website` exists.
+const clients = (await getClients()).map((c) =>
+	localizeData({ ...c }, lang),
+);
 ---
 
 <section class="glass section" id="clients">
@@ -15,10 +23,24 @@ const t = getDict(lang);
 		<h2>{t.clientsTitle}</h2>
 	</div>
 	<div class="clients-grid">
-		{CLIENTS.map((client) => (
-			<div class="client-cell">
+		{clients.map((client) => {
+			const inner = client.logo_url ? (
+				<img src={client.logo_url} alt={client.name} loading="lazy" />
+			) : (
 				<span class="client-wordmark">{client.name}</span>
-			</div>
-		))}
+			);
+			return client.website ? (
+				<a
+					class="client-cell"
+					href={client.website}
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					{inner}
+				</a>
+			) : (
+				<div class="client-cell">{inner}</div>
+			);
+		})}
 	</div>
 </section>

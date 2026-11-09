@@ -1,7 +1,6 @@
 ---
 import BrandIcon from "./BrandIcon.astro";
-import { PLATFORMS } from "../data/site";
-import { getVentures, truncateShort } from "../lib/content";
+import { getPlatforms, getVentures, truncateShort } from "../lib/content";
 import { getDict, langUrl, localizeData, type Lang } from "../lib/i18n";
 
 interface Props {
@@ -16,7 +15,12 @@ const ventures = venturesRaw.map((v) => ({
 	...v,
 	data: localizeData(v.data, lang),
 }));
-const musicPlatforms = PLATFORMS.filter((p) => p.group === "music");
+// Live music platforms over the build-time fallback (bn overlay on
+// /bn/ — platform names are proper nouns, subtitles localise).
+const platforms = (await getPlatforms()).map((p) =>
+	localizeData({ ...p }, lang),
+);
+const musicPlatforms = platforms.filter((p) => p.group === "music");
 // Preview mini-row copy (authorized preview content): SHORT one-line
 // descriptions that fit in full — the live API's long descriptions
 // get cut off mid-sentence here. Long descriptions stay on the

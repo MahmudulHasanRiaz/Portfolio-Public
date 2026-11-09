@@ -4,11 +4,18 @@
 // handles and subtitles are proper nouns / the platform's own copy.
 import Layout from "../../layouts/Layout.astro";
 import BrandIcon from "../../components/BrandIcon.astro";
-import { PLATFORMS, PROFILE, type Platform } from "../../data/site";
-import { getDict, langUrl } from "../../lib/i18n";
+import { PROFILE, type Platform } from "../../data/site";
+import { getPlatforms } from "../../lib/content";
+import { getDict, langUrl, localizeData } from "../../lib/i18n";
 
 const lang = "bn" as const;
 const t = getDict(lang);
+
+// Live rows over the build-time fallback; bn overlay per row
+// (subtitle / handle / note from the API `bn`, English fallback).
+const platforms = (await getPlatforms()).map((p) =>
+	localizeData({ ...p }, lang),
+);
 
 const groups: { key: Platform["group"]; title: string; blurb: string }[] = [
 	{
@@ -28,7 +35,7 @@ const groups: { key: Platform["group"]; title: string; blurb: string }[] = [
 	},
 ];
 
-const sameAs = PLATFORMS.flatMap((p) => [p.url]);
+const sameAs = platforms.flatMap((p) => [p.url]);
 const jsonLd = {
 	"@context": "https://schema.org",
 	"@type": "Person",
@@ -55,7 +62,7 @@ const jsonLd = {
 
 	{
 		groups.map((group) => {
-			const rows = PLATFORMS.filter((p) => p.group === group.key);
+			const rows = platforms.filter((p) => p.group === group.key);
 			return (
 				<section class="glass section platform-group">
 					<h3>{group.title}</h3>
