@@ -393,11 +393,12 @@ function breadcrumb(
 	archiveUrl: string,
 	title: string,
 	pageUrl: string,
+	baseUrl: string,
 ) {
 	return {
 		"@type": "BreadcrumbList",
 		itemListElement: [
-			{ "@type": "ListItem", position: 1, name: t.homeName, item: SITE_URL },
+			{ "@type": "ListItem", position: 1, name: t.homeName, item: baseUrl },
 			{
 				"@type": "ListItem",
 				position: 2,
@@ -449,6 +450,7 @@ async function prepareProject(
 	slug: string,
 	fromParam: string | null,
 	t: Dict,
+	baseUrl: string,
 ): Promise<ProjectView> {
 	const merged = liveData as unknown as
 		| (ProjectData & Record<string, unknown>)
@@ -506,7 +508,7 @@ async function prepareProject(
 		thumbOfItem,
 	);
 
-	const pageUrl = `${SITE_URL}${lang === "bn" ? "/bn" : ""}/projects/${slug}`;
+	const pageUrl = `${baseUrl}${lang === "bn" ? "/bn" : ""}/projects/${slug}`;
 	const jsonLd = d
 		? {
 				"@context": "https://schema.org",
@@ -522,16 +524,17 @@ async function prepareProject(
 						author: {
 							"@type": "Person",
 							name: "Mahmudul Hasan Riaz",
-							url: SITE_URL,
+							url: baseUrl,
 						},
 						...(d.publishedAt ? { datePublished: d.publishedAt } : {}),
 					},
 					breadcrumb(
 						t,
 						t.allProjects,
-						`${SITE_URL}${lang === "bn" ? "/bn" : ""}/projects`,
+						`${baseUrl}${lang === "bn" ? "/bn" : ""}/projects`,
 						d.title,
 						pageUrl,
+					baseUrl,
 					),
 				],
 			}
@@ -570,6 +573,7 @@ async function prepareCaseStudy(
 	lang: Lang,
 	slug: string,
 	t: Dict,
+	baseUrl: string,
 ): Promise<CaseStudyView> {
 	const merged = liveData as unknown as
 		| (CaseStudyData & Record<string, unknown>)
@@ -624,7 +628,7 @@ async function prepareCaseStudy(
 		thumbOfItem,
 	);
 
-	const pageUrl = `${SITE_URL}${lang === "bn" ? "/bn" : ""}/case-studies/${slug}`;
+	const pageUrl = `${baseUrl}${lang === "bn" ? "/bn" : ""}/case-studies/${slug}`;
 	const jsonLd = d
 		? {
 				"@context": "https://schema.org",
@@ -637,7 +641,7 @@ async function prepareCaseStudy(
 						author: {
 							"@type": "Person",
 							name: "Mahmudul Hasan Riaz",
-							url: SITE_URL,
+							url: baseUrl,
 						},
 						mainEntityOfPage: pageUrl,
 						...(coverImage ? { image: absUrl(coverImage) } : {}),
@@ -645,9 +649,10 @@ async function prepareCaseStudy(
 					breadcrumb(
 						t,
 						t.allCaseStudies,
-						`${SITE_URL}${lang === "bn" ? "/bn" : ""}/case-studies`,
+						`${baseUrl}${lang === "bn" ? "/bn" : ""}/case-studies`,
 						d.title,
 						pageUrl,
+					baseUrl,
 					),
 				],
 			}
@@ -684,6 +689,7 @@ async function prepareVenture(
 	lang: Lang,
 	slug: string,
 	t: Dict,
+	baseUrl: string,
 ): Promise<VentureView> {
 	const merged = liveData as unknown as
 		| (VentureData & Record<string, unknown>)
@@ -738,7 +744,7 @@ async function prepareVenture(
 		data ?? {},
 	);
 
-	const pageUrl = `${SITE_URL}${lang === "bn" ? "/bn" : ""}/ventures/${slug}`;
+	const pageUrl = `${baseUrl}${lang === "bn" ? "/bn" : ""}/ventures/${slug}`;
 	const jsonLd = data
 		? {
 				"@context": "https://schema.org",
@@ -754,9 +760,10 @@ async function prepareVenture(
 					breadcrumb(
 						t,
 						t.allVentures,
-						`${SITE_URL}${lang === "bn" ? "/bn" : ""}/ventures`,
+						`${baseUrl}${lang === "bn" ? "/bn" : ""}/ventures`,
 						title,
 						pageUrl,
+					baseUrl,
 					),
 				],
 			}
@@ -793,6 +800,7 @@ async function prepareRelease(
 	lang: Lang,
 	slug: string,
 	t: Dict,
+	baseUrl: string,
 ): Promise<ReleaseView> {
 	const merged = liveData as unknown as
 		| (ReleaseData & Record<string, unknown>)
@@ -863,7 +871,7 @@ async function prepareRelease(
 		return data?.releaseType ?? "";
 	})();
 
-	const pageUrl = `${SITE_URL}${lang === "bn" ? "/bn" : ""}/releases/${slug}`;
+	const pageUrl = `${baseUrl}${lang === "bn" ? "/bn" : ""}/releases/${slug}`;
 	const jsonLd = data
 		? {
 				"@context": "https://schema.org",
@@ -896,9 +904,10 @@ async function prepareRelease(
 					breadcrumb(
 						t,
 						t.allReleases,
-						`${SITE_URL}${lang === "bn" ? "/bn" : ""}/releases`,
+						`${baseUrl}${lang === "bn" ? "/bn" : ""}/releases`,
 						title,
 						pageUrl,
+					baseUrl,
 					),
 				],
 			}
@@ -936,6 +945,7 @@ async function preparePost(
 	lang: Lang,
 	slug: string,
 	t: Dict,
+	baseUrl: string,
 ): Promise<PostView> {
 	const merged = liveData as unknown as
 		| (PostData & Record<string, unknown>)
@@ -1013,7 +1023,7 @@ async function preparePost(
 		data ?? {},
 	);
 
-	const pageUrl = `${SITE_URL}${lang === "bn" ? "/bn" : ""}/posts/${slug}`;
+	const pageUrl = `${baseUrl}${lang === "bn" ? "/bn" : ""}/posts/${slug}`;
 	const jsonLd = data
 		? {
 				"@context": "https://schema.org",
@@ -1026,7 +1036,7 @@ async function preparePost(
 						author: {
 							"@type": "Person",
 							name: PROFILE.name,
-							url: SITE_URL,
+							url: baseUrl,
 						},
 						...(data.publishedAt
 							? { datePublished: data.publishedAt }
@@ -1037,9 +1047,10 @@ async function preparePost(
 					breadcrumb(
 						t,
 						t.allPosts,
-						`${SITE_URL}${lang === "bn" ? "/bn" : ""}/posts`,
+						`${baseUrl}${lang === "bn" ? "/bn" : ""}/posts`,
 						title,
 						pageUrl,
+					baseUrl,
 					),
 				],
 			}
@@ -1085,17 +1096,21 @@ export async function prepareDetail(
 	slug: string,
 	fromParam: string | null,
 	t: Dict,
+	// Resolved canonical base (admin site_url via resolveSiteUrl(),
+	// SITE_URL fallback) — threaded from the route, which already
+	// fetched the settings once; never fetched again here.
+	baseUrl: string = SITE_URL,
 ): Promise<PreparedDetail> {
 	switch (type) {
 		case "projects":
-			return prepareProject(liveData, lang, slug, fromParam, t);
+			return prepareProject(liveData, lang, slug, fromParam, t, baseUrl);
 		case "case-studies":
-			return prepareCaseStudy(liveData, lang, slug, t);
+			return prepareCaseStudy(liveData, lang, slug, t, baseUrl);
 		case "ventures":
-			return prepareVenture(liveData, lang, slug, t);
+			return prepareVenture(liveData, lang, slug, t, baseUrl);
 		case "releases":
-			return prepareRelease(liveData, lang, slug, t);
+			return prepareRelease(liveData, lang, slug, t, baseUrl);
 		case "posts":
-			return preparePost(liveData, lang, slug, t);
+			return preparePost(liveData, lang, slug, t, baseUrl);
 	}
 }

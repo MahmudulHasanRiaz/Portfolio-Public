@@ -10,7 +10,7 @@ import { getCollection, getEntry, getLiveEntry } from "astro:content";
 import { createPublicContentLoader } from "../../loaders/public-content";
 import { getVentures, formatDate } from "../../lib/content";
 import {
-	SITE_URL,
+	resolveSiteUrl,
 	absUrl,
 	dedupeBlocks,
 	isRealUrl,
@@ -58,7 +58,8 @@ export async function getStaticPaths() {
 }
 
 const lang = "en" as const;
-const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
+const settings = await getSiteSettings();
+const t = applySiteCopy(getDict(lang), lang, settings);
 
 const { slug } = Astro.params;
 if (!slug) Astro.response.status = 404;
@@ -144,7 +145,10 @@ const videoPoster =
 const coverImage =
 	!isVideoThumb && data?.thumbnail ? data.thumbnail : videoPoster;
 
-const pageUrl = `${SITE_URL}/ventures/${slug}`;
+// Canonical base: the admin site_url setting wins; resolveSiteUrl()
+// falls back to the live workers.dev base when it is absent/invalid.
+const siteBase = resolveSiteUrl(settings.siteUrl);
+const pageUrl = `${siteBase}/ventures/${slug}`;
 const jsonLd = data
 	? {
 			"@context": "https://schema.org",
@@ -164,13 +168,13 @@ const jsonLd = data
 							"@type": "ListItem",
 							position: 1,
 							name: "Home",
-							item: SITE_URL,
+							item: siteBase,
 						},
 						{
 							"@type": "ListItem",
 							position: 2,
 							name: t.allVentures,
-							item: `${SITE_URL}/ventures`,
+							item: `${siteBase}/ventures`,
 						},
 						{
 							"@type": "ListItem",

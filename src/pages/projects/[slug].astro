@@ -18,7 +18,7 @@ import { formatDate, getProjects } from "../../lib/content";
 import { applySiteCopy, getDict, langUrl } from "../../lib/i18n";
 import { getSiteSettings } from "../../lib/settings";
 import {
-	SITE_URL,
+	resolveSiteUrl,
 	absUrl,
 	isRealUrl,
 	mergeDetail,
@@ -63,7 +63,8 @@ export async function getStaticPaths() {
 }
 
 const lang = "en" as const;
-const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
+const settings = await getSiteSettings();
+const t = applySiteCopy(getDict(lang), lang, settings);
 
 const { slug } = Astro.params;
 const liveResult = slug
@@ -163,7 +164,10 @@ const thumbOf = (p: (typeof allProjects)[number] | undefined) =>
 		? p.data.thumbnail
 		: null;
 
-const pageUrl = `${SITE_URL}/projects/${slug}`;
+// Canonical base: the admin site_url setting wins; resolveSiteUrl()
+// falls back to the live workers.dev base when it is absent/invalid.
+const siteBase = resolveSiteUrl(settings.siteUrl);
+const pageUrl = `${siteBase}/projects/${slug}`;
 const jsonLd = d
 	? {
 			"@context": "https://schema.org",
@@ -179,7 +183,7 @@ const jsonLd = d
 					author: {
 						"@type": "Person",
 						name: "Mahmudul Hasan Riaz",
-						url: SITE_URL,
+						url: siteBase,
 					},
 					...(d.publishedAt ? { datePublished: d.publishedAt } : {}),
 				},
@@ -190,13 +194,13 @@ const jsonLd = d
 							"@type": "ListItem",
 							position: 1,
 							name: "Home",
-							item: SITE_URL,
+							item: siteBase,
 						},
 						{
 							"@type": "ListItem",
 							position: 2,
 							name: t.allProjects,
-							item: `${SITE_URL}/projects`,
+							item: `${siteBase}/projects`,
 						},
 						{
 							"@type": "ListItem",
