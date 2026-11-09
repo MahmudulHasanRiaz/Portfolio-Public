@@ -1,5 +1,6 @@
 ---
-import { PROFILE } from "../data/site";
+import { PROFILE, STATS } from "../data/site";
+import { getStats } from "../lib/content";
 import { getSiteSettings, type SettingsBn } from "../lib/settings";
 import { applySiteCopy, getDict, type Lang } from "../lib/i18n";
 import HeroDesignation from "./HeroDesignation";
@@ -17,6 +18,18 @@ const isKnowMe = profile === "knowme";
 // unreachable, so the build never breaks.
 const settings = await getSiteSettings();
 const t = applySiteCopy(getDict(lang), lang, settings);
+// Floating stat chips — the NUMBERS are live, the suffix words stay in
+// the dictionary (so Bangla keeps working). Chip 1 derives from the
+// live stats (stats[1] = 80+ Projects): the stats section and the chip
+// share one source of truth. Chip 2 has no structured live source —
+// no ordersPerDay metric exists in any DB row or API response (the
+// "2,000–5,000" range lives only in prose), so it reads
+// settings.heroChips[1] (dashboard migration 0031 seed); the number
+// below is only the build-time fallback for an unreachable API, the
+// same role build-time STATS plays for the stats section.
+const stats = await getStats();
+const chipProjects = stats[1]?.value ?? STATS[1].value;
+const chipOrders = settings.heroChips?.[1] ?? "2,000–5,000";
 const photoUrl = settings.portraitUrl ?? PROFILE.photo;
 // Admin Bangla hero copy (settings.bn) wins over the English settings
 // copy on /bn/ pages; the English settings copy (admin-managed) wins
@@ -143,11 +156,11 @@ const designations =
 	    visible, overlapping the card edge slightly like the preview. */}
 	<div class="hero-photo-float" aria-hidden="true">
 		<div class="hero-photo-float-card">
-			<strong>80+</strong>
+			<strong>{chipProjects}</strong>
 			<span>{t.projectsShipped}</span>
 		</div>
 		<div class="hero-photo-float-card">
-			<strong>2,000–5,000</strong>
+			<strong>{chipOrders}</strong>
 			<span>{t.ordersDaily}</span>
 		</div>
 	</div>

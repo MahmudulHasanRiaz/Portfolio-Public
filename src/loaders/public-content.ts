@@ -306,9 +306,10 @@ export type DefaultLanguage = "en" | "bn" | "system";
  * verified against GET /api/public/settings 2026-11-08). `statsLabels`
  * is positional — [years, projects, clients, releases] — and `null`
  * means "no Bangla yet" for that slot (falls back to the build-time
- * label). EN stat labels are deliberately NOT emitted by the API (the
- * DB seed copy differs from the live Astro copy) — Stats.astro keeps
- * its labels from build-time and only overlays bn.statsLabels.
+ * label). EN stat labels ARE now emitted by the API as top-level
+ * `stats` (dashboard migration 0031 reconciled the DB row to the live
+ * copy) — Stats.astro merges them live over build-time STATS and
+ * still overlays bn.statsLabels per slot.
  */
 export interface SettingsBn {
 	heroHeadline?: string;
@@ -321,6 +322,17 @@ export interface SettingsBn {
 export interface AvailabilitySetting {
 	available: boolean;
 	badgeText: string;
+}
+
+/**
+ * One homepage stat: the proof figure + its English label, from the
+ * homepage_sections "stats" row (dashboard migration 0031 reconciled
+ * the row to the live site copy, so emitting the EN labels no longer
+ * regresses the site).
+ */
+export interface StatItem {
+	value: string;
+	label: string;
 }
 
 export interface PublicSettings {
@@ -364,6 +376,21 @@ export interface PublicSettings {
 	heroDescription: string;
 	knowMeHeadline: string;
 	knowMeSub: string;
+	/**
+	 * Homepage stats (homepage_sections "stats" row), English value +
+	 * label per item, in row order. Absent when the row holds no valid
+	 * item; Stats.astro falls back to build-time STATS. The Bangla
+	 * labels ride in bn.statsLabels, positional over this same row.
+	 */
+	stats?: StatItem[];
+	/**
+	 * Hero floating-chip numbers (settings key `hero_chips`),
+	 * positional [projects, orders] — the two chip numbers only; the
+	 * suffix words stay in the i18n dict so Bangla keeps working.
+	 * Absent when the key is empty; Hero.astro falls back to the live
+	 * stats value (chip 1) / build-time number (chip 2).
+	 */
+	heroChips?: string[];
 	/**
 	 * Optional Bangla settings copy from the admin panel (same field
 	 * names as the English settings copy, plus positional statsLabels).
@@ -544,6 +571,48 @@ async function fetchPublicSettingsUncached(
 			record.knowMeSub,
 			DEFAULT_PUBLIC_SETTINGS.knowMeSub,
 		);
+		// Live stats (dashboard migration 0031 reconciled the DB row
+		// to the live copy): positional [{value, label}]. Entries
+		// without a non-empty string value AND label are dropped;
+		// omitted when nothing survives, so Stats.astro falls back to
+		// build-time STATS. Never throws on a wrong shape.
+		let stats: StatItem[] | undefined;
+		if (Array.isArray(record.stats)) {
+			const parsed = (record.stats as unknown[])
+				.filter(
+					(s): s is { value: unknown; label: unknown } =>
+						!!s &&
+						typeof s === "object" &&
+						typeof (s as { value?: unknown }).value ===
+							"string" &&
+						((s as { value: string }).value as string).trim() !==
+							"" &&
+						typeof (s as { label?: unknown }).label ===
+							"string" &&
+						((s as { label: string }).label as string).trim() !==
+							"",
+				)
+				.map((s) => ({
+					value: (s.value as string).trim(),
+					label: (s.label as string).trim(),
+				}));
+			if (parsed.length > 0) stats = parsed;
+		}
+		// Hero floating-chip numbers (settings key `hero_chips`):
+		// positional [projects, orders] number strings. Non-string /
+		// empty entries are dropped; omitted when nothing survives, so
+		// Hero.astro falls back to the live stats value / build-time
+		// number.
+		let heroChips: string[] | undefined;
+		if (Array.isArray(record.heroChips)) {
+			const parsed = (record.heroChips as unknown[])
+				.filter(
+					(c): c is string =>
+						typeof c === "string" && c.trim() !== "",
+				)
+				.map((c) => c.trim());
+			if (parsed.length > 0) heroChips = parsed;
+		}
 		// Optional `bn` object (omitted when nothing is set): same four
 		// fields in Bangla, plus positional statsLabels. A present but
 		// empty `bn` object carries nothing — drop it so consumers can
@@ -579,6 +648,8 @@ async function fetchPublicSettingsUncached(
 			heroDescription,
 			knowMeHeadline,
 			knowMeSub,
+			...(stats ? { stats } : {}),
+			...(heroChips ? { heroChips } : {}),
 			bn,
 		};
 	} catch {
