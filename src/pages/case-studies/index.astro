@@ -1,13 +1,14 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import { getCaseStudies, truncateShort } from "../../lib/content";
-import { getDict, langUrl } from "../../lib/i18n";
+import { applySiteCopy, getDict, langUrl } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
 
 // Static archive — no filters (one case study now); grid of cards with
 // title + one-line hook, linking to the case-study detail page.
 // Fixed strings from the dictionary (same keys as the /bn/ archive).
 const lang = "en" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const studies = await getCaseStudies();
 ---

@@ -15,7 +15,8 @@ import MarkdownBody from "../../components/MarkdownBody.astro";
 import PrevNext from "../../components/PrevNext.astro";
 import TechChips from "../../components/TechChips.astro";
 import { formatDate, getProjects } from "../../lib/content";
-import { getDict, langUrl } from "../../lib/i18n";
+import { applySiteCopy, getDict, langUrl } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
 import {
 	SITE_URL,
 	absUrl,
@@ -62,7 +63,7 @@ export async function getStaticPaths() {
 }
 
 const lang = "en" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const { slug } = Astro.params;
 const liveResult = slug

@@ -1,7 +1,7 @@
 ---
 import { PROFILE } from "../data/site";
 import { getSiteSettings, type SettingsBn } from "../lib/settings";
-import { getDict, type Lang } from "../lib/i18n";
+import { applySiteCopy, getDict, type Lang } from "../lib/i18n";
 import HeroDesignation from "./HeroDesignation";
 
 interface Props {
@@ -10,13 +10,13 @@ interface Props {
 }
 
 const { profile, lang = "en" } = Astro.props;
-const t = getDict(lang);
 const isKnowMe = profile === "knowme";
 
 // Hero portrait from the admin panel (Public Content API settings).
 // Falls back to the build-time repo portrait when the API is unset or
 // unreachable, so the build never breaks.
 const settings = await getSiteSettings();
+const t = applySiteCopy(getDict(lang), lang, settings);
 const photoUrl = settings.portraitUrl ?? PROFILE.photo;
 // Admin Bangla hero copy (settings.bn) wins over the English settings
 // copy on /bn/ pages; the English settings copy (admin-managed) wins

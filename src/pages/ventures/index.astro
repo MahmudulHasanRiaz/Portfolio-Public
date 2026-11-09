@@ -1,12 +1,13 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import { getVentures, formatDate, truncateShort } from "../../lib/content";
-import { getDict, langUrl, showingLabel } from "../../lib/i18n";
+import { applySiteCopy, getDict, langUrl, showingLabel } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
 
 // Ventures archive — fixed strings from the dictionary (same keys as
 // the /bn/ archive).
 const lang = "en" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const ventures = await getVentures();
 const allTags = [...new Set(ventures.flatMap((v) => v.data.tags ?? []))].sort();

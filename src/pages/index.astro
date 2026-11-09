@@ -9,7 +9,7 @@ import Combined from "../components/Combined.astro";
 import ClientsWall from "../components/ClientsWall.astro";
 import ContactForm from "../components/ContactForm";
 import { getProjects, getCaseStudies, getPosts, getServices, formatDate, readingTimeFromText, truncateShort } from "../lib/content";
-import { getDict, langUrl, pickDict, CONTACT_FORM_DICT_KEYS, PROJECTS_CAROUSEL_DICT_KEYS, STACK_GLOBE_DICT_KEYS, readingTimeLabel } from "../lib/i18n";
+import { applySiteCopy, getDict, langUrl, pickDict, CONTACT_FORM_DICT_KEYS, PROJECTS_CAROUSEL_DICT_KEYS, STACK_GLOBE_DICT_KEYS, readingTimeLabel } from "../lib/i18n";
 import { getSiteSettings } from "../lib/settings";
 import { resolveSiteUrl } from "../lib/detail";
 import { PROFILE } from "../data/site";
@@ -21,7 +21,7 @@ import { PROFILE } from "../data/site";
 // inside Combined as mini-rows/chips, and in full on the Know Me page.)
 // Fixed strings come from the dictionary (same keys as the /bn/ page).
 const lang = "en" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const projects = await getProjects();
 const caseStudies = await getCaseStudies();

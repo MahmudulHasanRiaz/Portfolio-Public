@@ -16,7 +16,8 @@ import {
 	yearOf,
 } from "../../lib/detail";
 import { PROFILE, WIKIMEDIA_LOGOS } from "../../data/site";
-import { getDict, langUrl, pickDict, RELEASE_PLAYER_DICT_KEYS, platformActionLabelLang } from "../../lib/i18n";
+import { applySiteCopy, getDict, langUrl, pickDict, RELEASE_PLAYER_DICT_KEYS, platformActionLabelLang } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
 
 // Static detail route — hybrid live-then-static, ISSUE 7A (plan §2):
 // known slugs are prerendered at build time, so a click serves static
@@ -55,7 +56,7 @@ export async function getStaticPaths() {
 }
 
 const lang = "en" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const { slug } = Astro.params;
 if (!slug) Astro.response.status = 404;

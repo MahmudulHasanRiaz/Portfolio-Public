@@ -7,7 +7,7 @@ import SiteFooter from "../components/SiteFooter.astro";
 import HomeButton from "../components/HomeButton.astro";
 import ContactModal from "../components/ContactModal";
 import { getSiteSettings } from "../lib/settings";
-import { enPath, getDict, langUrl, pickDict, CONTACT_MODAL_DICT_KEYS, SITE_HEADER_DICT_KEYS, type Lang } from "../lib/i18n";
+import { applySiteCopy, enPath, getDict, langUrl, pickDict, CONTACT_MODAL_DICT_KEYS, SITE_HEADER_DICT_KEYS, type Lang } from "../lib/i18n";
 import { SITE_URL, resolveSiteUrl } from "../lib/detail";
 
 interface Props {
@@ -37,12 +37,11 @@ const {
 	canonical,
 } = Astro.props;
 
-const t = getDict(lang);
-
 // OG image: explicit prop wins, then the admin-managed portrait, then
 // the repo speaker photo. A relative admin URL is resolved against the
 // page origin (OG images must be absolute).
 const settings = await getSiteSettings();
+const t = applySiteCopy(getDict(lang), lang, settings);
 const settingsPortrait = settings.portraitUrl
 	? settings.portraitUrl.startsWith("/")
 		? `${Astro.url.origin}${settings.portraitUrl}`
