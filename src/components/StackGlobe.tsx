@@ -272,6 +272,11 @@ export default function StackGlobe({
 	const [ready, setReady] = useState(false);
 
 	const tagRefs = useRef<Array<HTMLButtonElement | null>>([]);
+	// Globe redesign (2026-11-09): each tag is a button hit target
+	// wrapping a visual pill span. Depth scale applies to the PILL
+	// only — the button never scales, so its ≥24px tap target holds
+	// at every depth. Collision + clamp read the pill's size.
+	const pillRefs = useRef<Array<HTMLSpanElement | null>>([]);
 	const stageRef = useRef<HTMLDivElement | null>(null);
 	const lineRefs = useRef<Array<SVGLineElement | null>>([]);
 	const rotRef = useRef({ x: 0.25, y: 0 });
@@ -568,16 +573,20 @@ export default function StackGlobe({
 						) {
 							continue;
 						}
-						const elI = tagRefs.current[i];
-						const elJ = tagRefs.current[j];
+						// Sizes come from the PILL (the visual), not the
+						// button: the button is a larger invisible hit
+						// target, and the collision box must match what
+						// the visitor actually sees.
+						const pillI = pillRefs.current[i];
+						const pillJ = pillRefs.current[j];
 						const wI =
-							(elI?.offsetWidth || 64) * scales[i];
+							(pillI?.offsetWidth || 64) * scales[i];
 						const wJ =
-							(elJ?.offsetWidth || 64) * scales[j];
+							(pillJ?.offsetWidth || 64) * scales[j];
 						const hI =
-							(elI?.offsetHeight || 18) * scales[i];
+							(pillI?.offsetHeight || 18) * scales[i];
 						const hJ =
-							(elJ?.offsetHeight || 18) * scales[j];
+							(pillJ?.offsetHeight || 18) * scales[j];
 						// 1.05 demands a full gap plus a hair of
 						// breathing room between tags (0.92 let them sit
 						// 8% overlapped, which is what stacked the centre
@@ -647,12 +656,12 @@ export default function StackGlobe({
 				// posX/posY afterwards, so they stay attached. Do NOT
 				// use overflow: clip on the stage — it would cut the
 				// orbit ring (inset -7%).
-				const tagEl = tagRefs.current[i];
-				const halfW = tagEl
-					? ((tagEl.offsetWidth * scales[i]) / 2 / stageW) * 100
+				const pillEl = pillRefs.current[i];
+				const halfW = pillEl
+					? ((pillEl.offsetWidth * scales[i]) / 2 / stageW) * 100
 					: 8;
-				const halfH = tagEl
-					? ((tagEl.offsetHeight * scales[i]) / 2 / stageH) * 100
+				const halfH = pillEl
+					? ((pillEl.offsetHeight * scales[i]) / 2 / stageH) * 100
 					: 3;
 				posX[i] = Math.max(halfW, Math.min(100 - halfW, posX[i]));
 				posY[i] = Math.max(halfH, Math.min(100 - halfH, posY[i]));
@@ -668,7 +677,14 @@ export default function StackGlobe({
 					const scale = scales[i];
 					el.style.left = `${posX[i]}%`;
 					el.style.top = `${posY[i]}%`;
-					el.style.transform = `translate(-50%, -50%) scale(${scale})`;
+					// The BUTTON gets translate only — never scale — so
+					// its ≥24px hit area holds at every depth. The depth
+					// scale goes on the visual pill inside it.
+					el.style.transform = "translate(-50%, -50%)";
+					const pillEl = pillRefs.current[i];
+					if (pillEl) {
+						pillEl.style.transform = `scale(${scale})`;
+					}
 					// Front tag sits above everything; nothing may cover it.
 					el.style.zIndex =
 						i === frontIdx
@@ -1164,16 +1180,24 @@ export default function StackGlobe({
 								aria-label={`${tech.name} — ${catLabel(tech.category)}`}
 							>
 								<span
+									className="globe-tag-pill"
 									aria-hidden="true"
-									className="globe-tag-dot"
-									style={{
-										background:
-											CATEGORY_COLORS[tech.category] ??
-											"var(--accent)",
+									ref={(el) => {
+										pillRefs.current[i] = el;
 									}}
-								/>
-								<TechLogo tech={tech} />
-								{tech.name}
+								>
+									<span
+										aria-hidden="true"
+										className="globe-tag-dot"
+										style={{
+											background:
+												CATEGORY_COLORS[tech.category] ??
+												"var(--accent)",
+										}}
+									/>
+									<TechLogo tech={tech} />
+									{tech.name}
+								</span>
 							</button>
 						);
 					})}

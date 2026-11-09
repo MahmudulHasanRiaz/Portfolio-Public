@@ -3194,11 +3194,33 @@ button:focus-visible {
 	}
 }
 
+/* Globe tag hit target (redesign 2026-11-09): the BUTTON is an
+   invisible tap target, ≥24px at every depth (WCAG 2.2 AA target-size
+   minimum). The visual pill lives inside it (.globe-tag-pill) and
+   carries all the pill styling; the button never scales — only the
+   pill does (see StackGlobe pass 3) — so the hit area holds even for
+   back tags at 0.6 scale. */
 .globe-tag {
 	position: absolute;
 	left: 50%;
 	top: 50%;
 	transform: translate(-50%, -50%);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 24px;
+	min-height: 24px;
+	padding: 4px;
+	background: transparent;
+	border: 0;
+	cursor: pointer;
+	will-change: transform, opacity;
+	overflow: visible;
+}
+
+/* The visual pill — the old .globe-tag styling, verbatim. Only this
+   element scales with depth. */
+.globe-tag-pill {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
@@ -3214,14 +3236,13 @@ button:focus-visible {
 	font-weight: 600;
 	line-height: 1.2;
 	white-space: nowrap;
-	cursor: pointer;
-	will-change: transform, opacity;
-	overflow: visible;
+	flex: none;
+	will-change: transform;
 }
 
 /* Logos + names must fit inside the pill, never clip at its edges. */
-.globe-tag img,
-.globe-tag svg {
+.globe-tag-pill img,
+.globe-tag-pill svg {
 	flex: none;
 	flex-shrink: 0;
 	display: block;
@@ -3230,22 +3251,21 @@ button:focus-visible {
 /* Small screens: the stage is ~308px at 390px, so the tags shrink
    (9px, tighter padding) — otherwise 44 full-size pills cannot spread
    without colliding in the small ball.
-   A11y (2026-11-09): the 10px / 9px sizes are KEPT deliberately.
-   12px pills do not fit the sphere (collision relaxation pushes them
-   off the ball), and a 24px-tall hit area per tag would do the same —
-   axe flags the tags under target-size, but enlarging them breaks the
-   globe itself, so this is the documented tradeoff: the tags stay
-   keyboard-operable (Tab + Enter), ink-on-opaque-pill contrast is
-   17.88:1 light / 18.17:1 dark at full opacity, and the front tag
-   (the one a visitor reads) renders ~35% larger. Do NOT "fix" the
-   size without a globe redesign. */
+   A11y (redesign 2026-11-09): the hit area is decoupled from the
+   visual pill — the invisible button is ≥24px tall (4px padding +
+   min-height 24px) while the pill keeps its 9px / 10px sizes, so the
+   tags stay keyboard-operable (Tab + Enter) AND meet the 24px
+   target-size minimum. Scale applies to the pill only, never the
+   button. Ink-on-opaque-pill contrast is 17.88:1 light / 18.17:1
+   dark at full opacity, and the front tag (the one a visitor reads)
+   renders ~35% larger. */
 @media (max-width: 639px) {
-	.globe-tag {
+	.globe-tag-pill {
 		font-size: 9px;
 		padding: 2px 6px;
 		gap: 3px;
 	}
-	.globe-tag img {
+	.globe-tag-pill img {
 		width: 10px;
 		height: 10px;
 	}
@@ -3265,13 +3285,13 @@ button:focus-visible {
 	border-radius: 50%;
 }
 
-.globe-tag img {
+.globe-tag-pill img {
 	width: 12px;
 	height: 12px;
 	object-fit: contain;
 }
 
-.globe-tag.front {
+.globe-tag.front .globe-tag-pill {
 	font-weight: 700;
 	/* Preview spotlight: subtle border + soft halo, NOT a strong teal
 	   border. The front tag reads larger/bolder with a prominent dot. */
@@ -3281,7 +3301,7 @@ button:focus-visible {
 		0 8px 20px rgba(12, 26, 21, 0.14);
 }
 
-.globe-tag.front .globe-tag-dot {
+.globe-tag.front .globe-tag-pill .globe-tag-dot {
 	width: 8px;
 	height: 8px;
 }
