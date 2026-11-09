@@ -12,7 +12,7 @@ import Ventures from "../../components/Ventures.astro";
 import ContactForm from "../../components/ContactForm";
 import BrandIcon from "../../components/BrandIcon.astro";
 import { PLATFORMS, PROFILE, PUBLIC_FIGURE_POINTS } from "../../data/site";
-import { formatDate, getPosts, getProjects, getReleases, readingTimeFromText, truncateShort } from "../../lib/content";
+import { formatDate, getPosts, getProjects, getReleases, getServices, readingTimeFromText, truncateShort } from "../../lib/content";
 import { getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, readingTimeLabel } from "../../lib/i18n";
 
 const lang = "bn" as const;
@@ -41,6 +41,7 @@ const posts = postsRaw.map((p) => ({
 	...p,
 	data: localizeData(p.data, lang),
 }));
+const services = await getServices();
 
 const socialPlatforms = PLATFORMS.filter((p) => p.group === "social");
 const musicPlatforms = PLATFORMS.filter((p) => p.group === "music");
@@ -199,7 +200,7 @@ const publicFigureTexts = [
 
 	<Ventures lang={lang} />
 
-	<Services lang={lang} />
+	<Services services={services} lang={lang} />
 
 	<section class="glass section">
 		<div class="section-head">

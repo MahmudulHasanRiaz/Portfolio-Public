@@ -55,6 +55,9 @@ export interface Service {
 	icon: string | null;
 	/** Lucide icon name when icon is null. */
 	lucide?: string;
+	/** Optional Bangla variant from the API (same field names as the
+	 * English top level). Rendered when lang is bn. */
+	bn?: { title?: string; summary?: string; description?: string };
 }
 
 export const SERVICES: Service[] = [

@@ -120,4 +120,16 @@ const liveReleases = defineLiveCollection({
 	}),
 });
 
-export const collections = { livePosts, liveProjects, liveCaseStudies, liveVentures, liveReleases };
+const liveServices = defineLiveCollection({
+	loader: createPublicContentLoader("services"),
+	schema: baseSchema.extend({
+		summary: z.string().optional(),
+		icon: z.string().optional(),
+		priceRange: z.string().optional(),
+		thumbnailVideoUrl: z.string().optional(),
+		featured: z.boolean().optional(),
+		sortOrder: z.number().optional(),
+	}),
+});
+
+export const collections = { livePosts, liveProjects, liveCaseStudies, liveVentures, liveReleases, liveServices };
