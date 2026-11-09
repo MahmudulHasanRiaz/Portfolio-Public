@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { RotateCw, X } from "lucide-react";
-import { getDict, type Dict, type Lang } from "../lib/i18n";
+import { getDict, type StackGlobeDict, type Lang } from "../lib/i18n";
 import {
 	STACK,
 	STACK_CATEGORIES,
@@ -195,7 +195,8 @@ export default function StackGlobe({
 	dict,
 }: {
 	lang?: Lang;
-	dict?: Dict;
+	/** Subset dict only (Issue 7B) — the 8 keys the globe reads. */
+	dict?: StackGlobeDict;
 }) {
 	const t = dict ?? getDict(lang);
 	const [filter, setFilter] = useState("All");

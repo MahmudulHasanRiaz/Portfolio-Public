@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Play } from "lucide-react";
 import { youtubeEmbed, youtubeThumb } from "../lib/youtube";
-import { getDict, type Dict, type Lang } from "../lib/i18n";
+import { getDict, type ReleasePlayerDict, type Lang } from "../lib/i18n";
 
 // In-page YouTube player. The facade shows the real thumbnail with a play
 // button; clicking swaps it for the privacy-enhanced embed in the same
@@ -16,7 +16,8 @@ export default function ReleasePlayer({
 	youtubeId: string;
 	title: string;
 	lang?: Lang;
-	dict?: Dict;
+	/** Subset dict only (Issue 7B) — playHere + watchOnYouTube. */
+	dict?: ReleasePlayerDict;
 }) {
 	const t = dict ?? getDict(lang);
 	const playLabel = lang === "bn" ? `${title} চালান` : `Play ${title}`;

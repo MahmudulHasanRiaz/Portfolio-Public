@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { SERVICES, simpleIconsUrl, type Service } from "../data/site";
 import { lockBodyScroll, unlockBodyScroll } from "../lib/scrollLock";
-import type { Dict, Lang } from "../lib/i18n";
+import type { ServiceModalDict, Lang } from "../lib/i18n";
 
 interface OpenServiceDetail {
 	slug?: string;
@@ -33,7 +33,8 @@ export default function ServiceModal({
 	dict,
 }: {
 	lang?: Lang;
-	dict?: Dict;
+	/** Subset dict only (Issue 7B) — close + contactAboutService + openingContact. */
+	dict?: ServiceModalDict;
 }) {
 	const [open, setOpen] = useState(false);
 	const [service, setService] = useState<Service | undefined>(undefined);

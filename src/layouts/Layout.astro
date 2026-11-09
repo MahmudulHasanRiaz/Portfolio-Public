@@ -1,11 +1,12 @@
 ---
 import "../styles/glass.css";
 import "../styles/loading.css";
+import { ClientRouter } from "astro:transitions";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter.astro";
 import ContactModal from "../components/ContactModal";
 import { getSiteSettings } from "../lib/settings";
-import { enPath, getDict, type Lang } from "../lib/i18n";
+import { enPath, getDict, pickDict, CONTACT_MODAL_DICT_KEYS, SITE_HEADER_DICT_KEYS, type Lang } from "../lib/i18n";
 import { SITE_URL } from "../lib/detail";
 
 interface Props {
@@ -106,6 +107,12 @@ const ogLocaleAlt = lang === "bn" ? "en_US" : "bn_BD";
 			rel="stylesheet"
 		 />
 		<title>{title}</title>
+		{/* ISSUE 7A: View Transitions — same-origin navigations swap pages
+		    without a full reload (no more blank full-page load on every
+		    click). Also switches on Astro prefetch: hover-prefetch for all
+		    links by default; card links below carry data-astro-prefetch
+		    explicitly too. */}
+		<ClientRouter />
 		<script is:inline define:vars={{ defaultLanguage: settings.defaultLanguage }}>
 			// First-visit language resolution (client-side ONLY — no
 			// server/edge redirect, so crawlers always reach BOTH
@@ -155,27 +162,15 @@ const ogLocaleAlt = lang === "bn" ? "en_US" : "bn_BD";
 			}
 		</script>
 		<style is:global>
-			/* Scroll stability (worker H, 2026-11-08) — footer
-			   bounce-back fix. No JavaScript on the page scrolls the
-			   window (verified: no scrollTo/scrollIntoView anywhere;
-			   the header stuck loop from commit 665a988c is gone —
-			   constant header height, transform-only stuck move), and
-			   the footer has no height-changing animation. What moved
-			   the page was the browser's own overscroll: swiping down
-			   past the bottom (below the footer) rubber-banded and
-			   sprang the page back up, and `html { scroll-behavior:
-			   smooth }` stretched that spring-back into a slow
-			   auto-scroll. overscroll-behavior-y: none stops the
-			   overscroll at both edges (Android Chrome + iOS Safari
-			   16+); the page now simply stops at the bottom and stays
-			   where the visitor left it. (The matching glass.css rule
-			   belongs in src/styles/glass.css next to the html rule —
-			   see the round report; this block lands the fix without
-			   touching that file.) */
-			html,
-			body {
-				overscroll-behavior-y: none;
-			}
+			/* Pull-to-refresh fix (2026-11-09): the old
+			   overscroll-behavior-y: none on html/body lived here and
+			   in glass.css — it disabled pull-to-refresh (an overscroll
+			   gesture), so it is REMOVED from both places and must not
+			   come back. The slow footer spring-back it once guarded
+			   was the scroll-lock gap + header stuck loop, both fixed
+			   separately (reference-counted scrollLock.ts; constant
+			   header height, transform-only stuck move). The remaining
+			   native rubber-band is standard mobile behaviour. */
 		</style>
 	</head>
 	<body>
@@ -185,7 +180,7 @@ const ogLocaleAlt = lang === "bn" ? "en_US" : "bn_BD";
 				current={profile}
 				lang={lang}
 				currentPath={Astro.url.pathname}
-				dict={t}
+				dict={pickDict(t, SITE_HEADER_DICT_KEYS)}
 				client:load
 			/>
 			<main>
@@ -193,7 +188,7 @@ const ogLocaleAlt = lang === "bn" ? "en_US" : "bn_BD";
 			</main>
 			<SiteFooter profile={profile} lang={lang} dict={t} />
 		</div>
-		<ContactModal lang={lang} dict={t} client:load />
+		<ContactModal lang={lang} dict={pickDict(t, CONTACT_MODAL_DICT_KEYS)} client:load />
 		<div id="page-progress" aria-hidden="true"></div>
 		<noscript>
 			<style>

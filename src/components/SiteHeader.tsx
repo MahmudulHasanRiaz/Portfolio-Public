@@ -14,7 +14,7 @@ import {
 	langUrl,
 	otherLangUrl,
 	SITE_LANG_KEY,
-	type Dict,
+	type SiteHeaderDict,
 	type Lang,
 } from "../lib/i18n";
 
@@ -30,7 +30,8 @@ interface SiteHeaderProps {
 	current: ProfileId;
 	lang: Lang;
 	currentPath: string;
-	dict: Dict;
+	/** Subset dict only (Issue 7B) — the 12 nav/profile/theme keys. */
+	dict: SiteHeaderDict;
 }
 
 // Label animation (preview, CORRECTED 2026-11-08 ~18:42): the pill LABEL

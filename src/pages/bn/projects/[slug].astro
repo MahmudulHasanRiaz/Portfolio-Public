@@ -1,6 +1,12 @@
 ---
 import Layout from "../../../layouts/Layout.astro";
-import { getEntry, getLiveEntry, render } from "astro:content";
+import {
+	getCollection,
+	getEntry,
+	getLiveEntry,
+	render,
+} from "astro:content";
+import { createPublicContentLoader } from "../../../loaders/public-content";
 import DetailCta from "../../../components/DetailCta.astro";
 import DetailMedia from "../../../components/DetailMedia.astro";
 import DetailVideoFacade from "../../../components/DetailVideoFacade.astro";
@@ -19,11 +25,44 @@ import {
 } from "../../../lib/detail";
 import { getDict, langUrl, localizeData } from "../../../lib/i18n";
 
-// Bangla on-demand detail route — same hybrid live-then-static as the
-// English route. Bangla fields come from the item's optional nested
-// `bn` object (live API or build-time frontmatter); English is the
-// fallback, never a blank.
-export const prerender = false;
+// Bangla static detail route — same hybrid as the English route.
+// Bangla fields come from the item's optional nested `bn` object (live
+// API or build-time frontmatter); English is the fallback, never a blank.
+// Static detail route — hybrid live-then-static, ISSUE 7A (plan §2):
+// known slugs are prerendered at build time, so a click serves static
+// HTML from the edge instead of waiting on the Worker → slow VPS API
+// (~2.2s TTFB). The body still prefers the live entry when the API is
+// reachable at build time, then the build-time row, then a 404.
+// Route caching is in astro.config.mjs.
+// NOTE: `export const prerender = false` was REMOVED on purpose —
+// Astro only calls getStaticPaths() for prerendered routes, so keeping
+// it made getStaticPaths dead code (no static files were ever built).
+// Trade-off: a slug published after the build 404s until the next
+// rebuild — the on-demand fallback for new slugs needs a twin SSR
+// route with the same pattern (Astro serves the static file when one
+// exists and falls through to the SSR route otherwise).
+export async function getStaticPaths() {
+	// Slugs from the build-time collection AND the live API. When the
+	// live API is unreachable at build time, fall back to build-time
+	// slugs only — the build never fails on the live API.
+	const slugs = new Set<string>();
+	for (const entry of await getCollection("projects")) {
+		slugs.add(entry.data.slug);
+	}
+	try {
+		const { entries } = await createPublicContentLoader(
+			"projects",
+		).loadCollection();
+		for (const entry of entries) {
+			const slug =
+				typeof entry.data.slug === "string" ? entry.data.slug : entry.id;
+			if (slug) slugs.add(slug);
+		}
+	} catch {
+		// Live API unreachable at build time — build-time slugs only.
+	}
+	return [...slugs].map((slug) => ({ params: { slug } }));
+}
 
 const lang = "bn" as const;
 const t = getDict(lang);

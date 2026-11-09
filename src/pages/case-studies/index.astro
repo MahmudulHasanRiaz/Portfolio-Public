@@ -30,7 +30,7 @@ const studies = await getCaseStudies();
 			) : (
 				<div class="card-grid">
 					{studies.map((s) => (
-						<a class="grid-card" href={langUrl(`/case-studies/${s.data.slug}`, lang)}>
+						<a class="grid-card" data-astro-prefetch="hover" href={langUrl(`/case-studies/${s.data.slug}`, lang)}>
 							<div class="grid-thumb">
 								{s.data.thumbnailType === "video" && s.data.thumbnail ? (
 									<video

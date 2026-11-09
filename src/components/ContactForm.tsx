@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { PROFILE, SERVICES } from "../data/site";
 import { leadPayload, validateLead, type LeadError } from "../lib/lead";
-import { getDict, type Dict, type Lang } from "../lib/i18n";
+import { getDict, type ContactFormDict, type Lang } from "../lib/i18n";
 
 interface ContactFormProps {
 	service?: string;
@@ -9,7 +9,8 @@ interface ContactFormProps {
 	/** Render the bare form (used by the Contact section) — no modal chrome. */
 	inline?: boolean;
 	lang?: Lang;
-	dict?: Dict;
+	/** Subset dict only (Issue 7B) — the 22 keys ContactForm reads. */
+	dict?: ContactFormDict;
 }
 
 // The ONE shared contact form — used by the modal and inline in Contact.

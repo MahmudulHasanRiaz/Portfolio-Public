@@ -20,10 +20,40 @@ import {
 
 export type { PublicSettings, PrimaryIdentity, DefaultLanguage, SettingsBn } from "../loaders/public-content";
 
+// Memoised settings fetch (Issue 7B).
+//
+// Layout, Hero and Stats each call getSiteSettings() while rendering ONE
+// page — before this, every call hit the API separately (~1.16 s each
+// on the slow VPS, serialised into the page's TTFB). A single Worker
+// request / build step now fetches settings ONCE:
+//   - concurrent callers share the single in-flight promise, and
+//   - the resolved value is reused for SETTINGS_TTL_MS afterwards.
+// The TTL is deliberately short (60 s, well under the 300 s edge cache
+// on detail pages): settings change rarely via the admin panel, and a
+// stale value can never outlive the edge cache by much. The memo lives
+// in module state, so it is per Worker isolate (warm isolates reuse it
+// up to the TTL; cold isolates fetch once) and per build process (the
+// prerender fetches once per minute instead of once per page).
+// fetchPublicSettings() never throws, so the cached promise never
+// rejects; a failed fetch caches the fail-safe defaults for the TTL.
+const SETTINGS_TTL_MS = 60_000;
+
+let cachedSettings:
+	| { promise: Promise<PublicSettings>; at: number }
+	| undefined;
+
 export async function getSiteSettings(): Promise<PublicSettings> {
-	try {
-		return await fetchPublicSettings();
-	} catch {
-		return { ...DEFAULT_PUBLIC_SETTINGS };
+	const now = Date.now();
+	if (cachedSettings && now - cachedSettings.at < SETTINGS_TTL_MS) {
+		return cachedSettings.promise;
 	}
+	const promise = (async (): Promise<PublicSettings> => {
+		try {
+			return await fetchPublicSettings();
+		} catch {
+			return { ...DEFAULT_PUBLIC_SETTINGS };
+		}
+	})();
+	cachedSettings = { promise, at: now };
+	return promise;
 }

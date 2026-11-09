@@ -49,6 +49,7 @@ const allTags = [...new Set(ventures.flatMap((v) => v.data.tags ?? []))].sort();
 						<a
 							class="grid-card"
 							href={langUrl(`/ventures/${venture.data.slug}`, lang)}
+							data-astro-prefetch="hover"
 							data-tags={(venture.data.tags ?? []).join(",")}
 						>
 							<div class="grid-thumb">

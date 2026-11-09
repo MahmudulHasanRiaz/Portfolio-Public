@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ContactForm from "./ContactForm";
 import { lockBodyScroll, unlockBodyScroll } from "../lib/scrollLock";
-import { getDict, type Dict, type Lang } from "../lib/i18n";
+import { getDict, pickDict, CONTACT_FORM_DICT_KEYS, type ContactModalDict, type Lang } from "../lib/i18n";
 
 interface OpenContactDetail {
 	service?: string;
@@ -37,7 +37,8 @@ export default function ContactModal({
 	dict,
 }: {
 	lang?: Lang;
-	dict?: Dict;
+	/** Subset dict only (Issue 7B) — own 3 keys + the ContactForm keys forwarded below. */
+	dict?: ContactModalDict;
 }) {
 	const t = dict ?? getDict(lang);
 	const [open, setOpen] = useState(false);
@@ -109,7 +110,7 @@ export default function ContactModal({
 				</button>
 				<h2>{t.contactMe}</h2>
 				<p className="modal-sub">{t.modalSub}</p>
-				<ContactForm service={service} source={source} lang={lang} dict={t} />
+				<ContactForm service={service} source={source} lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} />
 			</div>
 		</div>
 	);

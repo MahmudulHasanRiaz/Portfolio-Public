@@ -299,8 +299,37 @@ async function resolveSettingsToken(
  * unset base URL, unreachable API, non-200, malformed payload — it
  * returns the fail-safe defaults so the build and the page keep working
  * on the repo portrait and the Software Engineer profile.
+ *
+ * Memoised (Issue 7B): concurrent callers share one in-flight fetch and
+ * the resolved value is reused for SETTINGS_FETCH_TTL_MS, keyed by the
+ * explicit base URL + token (both usually unset — env resolution happens
+ * inside). This is the same 60 s TTL as getSiteSettings() in
+ * lib/settings.ts and covers the direct caller that bypasses it,
+ * GET /api/settings. The key lives in module state only, never logged.
  */
+const SETTINGS_FETCH_TTL_MS = 60_000;
+
+const settingsFetchCache = new Map<
+	string,
+	{ promise: Promise<PublicSettings>; at: number }
+>();
+
 export async function fetchPublicSettings(
+	base?: string,
+	token?: string,
+): Promise<PublicSettings> {
+	const key = `${base ?? ""}\n${token ?? ""}`;
+	const now = Date.now();
+	const hit = settingsFetchCache.get(key);
+	if (hit && now - hit.at < SETTINGS_FETCH_TTL_MS) {
+		return hit.promise;
+	}
+	const promise = fetchPublicSettingsUncached(base, token);
+	settingsFetchCache.set(key, { promise, at: now });
+	return promise;
+}
+
+async function fetchPublicSettingsUncached(
 	base?: string,
 	token?: string,
 ): Promise<PublicSettings> {

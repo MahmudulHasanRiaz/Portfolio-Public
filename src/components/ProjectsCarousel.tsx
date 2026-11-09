@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 // truncateShort lives in lib/text.ts (no astro:content) — a client
 // island cannot import lib/content.ts (server-only astro:content).
 import { truncateShort } from "../lib/text";
-import { getDict, langUrl, type Dict, type Lang } from "../lib/i18n";
+import { getDict, langUrl, type ProjectsCarouselDict, type Lang } from "../lib/i18n";
 
 // Projects carousel — stacked deck ported from the approved React preview.
 // The page renders the section wrapper (heading + "View all projects →");
@@ -30,7 +30,8 @@ export interface CarouselProject {
 interface Props {
 	projects: CarouselProject[];
 	lang?: Lang;
-	dict?: Dict;
+	/** Subset dict only (Issue 7B) — the 5 keys the carousel reads. */
+	dict?: ProjectsCarouselDict;
 }
 
 const SWIPE_THRESHOLD = 28;

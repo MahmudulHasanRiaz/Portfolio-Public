@@ -18,7 +18,7 @@ import ContactForm from "../components/ContactForm";
 import BrandIcon from "../components/BrandIcon.astro";
 import { PLATFORMS, PROFILE, PUBLIC_FIGURE_POINTS } from "../data/site";
 import { formatDate, getPosts, getProjects, getReleases, readingTimeFromText, truncateShort } from "../lib/content";
-import { getDict, langUrl, readingTimeLabel } from "../lib/i18n";
+import { getDict, langUrl, pickDict, CONTACT_FORM_DICT_KEYS, readingTimeLabel } from "../lib/i18n";
 
 const lang = "en" as const;
 const t = getDict(lang);
@@ -208,7 +208,7 @@ const publicFigureTexts = [
 			projects.length > 0 ? (
 				<div class="card-grid">
 					{projects.map((project) => (
-						<a class="grid-card" href={langUrl(`/projects/${project.data.slug}`, lang)}>
+						<a class="grid-card" data-astro-prefetch="hover" href={langUrl(`/projects/${project.data.slug}`, lang)}>
 							<div class="grid-thumb">
 								{project.data.thumbnailType === "video" && project.data.thumbnail ? (
 									<video
@@ -264,7 +264,7 @@ const publicFigureTexts = [
 						const readingTime =
 							readingTimeFromText(postText) ?? post.data.readingTime ?? undefined;
 						return (
-							<a class="grid-card" href={langUrl(`/posts/${post.data.slug}`, lang)}>
+							<a class="grid-card" data-astro-prefetch="hover" href={langUrl(`/posts/${post.data.slug}`, lang)}>
 								<div class="grid-thumb">
 									{post.data.thumbnailType === "video" && post.data.thumbnail ? (
 										<video
@@ -317,6 +317,6 @@ const publicFigureTexts = [
 		<p class="muted" style="margin:0 0 16px;font-size:14px;">
 			{t.reachOutSub}
 		</p>
-		<ContactForm client:load inline source="know-me-contact" lang={lang} dict={t} />
+		<ContactForm client:load inline source="know-me-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} />
 	</section>
 </Layout>

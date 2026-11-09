@@ -2,7 +2,7 @@
 import { SERVICES } from "../data/site";
 import BrandIcon from "./BrandIcon.astro";
 import ServiceModal from "./ServiceModal";
-import { getDict, type Lang } from "../lib/i18n";
+import { getDict, pickDict, SERVICE_MODAL_DICT_KEYS, type Lang } from "../lib/i18n";
 
 interface Props {
 	lang?: Lang;
@@ -87,7 +87,8 @@ const t = getDict(lang);
 		))}
 	</div>
 	{/* Service detail modal — the brief + CTA live here, not on the card. */}
-	<ServiceModal lang={lang} dict={t} client:load />
+	{/* Subset dict only (Issue 7B): 3 keys, not the whole dictionary. */}
+	<ServiceModal lang={lang} dict={pickDict(t, SERVICE_MODAL_DICT_KEYS)} client:load />
 </section>
 
 <style>

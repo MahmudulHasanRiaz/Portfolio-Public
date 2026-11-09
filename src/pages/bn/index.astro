@@ -9,7 +9,7 @@ import Combined from "../../components/Combined.astro";
 import ClientsWall from "../../components/ClientsWall.astro";
 import ContactForm from "../../components/ContactForm";
 import { getProjects, getCaseStudies, getPosts, formatDate, readingTimeFromText, truncateShort } from "../../lib/content";
-import { getDict, langUrl, localizeData, readingTimeLabel } from "../../lib/i18n";
+import { getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, PROJECTS_CAROUSEL_DICT_KEYS, STACK_GLOBE_DICT_KEYS, readingTimeLabel } from "../../lib/i18n";
 import { PROFILE } from "../../data/site";
 
 // Bangla homepage — same sections as the English homepage, in Bangla.
@@ -84,7 +84,7 @@ const personJsonLd = {
 		{projects.length === 0 ? (
 			<p class="empty-state">{t.emptyProjects}</p>
 		) : (
-			<ProjectsCarousel projects={carouselProjects} lang={lang} dict={t} client:load />
+			<ProjectsCarousel projects={carouselProjects} lang={lang} dict={pickDict(t, PROJECTS_CAROUSEL_DICT_KEYS)} client:load />
 		)}
 	</section>
 
@@ -102,7 +102,7 @@ const personJsonLd = {
 				</div>
 				<div class="card-grid">
 					{caseStudies.map((cs) => (
-						<a class="grid-card" href={langUrl(`/case-studies/${cs.data.slug}`, lang)}>
+						<a class="grid-card" data-astro-prefetch="hover" href={langUrl(`/case-studies/${cs.data.slug}`, lang)}>
 							<div class="grid-thumb">
 								{cs.data.thumbnailType === "video" && cs.data.thumbnail ? (
 									<video
@@ -153,7 +153,7 @@ const personJsonLd = {
 		) : null
 	}
 
-	<StackGlobe lang={lang} dict={t} client:load />
+	<StackGlobe lang={lang} dict={pickDict(t, STACK_GLOBE_DICT_KEYS)} client:load />
 
 	<Combined lang={lang} />
 
@@ -184,7 +184,7 @@ const personJsonLd = {
 						post.data.readingTime ??
 						undefined;
 					return (
-						<a class="grid-card" href={langUrl(`/posts/${post.data.slug}`, lang)}>
+						<a class="grid-card" data-astro-prefetch="hover" href={langUrl(`/posts/${post.data.slug}`, lang)}>
 							<div class="grid-thumb">
 								{post.data.thumbnailType === "video" && post.data.thumbnail ? (
 									<video
@@ -240,7 +240,7 @@ const personJsonLd = {
 			</p>
 		</div>
 		<div style="max-width:520px;margin:24px auto 0;">
-			<ContactForm inline source="homepage-contact" lang={lang} dict={t} client:load />
+			<ContactForm inline source="homepage-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} client:load />
 		</div>
 	</section>
 </Layout>

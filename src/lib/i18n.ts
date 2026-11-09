@@ -23,6 +23,154 @@ export function getDict(lang: Lang): Dict {
 	return lang === "bn" ? bn : en;
 }
 
+// ---------------------------------------------------------------------------
+// Per-island dictionary subsets (Issue 7B).
+//
+// Client islands used to receive the WHOLE dictionary (~223 keys) as a
+// serialised prop — and a page mounts several islands, so the same ~20 KB
+// (EN) / ~30 KB (BN) JSON was embedded in the HTML once per island.
+// Each island below declares exactly the keys it reads (its own render
+// plus any island it forwards props to); call sites pass
+// `pickDict(t, <ISLAND>_DICT_KEYS)` instead of `t`. The prop types are
+// `Pick<Dict, ...>` so a full Dict still type-checks at any call site
+// that has not been converted yet, and an island that reads a key outside
+// its Pick fails `tsc` instead of rendering `undefined` at runtime.
+// The `dict ?? getDict(lang)` fallback inside each island is kept: it
+// only fires when a call site omits `dict` entirely.
+//
+// Key lists are `as const` so the union type and the runtime array can
+// never drift apart.
+// ---------------------------------------------------------------------------
+
+/**
+ * Shallow-pick only `keys` from a dictionary. Missing keys are skipped
+ * (never serialised as `undefined`); a full Dict always carries them.
+ */
+export function pickDict<K extends keyof Dict>(
+	dict: Partial<Dict>,
+	keys: readonly K[],
+): Pick<Dict, K> {
+	const out = {} as Pick<Dict, K>;
+	for (const key of keys) {
+		const value = dict[key];
+		if (value !== undefined) out[key] = value;
+	}
+	return out;
+}
+
+/** SiteHeader (Layout): nav + profile picker + theme/language labels. */
+export const SITE_HEADER_DICT_KEYS = [
+	"profileSe",
+	"profileKnowMe",
+	"navWork",
+	"navVentures",
+	"navNasheed",
+	"navAbout",
+	"navContact",
+	"switchLanguage",
+	"switchToLight",
+	"switchToDark",
+	"chooseProfile",
+	"resumeRotation",
+] as const;
+export type SiteHeaderDict = Pick<
+	Dict,
+	(typeof SITE_HEADER_DICT_KEYS)[number]
+>;
+
+/** ContactForm: every label, placeholder, hint and error string. */
+export const CONTACT_FORM_DICT_KEYS = [
+	"formName",
+	"formNamePlaceholder",
+	"formEmail",
+	"formEmailPlaceholder",
+	"formPhone",
+	"formPhonePlaceholder",
+	"formHintContact",
+	"formService",
+	"formSelectService",
+	"formPreselected",
+	"formMessage",
+	"formMessagePlaceholder",
+	"formSend",
+	"formSending",
+	"formThanks",
+	"formReplyPersonal",
+	"formSendAnother",
+	"formPreferEmail",
+	"formErrorName",
+	"formErrorContact",
+	"formErrorEmail",
+	"formErrorPhone",
+] as const;
+export type ContactFormDict = Pick<
+	Dict,
+	(typeof CONTACT_FORM_DICT_KEYS)[number]
+>;
+
+/**
+ * ContactModal: its own chrome (3 keys) PLUS the ContactForm keys it
+ * forwards to the form it renders — it receives the union and narrows
+ * it back down with pickDict at the ContactForm call site.
+ */
+export const CONTACT_MODAL_DICT_KEYS = [
+	"close",
+	"contactMe",
+	"modalSub",
+	...CONTACT_FORM_DICT_KEYS,
+] as const;
+export type ContactModalDict = Pick<
+	Dict,
+	(typeof CONTACT_MODAL_DICT_KEYS)[number]
+>;
+
+/** ProjectsCarousel: empty/loading states + prev/next + section title. */
+export const PROJECTS_CAROUSEL_DICT_KEYS = [
+	"emptyProjects",
+	"loadingProjects",
+	"nextProject",
+	"previousProject",
+	"projectsTitle",
+] as const;
+export type ProjectsCarouselDict = Pick<
+	Dict,
+	(typeof PROJECTS_CAROUSEL_DICT_KEYS)[number]
+>;
+
+/** ReleasePlayer: facade label + "Watch on YouTube" link. */
+export const RELEASE_PLAYER_DICT_KEYS = ["playHere", "watchOnYouTube"] as const;
+export type ReleasePlayerDict = Pick<
+	Dict,
+	(typeof RELEASE_PLAYER_DICT_KEYS)[number]
+>;
+
+/** StackGlobe: heading, filter UI, Now/Spin labels, detail-card close. */
+export const STACK_GLOBE_DICT_KEYS = [
+	"stackTitle",
+	"stackSub",
+	"stackFilter",
+	"allChip",
+	"nowLabel",
+	"spin",
+	"spinLabel",
+	"close",
+] as const;
+export type StackGlobeDict = Pick<
+	Dict,
+	(typeof STACK_GLOBE_DICT_KEYS)[number]
+>;
+
+/** ServiceModal: close + handover CTA + spinner label (all optional). */
+export const SERVICE_MODAL_DICT_KEYS = [
+	"close",
+	"contactAboutService",
+	"openingContact",
+] as const;
+export type ServiceModalDict = Pick<
+	Dict,
+	(typeof SERVICE_MODAL_DICT_KEYS)[number]
+>;
+
 /** "bn" when the pathname is a Bangla URL, otherwise "en". */
 export function langFromPath(pathname: string): Lang {
 	return pathname === "/bn" || pathname.startsWith("/bn/")

@@ -114,6 +114,7 @@ function releaseYear(publishedAt?: string): string {
 								<a
 									class="release-card-link"
 									href={langUrl(`/releases/${release.data.slug}`, lang)}
+									data-astro-prefetch="hover"
 									aria-label={`${t.viewDetailsFor} ${release.data.title}`}
 								>
 									<span class="release-card-thumb">
