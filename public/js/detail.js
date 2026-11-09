@@ -28,7 +28,15 @@
 	});
 
 	// 2. Media sliders.
-	document.querySelectorAll("[data-media-slider]").forEach(function (slider) {
+	// Re-run on EVERY `astro:page-load`: this file loads once (defer)
+	// and the IIFE's `__detailJsWired` guard means the top-level code
+	// never re-runs — so sliders on a page reached by a 2nd+ client
+	// navigation were never wired. `astro:page-load` fires on every
+	// navigation; the `:not([data-slider-bound])` guard keeps a
+	// slider from being wired twice.
+	function wireSliders() {
+	document.querySelectorAll("[data-media-slider]:not([data-slider-bound])").forEach(function (slider) {
+		slider.setAttribute("data-slider-bound", "");
 		var track = slider.querySelector(".media-track");
 		if (!track) return;
 		var slides = Array.prototype.slice.call(
@@ -82,6 +90,9 @@
 		window.addEventListener("resize", render);
 		render();
 	});
+	}
+	document.addEventListener("astro:page-load", wireSliders);
+	wireSliders();
 
 	// 3. Video facades (project / case-study / venture video thumbnails).
 	document.addEventListener("click", function (event) {

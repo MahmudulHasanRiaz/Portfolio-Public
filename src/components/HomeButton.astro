@@ -47,13 +47,19 @@ const { href, label } = Astro.props;
 	</svg>
 </a>
 <script>
-	// Visibility for [data-home-fab]. Guarded against double-binding
-	// (same pattern as Services.astro): View Transitions re-run
-	// Layout scripts on every navigation, so a button already wired
-	// by an earlier run is skipped. Each run wires only its own
-	// (new) button; listeners on a detached button toggle a detached
-	// node and are harmless.
-	(function () {
+	// Visibility for [data-home-fab].
+	//
+	// Bound on EVERY `astro:page-load` (initial load + every
+	// View-Transitions client navigation). A plain inline IIFE is
+	// NOT enough: Astro dedupes identical inline scripts by
+	// textContent, so it runs on initial load + the 1st client
+	// navigation only — from the 2nd navigation on, a new page's
+	// button was never wired and stayed hidden. `astro:page-load`
+	// fires on every navigation, so the current page's button is
+	// always bound. The `:not([data-home-fab-bound])` guard keeps
+	// a button from being bound twice (the immediate call + the
+	// event can both fire on the first load).
+	function bindHomeFab() {
 		// `const` (not `var`): the `!btn` guard above narrows the
 		// binding for the direct uses below; `update()` re-guards
 		// because TS does not carry narrowing into closures here
@@ -113,5 +119,7 @@ const { href, label } = Astro.props;
 			).observe(footer);
 		}
 		update();
-	})();
+	}
+	document.addEventListener("astro:page-load", bindHomeFab);
+	bindHomeFab();
 </script>
