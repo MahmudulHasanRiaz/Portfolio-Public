@@ -149,7 +149,13 @@ const videoSrc = isVideoThumb
 	? (d?.thumbnailVideoUrl ?? d?.thumbnail)
 	: undefined;
 const videoPoster =
-	isVideoThumb && d?.thumbnailVideoUrl ? (d?.thumbnail ?? null) : null;
+	isVideoThumb &&
+	d?.thumbnailVideoUrl &&
+	d?.thumbnail &&
+	d.thumbnail !== d.thumbnailVideoUrl &&
+	!/\.(mp4|webm|mov|m4v)([?#]|$)/i.test(d.thumbnail)
+		? d.thumbnail
+		: null;
 const coverImage = !isVideoThumb && d?.thumbnail ? d.thumbnail : videoPoster;
 
 // Prev/next by date order (newest first): prev = older, next = newer.

@@ -375,8 +375,12 @@ function videoThumb(data: {
 		? (data?.thumbnailVideoUrl ?? data?.thumbnail)
 		: undefined;
 	const videoPoster =
-		isVideoThumb && data?.thumbnailVideoUrl
-			? (data?.thumbnail ?? null)
+		isVideoThumb &&
+		data?.thumbnailVideoUrl &&
+		data?.thumbnail &&
+		data.thumbnail !== data.thumbnailVideoUrl &&
+		!/\.(mp4|webm|mov|m4v)([?#]|$)/i.test(data.thumbnail)
+			? data.thumbnail
 			: null;
 	const coverImage =
 		!isVideoThumb && data?.thumbnail ? data.thumbnail : videoPoster;

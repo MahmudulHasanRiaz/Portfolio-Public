@@ -18,6 +18,13 @@ interface Props {
 }
 
 const { src, poster, title, lang = "en", dict } = Astro.props;
+// Defense-in-depth: a poster must never be a video URL. If the poster
+// is the video itself (or looks like a video file), treat it as absent
+// so no broken <img> renders and no <video poster> is set.
+const safePoster =
+	poster && poster !== src && !/\.(mp4|webm|mov|m4v)([?#]|$)/i.test(poster)
+		? poster
+		: null;
 const t = dict ?? getDict(lang);
 const playLabel = lang === "bn" ? `${title} চালান` : `Play ${title}`;
 ---
@@ -27,11 +34,11 @@ const playLabel = lang === "bn" ? `${title} চালান` : `Play ${title}`;
 	class="video-facade"
 	data-video-facade
 	data-src={src}
-	data-poster={poster ?? ""}
+	data-poster={safePoster ?? ""}
 	aria-label={playLabel}
 >
-	{poster ? (
-		<img src={poster} alt={title} loading="lazy" />
+	{safePoster ? (
+		<img src={safePoster} alt={title} loading="lazy" />
 	) : (
 		<span class="video-facade-tile" aria-hidden="true">
 			<svg
