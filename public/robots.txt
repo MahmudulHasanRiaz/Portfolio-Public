@@ -1,8 +1,0 @@
-# DEV ONLY — block indexing until launch. Remove at launch.
-# The sitemap below already lists BOTH language versions (EN + /bn/)
-# with hreflang alternates, so when the Disallow is removed at launch
-# both languages are crawlable with no further robots change.
-User-agent: *
-Disallow: /
-
-Sitemap: https://portfolio-public.mahmudriaz-bd.workers.dev/sitemap.xml
