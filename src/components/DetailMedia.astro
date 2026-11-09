@@ -128,6 +128,7 @@ const videoGridClass =
 									<video
 										src={video.url}
 										controls
+										controlslist="nodownload"
 										preload="metadata"
 									/>
 									{video.title && (
@@ -171,7 +172,7 @@ const videoGridClass =
 					<div class={`media-grid ${videoGridClass}`}>
 						{videos.map((video) => (
 							<figure>
-								<video src={video.url} controls preload="metadata" />
+								<video src={video.url} controls controlslist="nodownload" preload="metadata" />
 								{video.title && (
 									<figcaption>{video.title}</figcaption>
 								)}

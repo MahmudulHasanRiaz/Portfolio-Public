@@ -154,11 +154,12 @@ const designations =
 </section>
 
 <script is:inline>
-	// Live portrait swap (hybrid live-then-static, live half): after an
-	// admin portrait update, /api/settings returns the new URL and the
-	// hero photo swaps without waiting for a rebuild. Fails silently —
-	// no console errors, no visual change — when the fetch fails or the
-	// URL already matches the rendered photo.
+	// Live portrait + favicon swap (hybrid live-then-static, live half):
+	// after an admin portrait or favicon update, /api/settings returns
+	// the new URL(s) and the hero photo / browser-tab icon swap without
+	// waiting for a rebuild. Fails silently — no console errors, no
+	// visual change — when the fetch fails or a URL already matches
+	// the rendered one.
 	(function () {
 		try {
 			fetch("/api/settings", { signal: AbortSignal.timeout(8000) })
@@ -166,21 +167,35 @@ const designations =
 					return res.ok ? res.json() : null;
 				})
 				.then(function (data) {
+					if (!data) return;
 					if (
-						!data ||
-						typeof data.portraitUrl !== "string" ||
-						!data.portraitUrl
-					)
-						return;
-					var img = document.querySelector("img[data-hero-photo]");
-					if (!img) return;
-					if (img.getAttribute("src") !== data.portraitUrl) {
-						img.setAttribute("src", data.portraitUrl);
+						typeof data.portraitUrl === "string" &&
+						data.portraitUrl
+					) {
+						var img = document.querySelector("img[data-hero-photo]");
+						if (
+							img &&
+							img.getAttribute("src") !== data.portraitUrl
+						) {
+							img.setAttribute("src", data.portraitUrl);
+						}
+					}
+					if (
+						typeof data.faviconUrl === "string" &&
+						data.faviconUrl
+					) {
+						var link = document.querySelector('link[rel="icon"]');
+						if (
+							link &&
+							link.getAttribute("href") !== data.faviconUrl
+						) {
+							link.setAttribute("href", data.faviconUrl);
+						}
 					}
 				})
 				.catch(function () {});
 		} catch {
-			/* fetch unavailable — rendered photo stays */
+			/* fetch unavailable — rendered photo / favicon stay */
 		}
 	})();
 </script>

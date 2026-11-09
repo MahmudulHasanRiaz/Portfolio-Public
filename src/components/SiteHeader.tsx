@@ -179,16 +179,27 @@ export default function SiteHeader({
 		}
 	}, []);
 
+	// Theme restore on mount (2026-11-09 navigation fix): the island
+	// re-mounts on EVERY View Transition navigation, and Astro's
+	// swapRootAttributes() strips the JS-set data-theme from <html> on
+	// every swap. The head script only re-runs on the 1st client
+	// navigation, so without this the page falls back to
+	// prefers-color-scheme (dark on a system-dark phone) from the 2nd
+	// in-app navigation on. Writing the attribute here — React state
+	// alone never touches it — keeps the rendered theme in sync with
+	// the stored choice on every page. (Layout.astro's
+	// astro:page-load handler re-applies it too; both are idempotent.)
 	useEffect(() => {
 		try {
 			const saved = localStorage.getItem("theme");
-			if (saved === "light" || saved === "dark") {
-				setTheme(saved);
-			} else if (
-				window.matchMedia("(prefers-color-scheme: dark)").matches
-			) {
-				setTheme("dark");
-			}
+			const resolved =
+				saved === "light" || saved === "dark"
+					? saved
+					: window.matchMedia("(prefers-color-scheme: dark)").matches
+						? "dark"
+						: "light";
+			setTheme(resolved);
+			document.documentElement.setAttribute("data-theme", resolved);
 		} catch {
 			/* storage unavailable */
 		}

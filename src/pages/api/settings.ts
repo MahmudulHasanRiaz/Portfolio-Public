@@ -2,8 +2,8 @@ import type { APIRoute } from "astro";
 import { fetchPublicSettings } from "../../loaders/public-content";
 
 // GET /api/settings — same-origin proxy for the admin-managed site
-// settings (hero portrait URL, default profile, default language,
-// hero / Know Me copy + Bangla overlay).
+// settings (hero portrait URL, favicon URL, default profile, default
+// language, hero / Know Me copy + Bangla overlay).
 //
 // The client live-swap script in Hero.astro calls this route (no CORS
 // issue: same origin). It fetches the admin

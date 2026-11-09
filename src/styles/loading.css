@@ -158,6 +158,18 @@ button.is-navigating {
 .mini-thumb img {
 	opacity: 0;
 	transition: opacity 300ms ease;
+	/* Safety net (2026-11-09 navigation fix): if the JS that adds
+	   .img-loaded never runs (e.g. a script failure after a View
+	   Transition navigation), the image can no longer stay invisible
+	   forever — it fades in on its own after 5s. In the normal path
+	   the image already has .img-loaded (and opacity 1) long before
+	   this fires, so nothing changes visually. */
+	animation: img-reveal-safety 300ms ease 5s forwards;
+}
+@keyframes img-reveal-safety {
+	to {
+		opacity: 1;
+	}
 }
 .grid-thumb img.img-loaded,
 .grid-thumb video.img-loaded,
@@ -247,6 +259,7 @@ form[data-busy="true"] textarea {
 	.mini-thumb img,
 	.mini-thumb video {
 		transition: none;
+		animation: none;
 		opacity: 1;
 	}
 	#page-progress {

@@ -141,6 +141,7 @@ export const en: Dict = {
 	platformsProfessionalBlurb: "The engineering work, in the open.",
 	// Archives
 	backHome: "← Back to home",
+	homeName: "Home",
 	allProjects: "All projects",
 	allPosts: "All posts",
 	allReleases: "All releases",
@@ -213,6 +214,8 @@ export const en: Dict = {
 	notFoundRelease: "Release not published yet",
 	notFoundVenture: "Venture not published yet",
 	notFoundCaseStudy: "Case study not found",
+	pageNotFound: "Page not found",
+	pageNotFoundText: "This page does not exist or is not published yet.",
 	notPublishedProject: "This project is not published yet.",
 	notPublishedPost: "This post is not published yet.",
 	notPublishedRelease: "This release is not published yet.",

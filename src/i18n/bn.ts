@@ -102,6 +102,7 @@ export interface Dict {
 	platformsProfessional: string;
 	platformsProfessionalBlurb: string;
 	backHome: string;
+	homeName: string;
 	allProjects: string;
 	allPosts: string;
 	allReleases: string;
@@ -173,6 +174,8 @@ export interface Dict {
 	notFoundRelease: string;
 	notFoundVenture: string;
 	notFoundCaseStudy: string;
+	pageNotFound: string;
+	pageNotFoundText: string;
 	notPublishedProject: string;
 	notPublishedPost: string;
 	notPublishedRelease: string;
@@ -360,6 +363,7 @@ export const bn: Dict = {
 	platformsProfessional: "প্রফেশনাল / কোড",
 	platformsProfessionalBlurb: "ইঞ্জিনিয়ারিংয়ের কাজ, সবার সামনে।",
 	backHome: "← হোমে ফিরুন",
+	homeName: "হোম",
 	allProjects: "সব প্রজেক্ট",
 	allPosts: "সব পোস্ট",
 	allReleases: "সব রিলিজ",
@@ -431,6 +435,8 @@ export const bn: Dict = {
 	notFoundRelease: "রিলিজটা এখনো পাবলিশ হয়নি",
 	notFoundVenture: "উদ্যোগটা এখনো পাবলিশ হয়নি",
 	notFoundCaseStudy: "কেস স্টাডিটা পাওয়া যায়নি",
+	pageNotFound: "পেজটি পাওয়া যায়নি",
+	pageNotFoundText: "এই পেজটি নেই বা এখনো পাবলিশ হয়নি।",
 	notPublishedProject: "এই প্রজেক্টটা এখনো পাবলিশ হয়নি।",
 	notPublishedPost: "এই পোস্টটা এখনো পাবলিশ হয়নি।",
 	notPublishedRelease: "এই রিলিজটা এখনো পাবলিশ হয়নি।",

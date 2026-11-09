@@ -95,6 +95,10 @@
 		var video = document.createElement("video");
 		video.src = src;
 		video.controls = true;
+		// No Download entry in the native controls (2026-11-09): the
+		// Pexels video was downloaded as a file from the controls'
+		// overflow menu. Playback only — the file stays on the site.
+		video.controlsList = "nodownload";
 		video.autoplay = true;
 		video.playsInline = true;
 		video.className = "video-frame";
