@@ -10,7 +10,8 @@
 // Clients → Latest posts → Contact → Footer.
 // NO Testimonials section — no real testimonial quotes exist; never invent one.
 // All copy below is built ONLY from established facts — no invented
-// biography, timeline, or claims. Fixed strings from the dictionary;
+// biography, timeline, or claims. Fixed strings from the dictionary,
+// with the admin site-copy overlay applied (A4, same as every page);
 // content rows are localised per-item (bn overlay, English fallback)
 // via localizeData — a no-op for lang "en", so one component serves
 // both languages with byte-identical markup to the old pages.
@@ -24,7 +25,8 @@ import ContactForm from "./ContactForm";
 import BrandIcon from "./BrandIcon.astro";
 import { PLATFORMS, PROFILE, PUBLIC_FIGURE_POINTS } from "../data/site";
 import { formatDate, getPosts, getProjects, getReleases, getServices, readingTimeFromText, truncateShort } from "../lib/content";
-import { getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, readingTimeLabel, type Lang } from "../lib/i18n";
+import { applySiteCopy, getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, readingTimeLabel, type Lang } from "../lib/i18n";
+import { getSiteSettings } from "../lib/settings";
 
 interface Props {
 	/** Page language. English at /<page>, Bangla at /bn/<page>. */
@@ -32,7 +34,10 @@ interface Props {
 }
 
 const { lang = "en" } = Astro.props;
-const t = getDict(lang);
+// Admin site-copy overlay (A4): same as every page/component — the
+// admin-managed copy wins per key over the dictionary. Settings are
+// memoised, so this costs no extra fetch.
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const releases = (await getReleases()).map((r) => {
 	const d = localizeData(r.data, lang);
@@ -326,5 +331,5 @@ const publicFigureTexts = [
 		<p class="muted" style="margin:0 0 16px;font-size:14px;">
 			{t.reachOutSub}
 		</p>
-		<ContactForm client:load inline source="know-me-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} />
+		<ContactForm client:load inline source="know-me-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} services={services} />
 	</section>

@@ -30,7 +30,8 @@ import PostDetail from "../components/details/PostDetail.astro";
 import ProjectDetail from "../components/details/ProjectDetail.astro";
 import ReleaseDetail from "../components/details/ReleaseDetail.astro";
 import VentureDetail from "../components/details/VentureDetail.astro";
-import { getDict, langFromPath, langUrl } from "../lib/i18n";
+import { applySiteCopy, getDict, langFromPath, langUrl } from "../lib/i18n";
+import { getSiteSettings } from "../lib/settings";
 import {
 	fetchLiveDetail,
 	prepareDetail,
@@ -42,7 +43,7 @@ export const prerender = false;
 
 const route = resolveTwinRoute(Astro.url.pathname);
 const lang = route?.lang ?? langFromPath(Astro.url.pathname);
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 let view: PreparedDetail | null = null;
 if (route) {

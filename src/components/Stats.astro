@@ -1,6 +1,6 @@
 ---
 import { STATS } from "../data/site";
-import { getDict, type Lang } from "../lib/i18n";
+import { applySiteCopy, getDict, type Lang } from "../lib/i18n";
 import { getSiteSettings } from "../lib/settings";
 
 interface Props {
@@ -8,13 +8,13 @@ interface Props {
 }
 
 const { lang = "en" } = Astro.props;
-const t = getDict(lang);
 // Stat labels in the page language (values are the real proof
 // figures — identical in both languages). EN labels always come from
 // build-time (the API deliberately does not emit them); on /bn/ pages
 // the admin's positional bn.statsLabels overlay wins per slot, with
 // `null` meaning "no Bangla yet" → build-time Bangla label.
 const settings = await getSiteSettings();
+const t = applySiteCopy(getDict(lang), lang, settings);
 const bnLabels = lang === "bn" ? (settings.bn?.statsLabels ?? []) : [];
 const labels = [t.statYears, t.statProjects, t.statClients, t.statReleases].map(
 	(label, i) => {

@@ -5,10 +5,11 @@ import {
 	formatDate,
 	readingTimeFromText,
 } from "../../../lib/content";
-import { getDict, langUrl, localizeData, readingTimeLabel, showingLabel } from "../../../lib/i18n";
+import { applySiteCopy, getDict, langUrl, localizeData, readingTimeLabel, showingLabel } from "../../../lib/i18n";
+import { getSiteSettings } from "../../../lib/settings";
 
 const lang = "bn" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const postsRaw = await getPosts();
 const posts = postsRaw.map((p) => ({

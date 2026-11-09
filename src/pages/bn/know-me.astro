@@ -3,14 +3,20 @@
 // Body lives in components/KnowMeSections.astro (shared with the
 // homepage when the admin primary identity is "know-me"); this page
 // stays the permanent canonical URL for that content. Fixed strings
-// from the dictionary; content rows localised per-item (bn overlay,
-// English fallback) inside the shared component.
+// from the dictionary, with the admin site-copy overlay applied;
+// content rows localised per-item (bn overlay, English fallback)
+// inside the shared component.
+// Services are fetched here for Layout (contact modal select, A2) —
+// the section rows themselves are fetched inside KnowMeSections.
 import Layout from "../../layouts/Layout.astro";
 import KnowMeSections from "../../components/KnowMeSections.astro";
-import { getDict } from "../../lib/i18n";
+import { getServices } from "../../lib/content";
+import { applySiteCopy, getDict } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
 
 const lang = "bn" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
+const services = await getServices();
 ---
 
 <Layout
@@ -18,6 +24,7 @@ const t = getDict(lang);
 	description={t.knowMeDescription}
 	profile="knowme"
 	lang={lang}
+	services={services}
 >
 	<KnowMeSections lang={lang} />
 </Layout>

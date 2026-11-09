@@ -22,6 +22,68 @@ export type { Dict };
 export function getDict(lang: Lang): Dict {
 	return lang === "bn" ? bn : en;
 }
+/**
+ * Admin-overridable site copy (gap group (f)).
+ *
+ * `settings.siteCopy` (EN) / `settings.siteCopyBn` (BN) are the admin-
+ * managed `site_copy` / `site_copy_bn` settings keys, exposed via
+ * getPublicSettings() as `siteCopy` / `siteCopyBn`. For the current
+ * language, a settings value wins over the dictionary value, PER KEY —
+ * the admin can override ONE string without touching the rest. Absent
+ * settings value -> dictionary value; the dictionary stays the
+ * fail-safe fallback. An empty / whitespace-only string (or an empty /
+ * non-string array for the four list keys) is treated as absent, so a
+ * page can never render a blank. Keys the dictionary does not know are
+ * ignored. When there is nothing to override, the SAME dict object is
+ * returned — with no settings keys present (the state today) the output
+ * is byte-identical to getDict() alone.
+ *
+ * The `settings` parameter is deliberately `unknown`: PublicSettings
+ * does not declare siteCopy/siteCopyBn yet (that exposure lands
+ * separately), so no named object type can accept it today — an
+ * all-optional shape trips TS2559 ("no properties in common") at the
+ * call sites, and an index signature trips TS2345. The function
+ * narrows defensively instead, so anything malformed is ignored and
+ * the dictionary wins. Once the loader declares the fields, tighten
+ * the parameter to `SiteCopySettings` (below).
+ */
+export interface SiteCopySettings {
+	siteCopy?: Record<string, unknown> | null;
+	siteCopyBn?: Record<string, unknown> | null;
+}
+
+export function applySiteCopy(
+	dict: Dict,
+	lang: Lang,
+	settings?: unknown,
+): Dict {
+	const record =
+		settings !== null && typeof settings === "object"
+			? (settings as Record<string, unknown>)
+			: undefined;
+	const overrides =
+		lang === "bn" ? record?.siteCopyBn : record?.siteCopy;
+	if (!overrides || typeof overrides !== "object") return dict;
+	let out: Record<string, unknown> | undefined;
+	for (const key of Object.keys(dict) as (keyof Dict)[]) {
+		const raw = (overrides as Record<string, unknown>)[key];
+		if (raw === undefined || raw === null) continue;
+		const current = dict[key];
+		if (typeof current === "string") {
+			if (typeof raw === "string" && raw.trim() !== "") {
+				(out ??= { ...dict })[key] = raw;
+			}
+		} else if (
+			Array.isArray(raw) &&
+			raw.length > 0 &&
+			raw.every((v) => typeof v === "string" && v.trim() !== "")
+		) {
+			(out ??= { ...dict })[key] = [...raw];
+		}
+	}
+	return (out ?? dict) as Dict;
+}
+
 
 // ---------------------------------------------------------------------------
 // Per-island dictionary subsets (Issue 7B).

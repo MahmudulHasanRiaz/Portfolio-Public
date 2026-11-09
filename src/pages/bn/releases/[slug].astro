@@ -16,7 +16,8 @@ import {
 	yearOf,
 } from "../../../lib/detail";
 import { PROFILE, WIKIMEDIA_LOGOS } from "../../../data/site";
-import { getDict, langUrl, localizeData, pickDict, RELEASE_PLAYER_DICT_KEYS, platformActionLabelLang } from "../../../lib/i18n";
+import { applySiteCopy, getDict, langUrl, localizeData, pickDict, RELEASE_PLAYER_DICT_KEYS, platformActionLabelLang } from "../../../lib/i18n";
+import { getSiteSettings } from "../../../lib/settings";
 
 // Bangla static detail route — same hybrid as the English route.
 // Bangla fields come from the item's optional nested `bn` object (live
@@ -58,7 +59,7 @@ export async function getStaticPaths() {
 }
 
 const lang = "bn" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const { slug } = Astro.params;
 if (!slug) Astro.response.status = 404;

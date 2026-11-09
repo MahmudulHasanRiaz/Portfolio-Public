@@ -1,13 +1,14 @@
 ---
 import { CLIENTS } from "../data/site";
-import { getDict, type Lang } from "../lib/i18n";
+import { applySiteCopy, getDict, type Lang } from "../lib/i18n";
+import { getSiteSettings } from "../lib/settings";
 
 interface Props {
 	lang?: Lang;
 }
 
 const { lang = "en" } = Astro.props;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 ---
 
 <section class="glass section" id="clients">
