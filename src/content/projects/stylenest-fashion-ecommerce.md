@@ -7,8 +7,9 @@ bn:
   description: "স্টাইলনেস্টের ধীর WooCommerce স্টোরে ভারী ক্যাশ-অন-ডেলিভারি প্রতারণা চলত: ভুয়া অর্ডার, বারবার একই নম্বর, আর স্টক যা দোকানের সঙ্গে কখনো মিলত না।"
 tags: ["WooCommerce", "E-commerce", "Fraud"]
 techs: ["WooCommerce", "WordPress", "PHP"]
-thumbnail: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&q=80&auto=format&fit=crop"
-thumbnailType: "image"
+thumbnail: "https://videos.pexels.com/video-files/5981981/5981981-hd_1366_720_25fps.mp4"
+thumbnailType: "video"
+thumbnailAutoplay: true
 publishedAt: "2024-01-01"
 ---
 

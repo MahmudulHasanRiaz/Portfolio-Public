@@ -119,11 +119,14 @@ html {
 	scroll-behavior: smooth;
 	/* Mobile layout lock (6-point round, 2026-11-08): the page must never
 	   shift sideways on mobile. overflow-x: clip (not hidden) on html/body
-	   is the safety net behind the globe-tag clamp (worker F); the
-	   overscroll rule stops the footer bounce-back (rubber-band
-	   spring-back, worker H — same rule also lands in Layout.astro). */
+	   is the safety net behind the globe-tag clamp (worker F).
+	   NOTE (2026-11-09, pull-to-refresh fix): do NOT add
+	   overscroll-behavior-y: none here — it disables pull-to-refresh
+	   (an overscroll gesture). The slow footer spring-back it once
+	   guarded was the scroll-lock gap + header stuck loop, both fixed
+	   separately; the remaining native rubber-band is standard mobile
+	   behaviour. */
 	overflow-x: clip;
-	overscroll-behavior-y: none;
 }
 
 body {
