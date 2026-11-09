@@ -17,12 +17,14 @@ import {
 	PLATFORMS,
 	SERVICES,
 	STACK,
+	STATS,
 	type Client,
 	type Platform,
 	type Service,
 	type StackCategory,
 	type StackTech,
 } from "../data/site";
+import { getSiteSettings } from "./settings";
 
 // Text helpers (truncateShort, SHORT_DESC_MAX) live in lib/text.ts —
 // this module re-exports them so .astro pages keep importing from
@@ -257,6 +259,48 @@ export async function getServices(): Promise<Service[]> {
 	return [...bySlug.values()]
 		.sort((a, b) => a.sortOrder - b.sortOrder)
 		.map((x) => x.service);
+}
+
+export interface Stat {
+	value: string;
+	label: string;
+}
+
+/**
+ * Stats, merged live over build-time STATS by position.
+ *
+ * Stats are NOT a content collection — the live rows come from the
+ * Public Content API settings (`stats`, dashboard migration 0031).
+ * Same live-wins rule as getServices(): a live entry wins where it has
+ * a non-empty value AND label; build-time fills any gap; live-only
+ * extras append. getSiteSettings() never throws (it falls back to the
+ * fail-safe defaults, which carry no stats), so this never throws
+ * either — an unreachable API renders exactly build-time STATS.
+ */
+export async function getStats(): Promise<Stat[]> {
+	const live = (await getSiteSettings()).stats ?? [];
+	const merged: Stat[] = STATS.map((s) => ({
+		value: s.value,
+		label: s.label,
+	}));
+	for (let i = 0; i < live.length; i++) {
+		const entry = live[i];
+		if (
+			!entry ||
+			typeof entry.value !== "string" ||
+			entry.value.trim() === "" ||
+			typeof entry.label !== "string" ||
+			entry.label.trim() === ""
+		)
+			continue;
+		const clean: Stat = {
+			value: entry.value.trim(),
+			label: entry.label.trim(),
+		};
+		if (i < merged.length) merged[i] = clean;
+		else merged.push(clean);
+	}
+	return merged;
 }
 
 // ---------------------------------------------------------------------------
