@@ -1,6 +1,7 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import Hero from "../../components/Hero.astro";
+import KnowMeSections from "../../components/KnowMeSections.astro";
 import Stats from "../../components/Stats.astro";
 import Services from "../../components/Services.astro";
 import ProjectsCarousel from "../../components/ProjectsCarousel";
@@ -10,8 +11,15 @@ import ClientsWall from "../../components/ClientsWall.astro";
 import ContactForm from "../../components/ContactForm";
 import { getProjects, getCaseStudies, getPosts, getServices, formatDate, readingTimeFromText, truncateShort } from "../../lib/content";
 import { getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, PROJECTS_CAROUSEL_DICT_KEYS, STACK_GLOBE_DICT_KEYS, readingTimeLabel } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
 import { PROFILE } from "../../data/site";
 
+// Primary identity (admin setting, Wave 2 A1): when the default is
+// "know-me", /bn/ BECOMES the Know Me page — it renders KnowMeSections
+// directly, NOT a redirect to /bn/know-me (a redirect would split the
+// canonical homepage and break the / SEO already built). /bn/know-me
+// stays the permanent canonical URL for that content. When the default
+// is Software Engineer, /bn/ renders exactly as before.
 // Bangla homepage — same sections as the English homepage, in Bangla.
 // Content rows are localised per-item (bn overlay, English fallback);
 // fixed strings come from the dictionary. No auto-redirect anywhere:
@@ -20,22 +28,28 @@ import { PROFILE } from "../../data/site";
 const lang = "bn" as const;
 const t = getDict(lang);
 
-const projectsRaw = await getProjects();
+const settings = await getSiteSettings();
+const isKnowMe = settings.primaryIdentity === "know-me";
+const profile = isKnowMe ? "knowme" : "se";
+
+// The SE branch needs these rows; the Know Me branch fetches its own
+// rows inside KnowMeSections, so skip them there (no double fetch).
+const projectsRaw = isKnowMe ? [] : await getProjects();
 const projects = projectsRaw.map((p) => ({
 	...p,
 	data: localizeData(p.data, lang),
 }));
-const caseStudiesRaw = await getCaseStudies();
+const caseStudiesRaw = isKnowMe ? [] : await getCaseStudies();
 const caseStudies = caseStudiesRaw.map((cs) => ({
 	...cs,
 	data: localizeData(cs.data, lang),
 }));
-const postsRaw = await getPosts();
+const postsRaw = isKnowMe ? [] : await getPosts();
 const posts = postsRaw.map((p) => ({
 	...p,
 	data: localizeData(p.data, lang),
 }));
-const services = await getServices();
+const services = isKnowMe ? [] : await getServices();
 
 const carouselProjects = projects.map((p) => ({
 	slug: p.data.slug,
@@ -61,12 +75,16 @@ const personJsonLd = {
 ---
 
 <Layout
-	title={t.homeTitle}
-	description={t.homeDescription}
-	profile="se"
+	title={isKnowMe ? t.knowMeTitle : t.homeTitle}
+	description={isKnowMe ? t.knowMeDescription : t.homeDescription}
+	profile={profile}
 	lang={lang}
 >
-	<script type="application/ld+json" set:html={JSON.stringify(personJsonLd)} />
+	{isKnowMe ? (
+		<KnowMeSections lang={lang} />
+	) : (
+		<>
+			<script type="application/ld+json" set:html={JSON.stringify(personJsonLd)} />
 
 	<Hero profile="se" lang={lang} />
 
@@ -244,4 +262,6 @@ const personJsonLd = {
 			<ContactForm inline source="homepage-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} client:load />
 		</div>
 	</section>
+		</>
+	)}
 </Layout>
