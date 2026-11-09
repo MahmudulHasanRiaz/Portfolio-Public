@@ -7,6 +7,7 @@ import {
 } from "../../../lib/content";
 import { applySiteCopy, getDict, langUrl, localizeData, readingTimeLabel, showingLabel } from "../../../lib/i18n";
 import { getSiteSettings } from "../../../lib/settings";
+import ThumbImage from "../../../components/ThumbImage.astro";
 
 const lang = "bn" as const;
 const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
@@ -89,13 +90,13 @@ const sizedThumb = (url: string | null | undefined, w = 800) =>
 											preload="metadata"
 										/>
 									) : post.data.thumbnail ? (
-										<img
-											src={sizedThumb(post.data.thumbnail)}
+										<ThumbImage
+											src={post.data.thumbnail}
 											alt={post.data.title}
-											width="800"
-											height="500"
-											loading="lazy"
-											decoding="async"
+											widths={[360, 720, 1080]}
+											sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px"
+											width={800}
+											height={500}
 										/>
 									) : (
 										<div class="thumb-fallback">

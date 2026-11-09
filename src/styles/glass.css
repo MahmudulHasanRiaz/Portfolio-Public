@@ -2338,6 +2338,15 @@ button:focus-visible {
 	display: block;
 }
 
+/* <picture> wrappers from ThumbImage fill their thumb container
+   exactly like the <img> they replace (Batch 2). */
+.grid-card .grid-thumb picture,
+.mini-row .mini-thumb picture {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
 .grid-card .grid-thumb .thumb-fallback {
 	width: 100%;
 	height: 100%;
@@ -2620,6 +2629,14 @@ button:focus-visible {
 	height: 56px;
 	object-fit: cover;
 	border-radius: var(--radius-xs);
+}
+
+/* <picture> wrapper from ThumbImage (local thumbs) — same box as the
+   <img> it replaces, so the flex row does not shift (Batch 2). */
+.prev-next a picture {
+	flex: none;
+	width: 80px;
+	height: 56px;
 }
 
 .prev-next a .pn-body {

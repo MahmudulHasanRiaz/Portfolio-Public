@@ -175,6 +175,29 @@ const isHome =
 		    links by default; card links below carry data-astro-prefetch
 		    explicitly too. */}
 		<ClientRouter />
+		{/* Speculation Rules — prerender, moderate (Batch 2, mobile
+		    speed). Chromium-only progressive enhancement: Safari /
+		    Firefox ignore the rules, nothing regresses there. Same-
+		    origin content links only — no <a> on the site points at
+		    /api/*, a logout, or a checkout (none exist), so no
+		    exclusion list is needed. "moderate" prerenders on hover
+		    (desktop) / viewport heuristics (mobile), capped by the
+		    browser (2 interaction slots); "eager"/"immediate" would
+		    burn bandwidth on pages the visitor never opens. A
+		    prerendered navigation activates near-instantly (~0s LCP
+		    on the second page). The prerender runs the target page's
+		    JS (incl. its /api/settings fetch — public, cached 60s),
+		    which is the bounded cost of the win. */}
+		<script type="speculationrules">
+			{
+				"prerender": [
+					{
+						"where": { "href_matches": "/*" },
+						"eagerness": "moderate"
+					}
+				]
+			}
+		</script>
 		<script is:inline define:vars={{ defaultLanguage: settings.defaultLanguage }}>
 			// First-visit language resolution (client-side ONLY — no
 			// server/edge redirect, so crawlers always reach BOTH
@@ -251,7 +274,7 @@ const isHome =
 			</main>
 			<SiteFooter profile={effectiveProfile} lang={lang} dict={t} />
 		</div>
-		<ContactModal lang={lang} dict={pickDict(t, CONTACT_MODAL_DICT_KEYS)} services={services} client:load />
+		<ContactModal lang={lang} dict={pickDict(t, CONTACT_MODAL_DICT_KEYS)} services={services} client:idle />
 		{/* Floating home button — off-home pages only (see isHome
 		    above); the button itself is a plain link home, its
 		    inline script only controls when it is visible. */}

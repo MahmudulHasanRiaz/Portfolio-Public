@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { RotateCw, X } from "lucide-react";
 import { getDict, type StackGlobeDict, type Lang } from "../lib/i18n";
+import { hasSpriteIcon } from "../lib/icons";
+import SpriteIcon from "./SpriteIcon";
 import {
 	STACK,
 	STACK_CATEGORIES,
@@ -188,6 +190,22 @@ function TechLogo({ tech }: { tech: StackTech }) {
 	}
 	const src = platformIconSrc(tech.icon);
 	if (!src) return null;
+	// Sprite first (one self-hosted request for all icons); a slug the
+	// sprite does not cover (e.g. a new live-API tech) falls back to
+	// the CDN <img> so the tag never renders blank.
+	if (tech.icon && hasSpriteIcon(tech.icon)) {
+		return (
+			<SpriteIcon
+				slug={tech.icon}
+				name={tech.name}
+				size={12}
+				decorative
+				className={
+					DARK_INVERT_NAMES.has(tech.name) ? "logo-dark-invert" : undefined
+				}
+			/>
+		);
+	}
 	return (
 		<img
 			src={src}

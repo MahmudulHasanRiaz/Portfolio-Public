@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { SERVICES, simpleIconsUrl, type Service } from "../data/site";
+import { hasSpriteIcon } from "../lib/icons";
+import SpriteIcon from "./SpriteIcon";
 import { lockBodyScroll, unlockBodyScroll } from "../lib/scrollLock";
 import type { ServiceModalDict, Lang } from "../lib/i18n";
 
@@ -170,7 +172,17 @@ export default function ServiceModal({
 					×
 				</button>
 				<span className="service-icon" aria-hidden="true">
-					{service.icon ? (
+					{service.icon && hasSpriteIcon(service.icon) ? (
+						<SpriteIcon
+							slug={service.icon}
+							name={service.name}
+							size={26}
+							decorative
+							className={
+								service.icon === "wordpress" ? "logo-dark-invert" : undefined
+							}
+						/>
+					) : service.icon ? (
 						<img
 							src={simpleIconsUrl(service.icon)}
 							alt=""

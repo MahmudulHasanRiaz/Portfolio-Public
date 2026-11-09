@@ -248,7 +248,7 @@ const jsonLd = data
 			</a>
 
 			{isVideo && youtubeId ? (
-				<ReleasePlayer client:load youtubeId={youtubeId} title={title} lang={lang} dict={pickDict(t, RELEASE_PLAYER_DICT_KEYS)} />
+				<ReleasePlayer client:visible youtubeId={youtubeId} title={title} lang={lang} dict={pickDict(t, RELEASE_PLAYER_DICT_KEYS)} />
 			) : data.thumbnailType === "video" && data.thumbnail ? (
 				<div class="detail-hero">
 					<DetailVideoFacade

@@ -210,6 +210,17 @@ export const WIKIMEDIA_LOGOS = {
 		"https://upload.wikimedia.org/wikipedia/commons/e/ed/JioSaavn_Logo.svg",
 } as const;
 
+// The Boomplay logo ships as a 3240x2742 PNG (131 KiB) on Wikimedia
+// but renders at 16–22px. The SAME official logo, resized to 96px
+// (5 KiB), lives at /boomplay-logo.png (public/). Render-time
+// override — the data keeps the canonical wikimedia: value (and so
+// does the live API), and the render layer swaps it for the local
+// file. Same pattern as sizedThumb() in the thumbnail components.
+export const BOOMPLAY_LOGO_LOCAL = "/boomplay-logo.png";
+export const LOCAL_LOGO_OVERRIDES: Record<string, string> = {
+	[`wikimedia:${WIKIMEDIA_LOGOS.boomplay}`]: BOOMPLAY_LOGO_LOCAL,
+};
+
 // The latest WooCommerce "W" lettermark (2026 update) — first path of the
 // official Woo_logo_color.svg, viewBox 0 0 88 47.5. NOT the old Simple Icons icon.
 export const WOOCOMMERCE_W_PATH =
@@ -397,6 +408,10 @@ export const PUBLIC_FIGURE_POINTS = [
 
 export function platformIconSrc(icon: string | null): string | null {
 	if (!icon) return null;
+	// Local optimized replacement for an oversized remote logo.
+	if (LOCAL_LOGO_OVERRIDES[icon]) return LOCAL_LOGO_OVERRIDES[icon];
 	if (icon.startsWith("wikimedia:")) return icon.slice("wikimedia:".length);
+	// A local /path is already a final src.
+	if (icon.startsWith("/")) return icon;
 	return simpleIconsUrl(icon);
 }
