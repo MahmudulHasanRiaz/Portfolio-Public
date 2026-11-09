@@ -36,12 +36,12 @@
 // instead of the adapter's no-store.
 //
 // Deliberately NOT applied to: prerendered pages (static assets bypass
-// the Worker entirely), /api/* (settings must stay no-store — the
-// client live-swap needs fresh settings), non-GET, non-200, non-HTML,
-// or responses carrying Set-Cookie. After 7A lands getStaticPaths the
-// detail pages become static files and this middleware stops seeing
-// them — it is a bridge for the live-then-static interim, and harmless
-// once that lands.
+// the Worker entirely), /api/* (settings is cached 60s at its own route
+// — see src/pages/api/settings.ts — and /api/contact is a POST), non-GET,
+// non-200, non-HTML, or responses carrying Set-Cookie. After 7A lands
+// getStaticPaths the detail pages become static files and this
+// middleware stops seeing them — it is a bridge for the live-then-static
+// interim, and harmless once that lands.
 
 import { defineMiddleware } from "astro:middleware";
 

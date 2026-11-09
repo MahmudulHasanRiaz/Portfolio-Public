@@ -3,6 +3,16 @@
 	"assets": { "directory": "./dist" },
 	"compatibility_date": "2026-11-08",
 	"compatibility_flags": ["nodejs_compat"],
+	// Workers Cache (Cloudflare, July 2026 — all plans): a tiered cache
+	// IN FRONT of the Worker. On a HIT the Worker does not run at all
+	// (zero CPU), so repeat-visit TTFB drops from ~0.57s (PageSpeed
+	// 2026-11-10, cold Worker / cache MISS) toward ~0.05–0.15s. It
+	// honours the Cache-Control / Cloudflare-CDN-Cache-Control headers
+	// the Worker and the Astro cache provider emit; responses without
+	// a cacheable directive are not cached. cross_version_cache stays
+	// OFF (default): every deploy resets the hit rate, so a deploy can
+	// never serve stale HTML — the cache re-warms in minutes.
+	"cache": { "enabled": true },
 	"name": "portfolio-public",
 	"observability": { "enabled": true },
 	// Runtime env for the live loader (src/loaders/public-content.ts).

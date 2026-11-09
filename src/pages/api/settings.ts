@@ -12,11 +12,20 @@ import { fetchPublicSettings } from "../../loaders/public-content";
 // API unset, unreachable, non-200, malformed — it returns the fail-safe
 // defaults, never an error, so the client script simply keeps the
 // rendered photo.
+//
+// Edge-cached 60s + stale-while-revalidate 300s (PageSpeed 2026-11-10:
+// the uncached fetch took 2.4s and was the longest critical-path item).
+// Settings are PUBLIC (same for every visitor, no user data) and change
+// rarely via the admin panel, so a 60s staleness bound is invisible in
+// practice — and the hero swap is deferred until after window load, so
+// LCP never waits on this fetch even on a cold edge.
 export const prerender = false;
 
 export const GET: APIRoute = async () => {
 	const settings = await fetchPublicSettings();
 	return Response.json(settings, {
-		headers: { "Cache-Control": "no-store" },
+		headers: {
+			"Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+		},
 	});
 };

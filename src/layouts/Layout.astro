@@ -1,6 +1,15 @@
 ---
 import "../styles/glass.css";
 import "../styles/loading.css";
+// Plus Jakarta Sans — SELF-HOSTED variable font via Fontsource
+// (PageSpeed 2026-11-10: the Google Fonts stylesheet was
+// render-blocking, 530ms on mobile, plus two third-party origins).
+// The CSS import bundles the @font-face rules (font-display: swap,
+// unicode-range subsets) and the woff2 files into /_astro/; the ?url
+// import below resolves the SAME emitted latin file so the preload
+// href always matches — never hardcode the hashed filename.
+import "@fontsource-variable/plus-jakarta-sans";
+import plusJakartaLatin from "@fontsource-variable/plus-jakarta-sans/files/plus-jakarta-sans-latin-wght-normal.woff2?url";
 import { ClientRouter } from "astro:transitions";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter.astro";
@@ -146,12 +155,19 @@ const isHome =
 		<meta name="twitter:description" content={description} />
 		{ogImageUrl ? <meta name="twitter:image" content={ogImageUrl} /> : null}
 		<meta name="generator" content={Astro.generator} />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		{/* Self-hosted font preload (see imports above): exactly ONE
+		    file — the latin variable woff2 used by above-the-fold
+		    text — with crossorigin (mandatory even same-origin;
+		    omitting it double-downloads the font). The Bengali font
+		    (Li Ador Noirrit, public/fonts/) is NOT preloaded: it
+		    loads on demand via its own @font-face rules. */}
 		<link
-			href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
-			rel="stylesheet"
-		 />
+			rel="preload"
+			href={plusJakartaLatin}
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
 		<title>{title}</title>
 		{/* ISSUE 7A: View Transitions — same-origin navigations swap pages
 		    without a full reload (no more blank full-page load on every
