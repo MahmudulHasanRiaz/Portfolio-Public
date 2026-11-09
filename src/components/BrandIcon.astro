@@ -13,9 +13,12 @@ interface Props {
 	size?: number;
 	darkInvert?: boolean;
 	class?: string;
+	/** Decorative: the name is already announced by adjacent visible text
+	    or an ancestor label, so the logo carries no accessible name. */
+	decorative?: boolean;
 }
 
-const { icon, name, size = 20, darkInvert = false, class: cls = "" } = Astro.props;
+const { icon, name, size = 20, darkInvert = false, class: cls = "", decorative = false } = Astro.props;
 
 // Logos that are dark-on-transparent and need inverting in dark mode.
 export const DARK_INVERT_SLUGS = new Set([
@@ -43,8 +46,9 @@ const imgClass = `${invert ? "logo-dark-invert" : ""} ${cls}`.trim();
 			viewBox="0 0 88 47.5"
 			width={size}
 			height={size}
-			role="img"
-			aria-label={name}
+			role={decorative ? undefined : "img"}
+			aria-label={decorative ? undefined : name}
+			aria-hidden={decorative ? "true" : undefined}
 			class={cls}
 		>
 			<path d={WOOCOMMERCE_W_PATH} fill="#873EFF" />
@@ -52,7 +56,7 @@ const imgClass = `${invert ? "logo-dark-invert" : ""} ${cls}`.trim();
 	) : icon !== null && icon.startsWith("wikimedia:") ? (
 		<img
 			src={icon.slice("wikimedia:".length)}
-			alt={name}
+			alt={decorative ? "" : name}
 			width={size}
 			height={size}
 			loading="lazy"
@@ -62,7 +66,7 @@ const imgClass = `${invert ? "logo-dark-invert" : ""} ${cls}`.trim();
 	) : icon !== null ? (
 		<img
 			src={simpleIconsUrl(icon)}
-			alt={name}
+			alt={decorative ? "" : name}
 			width={size}
 			height={size}
 			loading="lazy"
