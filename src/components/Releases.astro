@@ -2,7 +2,8 @@
 import BrandIcon from "./BrandIcon.astro";
 import { WIKIMEDIA_LOGOS } from "../data/site";
 import { youtubeThumb } from "../lib/youtube";
-import { getDict, langUrl, type Lang } from "../lib/i18n";
+import { applySiteCopy, getDict, langUrl, type Lang } from "../lib/i18n";
+import { getSiteSettings } from "../lib/settings";
 
 export interface ReleaseCardItem {
 	slug: string;
@@ -20,7 +21,7 @@ interface Props {
 }
 
 const { releases, lang = "en" } = Astro.props;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 // Platform name -> BrandIcon icon value (Simple Icons slug, or a real
 // Wikimedia logo). Unknown names render no icon, never a fake one.

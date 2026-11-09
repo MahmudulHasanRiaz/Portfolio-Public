@@ -4,12 +4,13 @@ import BrandIcon from "../../components/BrandIcon.astro";
 import { WIKIMEDIA_LOGOS } from "../../data/site";
 import { getReleases } from "../../lib/content";
 import { youtubeThumb } from "../../lib/youtube";
-import { getDict, langUrl, showingLabel } from "../../lib/i18n";
+import { applySiteCopy, getDict, langUrl, showingLabel } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
 
 // Releases archive — fixed strings from the dictionary (same keys as
 // the /bn/ archive). Type labels come from the dict, never hardcoded.
 const lang = "en" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const releases = await getReleases();
 

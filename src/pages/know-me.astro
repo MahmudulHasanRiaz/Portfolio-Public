@@ -18,10 +18,11 @@ import ContactForm from "../components/ContactForm";
 import BrandIcon from "../components/BrandIcon.astro";
 import { PLATFORMS, PROFILE, PUBLIC_FIGURE_POINTS } from "../data/site";
 import { formatDate, getPosts, getProjects, getReleases, getServices, readingTimeFromText, truncateShort } from "../lib/content";
-import { getDict, langUrl, pickDict, CONTACT_FORM_DICT_KEYS, readingTimeLabel } from "../lib/i18n";
+import { applySiteCopy, getDict, langUrl, pickDict, CONTACT_FORM_DICT_KEYS, readingTimeLabel } from "../lib/i18n";
+import { getSiteSettings } from "../lib/settings";
 
 const lang = "en" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const releases = (await getReleases()).map((r) => ({
 	slug: r.data.slug,

@@ -5,12 +5,14 @@ import {
 	readingTimeFromText,
 } from "../lib/content";
 import {
+	applySiteCopy,
 	getDict,
 	langUrl,
 	localizeData,
 	readingTimeLabel,
 	type Lang,
 } from "../lib/i18n";
+import { getSiteSettings } from "../lib/settings";
 
 // "Latest" block — preview presentation: cards with thumbnail (or a
 // deliberate monogram tile when a post has none) + tag chip + title +
@@ -23,7 +25,7 @@ interface Props {
 }
 
 const { lang = "en" } = Astro.props;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const postsRaw = await getPosts();
 const posts = postsRaw.map((p) => ({

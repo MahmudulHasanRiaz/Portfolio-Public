@@ -5,10 +5,11 @@
 import Layout from "../../layouts/Layout.astro";
 import BrandIcon from "../../components/BrandIcon.astro";
 import { PLATFORMS, PROFILE, type Platform } from "../../data/site";
-import { getDict, langUrl } from "../../lib/i18n";
+import { applySiteCopy, getDict, langUrl } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
 
 const lang = "bn" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const groups: { key: Platform["group"]; title: string; blurb: string }[] = [
 	{

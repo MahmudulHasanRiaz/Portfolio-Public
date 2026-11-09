@@ -2,12 +2,13 @@
 import Layout from "../../../layouts/Layout.astro";
 import ProjectCard from "../../../components/ProjectCard.astro";
 import { getProjects } from "../../../lib/content";
-import { getDict, langUrl, localizeData, showingLabel } from "../../../lib/i18n";
+import { applySiteCopy, getDict, langUrl, localizeData, showingLabel } from "../../../lib/i18n";
+import { getSiteSettings } from "../../../lib/settings";
 
 // Bangla projects archive — filters are client-side, driven by the
 // tags on the cards themselves (no framework, tiny inline script below).
 const lang = "bn" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const projectsRaw = await getProjects();
 const projects = projectsRaw.map((p) => ({

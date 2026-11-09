@@ -2,13 +2,14 @@
 import Layout from "../../layouts/Layout.astro";
 import ProjectCard from "../../components/ProjectCard.astro";
 import { getProjects } from "../../lib/content";
-import { getDict, langUrl, showingLabel } from "../../lib/i18n";
+import { applySiteCopy, getDict, langUrl, showingLabel } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
 
 // Static archive — filters are client-side, driven by the tags on the
 // cards themselves (no framework, tiny inline script below).
 // Fixed strings from the dictionary (same keys as the /bn/ archive).
 const lang = "en" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const projects = await getProjects();
 const tags = [...new Set(projects.flatMap((p) => p.data.tags))].sort((a, b) =>

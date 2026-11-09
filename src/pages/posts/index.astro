@@ -5,12 +5,13 @@ import {
 	formatDate,
 	readingTimeFromText,
 } from "../../lib/content";
-import { getDict, langUrl, readingTimeLabel, showingLabel } from "../../lib/i18n";
+import { applySiteCopy, getDict, langUrl, readingTimeLabel, showingLabel } from "../../lib/i18n";
+import { getSiteSettings } from "../../lib/settings";
 
 // Posts archive — fixed strings from the dictionary (same keys as the
 // /bn/ archive). Reading time is computed from the actual post text.
 const lang = "en" as const;
-const t = getDict(lang);
+const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 
 const posts = await getPosts();
 const allTags = [...new Set(posts.flatMap((p) => p.data.tags ?? []))].sort();
