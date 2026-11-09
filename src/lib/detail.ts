@@ -20,6 +20,107 @@ export const SITE_URL =
 	"https://portfolio-public.riaaz.workers.dev";
 
 /**
+ * Origin of the incoming request (protocol + host, no path, no
+ * trailing slash) — the ONLY host source. Accepts a Request, a URL,
+ * a URL string, or an Astro-like `{ url }` object. The origin comes
+ * from the request URL itself (Astro.url / request.url), NEVER from
+ * Host / X-Forwarded-Host headers: Cloudflare sets the request URL
+ * from the host the request actually arrived on, while a forwarded
+ * header is client-controlled and would let anyone spoof canonicals.
+ * Only a valid http(s) origin with a dotted host counts; anything
+ * else (relative URL, wrong scheme, bare hostname) returns
+ * undefined so the caller falls through to the next source.
+ */
+export function requestOrigin(
+	input?: Request | URL | string | { url?: string | URL } | undefined,
+): string | undefined {
+	let raw: string | undefined;
+	if (typeof input === "string") raw = input;
+	else if (input instanceof URL) raw = input.toString();
+	else if (input instanceof Request) raw = input.url;
+	else if (input && typeof input === "object" && "url" in input) {
+		const u = input.url;
+		raw = u instanceof URL ? u.toString() : u;
+	}
+	if (!raw) return undefined;
+	try {
+		const parsed = new URL(raw);
+		if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
+			return undefined;
+		// Dotted host (real domain) — or localhost for local dev
+		// (astro dev runs on localhost:4321, which has no dot).
+		const host = parsed.host;
+		const okHost =
+			/^[^/]+\.[^/]{2,}$/.test(host) ||
+			host === "localhost" ||
+			host.startsWith("localhost:");
+		if (!okHost) return undefined;
+		return parsed.origin;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * True only when the admin `site_url` setting is an explicit override:
+ * a valid http(s) URL DIFFERENT from SITE_URL. The loader's fail-safe
+ * default IS SITE_URL (public-content.ts DEFAULT_PUBLIC_SETTINGS), so
+ * "admin never set site_url" and "admin set it to the fallback host"
+ * arrive here as the same value — and the distinction does not matter:
+ * in both cases the request host wins, which is the wanted behaviour.
+ * Only a genuinely different admin value (e.g. the custom domain
+ * mahmudulhasanriaz.com once it is connected) counts as an override.
+ */
+export function isAdminSiteUrl(siteUrl?: string | null): siteUrl is string {
+	if (typeof siteUrl !== "string") return false;
+	const cleaned = siteUrl.trim().replace(/\/$/, "");
+	if (!/^https?:\/\/[^/]+\.[^/]{2,}/i.test(cleaned)) return false;
+	return cleaned.toLowerCase() !== SITE_URL.toLowerCase();
+}
+
+/** The admin override when it is explicit, else undefined. */
+function adminBase(siteUrl?: string | null): string | undefined {
+	if (!isAdminSiteUrl(siteUrl)) return undefined;
+	return siteUrl.trim().replace(/\/$/, "");
+}
+
+/**
+ * Host-consistent base — for robots.txt + sitemap.xml. Precedence:
+ *   request host → explicit admin site_url → SITE_URL fallback.
+ * The request host MUST win here: the Sitemap line in robots.txt and
+ * every <loc> in the sitemap have to live on the host the crawler
+ * actually fetched, or search engines reject them as cross-host.
+ */
+export function resolveHostBase(
+	siteUrl?: string | null,
+	request?: Request | URL | string | { url?: string | URL } | undefined,
+): string {
+	return requestOrigin(request) ?? adminBase(siteUrl) ?? SITE_URL;
+}
+
+/**
+ * Canonical base — for Layout canonical / hreflang / og:url / JSON-LD
+ * and detail-page canonicals. Precedence:
+ *   explicit admin site_url → request host → SITE_URL fallback.
+ * The admin value wins when set so search engines see ONE canonical
+ * no matter which host served the page; without an admin override the
+ * page is self-consistent on whichever domain served it.
+ *
+ * NOTE on prerendered pages: at build time Astro.url.origin is
+ * Astro.site (astro.config.mjs), so static pages bake that origin
+ * into their canonicals; only on-demand renders (detail twin
+ * fallback, robots, sitemap) see the live request host. That is
+ * inherent to static prerendering — making pages host-aware at serve
+ * time would need them on-demand, which is out of scope here.
+ */
+export function resolveCanonicalBase(
+	siteUrl?: string | null,
+	request?: Request | URL | string | { url?: string | URL } | undefined,
+): string {
+	return adminBase(siteUrl) ?? requestOrigin(request) ?? SITE_URL;
+}
+
+/**
  * Resolve the site's canonical base URL from the admin setting
  * (settings key "site_url", parsed as PublicSettings.siteUrl).
  * Only a valid http(s) URL counts — anything else (absent,
@@ -28,21 +129,35 @@ export const SITE_URL =
  * canonicals, sitemap or robots. Never returns a trailing slash.
  * The custom domain (mahmudulhasanriaz.com) stays disconnected
  * until dev finishes — it arrives here only via the admin setting.
+ *
+ * Kept for backward compatibility: this is the canonical (SEO)
+ * precedence — explicit admin site_url → request host → SITE_URL.
+ * Robots/sitemap must use resolveHostBase() instead (request host
+ * first); canonical/OG/JSON-LD callers should prefer
+ * resolveCanonicalBase() explicitly.
  */
-export function resolveSiteUrl(siteUrl?: string | null): string {
-	if (typeof siteUrl === "string") {
-		const cleaned = siteUrl.trim().replace(/\/$/, "");
-		if (/^https?:\/\/[^/]+\.[^/]{2,}/i.test(cleaned)) return cleaned;
-	}
-	return SITE_URL;
+export function resolveSiteUrl(
+	siteUrl?: string | null,
+	request?: Request | URL | string | { url?: string | URL } | undefined,
+): string {
+	return resolveCanonicalBase(siteUrl, request);
 }
 
-/** Resolve a stored URL to an absolute URL against the live base. */
-export function absUrl(url: string | null | undefined): string | undefined {
+/**
+ * Resolve a stored URL to an absolute URL against the given base
+ * (default SITE_URL for callers that have no request context).
+ * Pass the page's resolved base (resolveCanonicalBase / resolveHostBase)
+ * so relative media never hardcodes the fallback host.
+ */
+export function absUrl(
+	url: string | null | undefined,
+	base: string = SITE_URL,
+): string | undefined {
 	if (!url) return undefined;
 	if (/^https?:\/\//i.test(url)) return url;
-	if (url.startsWith("/")) return `${SITE_URL}${url}`;
-	return `${SITE_URL}/${url}`;
+	const cleanBase = base.replace(/\/$/, "");
+	if (url.startsWith("/")) return `${cleanBase}${url}`;
+	return `${cleanBase}/${url}`;
 }
 
 /** A stored website link is real only when it is a plain http(s) URL. */

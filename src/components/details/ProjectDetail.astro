@@ -54,7 +54,14 @@ const d = view.d;
 					</div>
 				) : (
 					<div class="detail-hero">
-						<img src={d.thumbnail} alt={d.title} />
+						<img
+							src={d.thumbnail}
+							alt={d.title}
+							fetchpriority="high"
+							decoding="async"
+							srcset={d.thumbnail?.includes("images.unsplash.com") ? `${d.thumbnail.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${d.thumbnail.replace(/q=\d+/, "q=75")} 1200w` : undefined}
+							sizes="(max-width: 640px) 100vw, 1088px"
+						/>
 					</div>
 				))}
 			<h1 class="detail-title">{d.title}</h1>

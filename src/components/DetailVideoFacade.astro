@@ -38,7 +38,16 @@ const playLabel = lang === "bn" ? `${title} প্লে করুন` : `Play $
 	aria-label={playLabel}
 >
 	{safePoster ? (
-		<img src={safePoster} alt={title} loading="lazy" />
+		<img
+			src={
+				safePoster.includes("images.unsplash.com")
+					? safePoster.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")
+					: safePoster
+			}
+			alt={title}
+			loading="lazy"
+			decoding="async"
+		/>
 	) : (
 		<span class="video-facade-tile" aria-hidden="true">
 			<svg

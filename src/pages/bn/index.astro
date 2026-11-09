@@ -12,7 +12,7 @@ import KnowMeSections from "../../components/KnowMeSections.astro";
 import { getProjects, getCaseStudies, getPosts, getServices, getTechnologies, formatDate, readingTimeFromText, truncateShort } from "../../lib/content";
 import { applySiteCopy, getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, PROJECTS_CAROUSEL_DICT_KEYS, STACK_GLOBE_DICT_KEYS, readingTimeLabel } from "../../lib/i18n";
 import { getSiteSettings } from "../../lib/settings";
-import { resolveSiteUrl } from "../../lib/detail";
+import { resolveCanonicalBase } from "../../lib/detail";
 import { PROFILE } from "../../data/site";
 
 // Bangla homepage — same sections as the English homepage, in Bangla.
@@ -36,7 +36,7 @@ const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 // (Moved above the content fetches: the primary-identity branch
 // below needs `settings` before deciding what to fetch.)
 const settings = await getSiteSettings();
-const siteUrl = resolveSiteUrl(settings.siteUrl);
+const siteUrl = resolveCanonicalBase(settings.siteUrl, Astro.url);
 
 const isKnowMe = settings.primaryIdentity === "know-me";
 const profile = isKnowMe ? "knowme" : "se";
@@ -94,6 +94,13 @@ const personJsonLd = {
 	inLanguage: "bn",
 	address: { "@type": "PostalAddress", addressLocality: "Dhaka", addressCountry: "BD" },
 };
+// Unsplash card thumbs ship at w=1200 in content/API rows but render at
+// ~360px wide (2x retina ≈ 720px) — request w=800/q=75 instead: measured
+// 124KB → 67KB per image (~46% less). Non-Unsplash URLs pass through.
+const sizedThumb = (url: string | null | undefined, w = 800) =>
+	url?.includes("images.unsplash.com")
+		? url.replace(/w=\d+/, `w=${w}`).replace(/q=\d+/, "q=75")
+		: url;
 ---
 
 <Layout
@@ -126,7 +133,7 @@ const personJsonLd = {
 		{projects.length === 0 ? (
 			<p class="empty-state">{t.emptyProjects}</p>
 		) : (
-			<ProjectsCarousel projects={carouselProjects} lang={lang} dict={pickDict(t, PROJECTS_CAROUSEL_DICT_KEYS)} client:load />
+			<ProjectsCarousel projects={carouselProjects} lang={lang} dict={pickDict(t, PROJECTS_CAROUSEL_DICT_KEYS)} client:visible />
 		)}
 	</section>
 
@@ -158,9 +165,12 @@ const personJsonLd = {
 									/>
 								) : cs.data.thumbnail ? (
 									<img
-										src={cs.data.thumbnail}
+										src={sizedThumb(cs.data.thumbnail)}
 										alt={cs.data.title}
+										width="800"
+										height="500"
 										loading="lazy"
+										decoding="async"
 									/>
 								) : (
 									<span class="thumb-fallback" aria-hidden="true">
@@ -195,7 +205,7 @@ const personJsonLd = {
 		) : null
 	}
 
-	<StackGlobe lang={lang} dict={pickDict(t, STACK_GLOBE_DICT_KEYS)} techs={technologies} client:load />
+	<StackGlobe lang={lang} dict={pickDict(t, STACK_GLOBE_DICT_KEYS)} techs={technologies} client:visible />
 
 	<Combined lang={lang} />
 
@@ -240,9 +250,12 @@ const personJsonLd = {
 									/>
 								) : post.data.thumbnail ? (
 									<img
-										src={post.data.thumbnail}
+										src={sizedThumb(post.data.thumbnail)}
 										alt={post.data.title}
+										width="800"
+										height="500"
 										loading="lazy"
+										decoding="async"
 									/>
 								) : (
 									<span class="thumb-fallback" aria-hidden="true">
@@ -282,7 +295,7 @@ const personJsonLd = {
 			</p>
 		</div>
 		<div style="max-width:520px;margin:24px auto 0;">
-			<ContactForm inline source="homepage-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} services={services} client:load />
+			<ContactForm inline source="homepage-contact" lang={lang} dict={pickDict(t, CONTACT_FORM_DICT_KEYS)} services={services} client:visible />
 		</div>
 	</section>
 		</>

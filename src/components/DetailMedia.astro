@@ -60,6 +60,14 @@ const counterText = (current: number, total: number) =>
 function stripQuery(url: string): string {
 	return url.split("?")[0];
 }
+
+// Unsplash gallery images ship at w=1200 in content/API rows but render
+// at most ~720px wide (2x retina) — request w=800/q=75 instead: measured
+// 124KB → 67KB per image (~46% less). Non-Unsplash URLs pass through.
+const sizedThumb = (url: string, w = 800) =>
+	url.includes("images.unsplash.com")
+		? url.replace(/w=\d+/, `w=${w}`).replace(/q=\d+/, "q=75")
+		: url;
 const excluded = exclude ? stripQuery(exclude) : null;
 const seen = new Set<string>();
 const cleanGallery = gallery.filter((src) => {
@@ -93,9 +101,10 @@ const videoGridClass =
 							{cleanGallery.map((src, i) => (
 								<figure class="media-slide">
 									<img
-										src={src}
+										src={sizedThumb(src)}
 										alt={`${base} ${counterText(i + 1, cleanGallery.length)}`}
 										loading="lazy"
+										decoding="async"
 									/>
 								</figure>
 							))}
@@ -136,9 +145,10 @@ const videoGridClass =
 						{cleanGallery.map((src, i) => (
 							<figure>
 								<img
-									src={src}
+									src={sizedThumb(src)}
 									alt={`${base} ${counterText(i + 1, cleanGallery.length)}`}
 									loading="lazy"
+									decoding="async"
 								/>
 							</figure>
 						))}

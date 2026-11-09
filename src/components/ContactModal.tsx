@@ -64,7 +64,38 @@ export default function ContactModal({
 	useEffect(() => {
 		if (!open) return;
 		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") setOpen(false);
+			if (e.key === "Escape") {
+				setOpen(false);
+				return;
+			}
+			// A11y (2026-11-09): focus trap — Tab cycles inside the
+			// dialog instead of escaping to the locked page behind it.
+			// (Before this, focus landed on the sheet on open but Tab
+			// could walk out onto the background page.)
+			if (e.key !== "Tab") return;
+			const sheet = sheetRef.current;
+			if (!sheet) return;
+			const focusable = Array.from(
+				sheet.querySelectorAll<HTMLElement>(
+					'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+				),
+			).filter((el) => el.offsetParent !== null);
+			if (focusable.length === 0) {
+				e.preventDefault();
+				return;
+			}
+			const first = focusable[0]!;
+			const last = focusable[focusable.length - 1]!;
+			if (e.shiftKey && document.activeElement === first) {
+				e.preventDefault();
+				last.focus();
+			} else if (
+				!e.shiftKey &&
+				document.activeElement === last
+			) {
+				e.preventDefault();
+				first.focus();
+			}
 		};
 		window.addEventListener("keydown", onKey);
 		// Lock the page behind the modal; the cleanup runs on close AND

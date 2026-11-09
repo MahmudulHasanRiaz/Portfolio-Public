@@ -192,7 +192,10 @@ function TechLogo({ tech }: { tech: StackTech }) {
 		<img
 			src={src}
 			alt=""
+			width={12}
+			height={12}
 			loading="lazy"
+			decoding="async"
 			className={
 				DARK_INVERT_NAMES.has(tech.name) ? "logo-dark-invert" : undefined
 			}
@@ -1130,36 +1133,50 @@ export default function StackGlobe({
 								}}
 							/>
 						))}
-					{techs.map((tech, i) => (
-						<button
-							key={tech.name}
-							type="button"
-							ref={(el) => {
-								tagRefs.current[i] = el;
-							}}
-							className="globe-tag"
-							data-tech={i}
-							onClick={(e) => {
-								// Pointer taps open via pointer-up (see
-								// onPointerUp); a click with detail 0 is
-								// keyboard activation.
-								if (e.detail === 0) handleTap(i);
-							}}
-							aria-label={`${tech.name} — ${catLabel(tech.category)}`}
-						>
-							<span
-								aria-hidden="true"
-								className="globe-tag-dot"
-								style={{
-									background:
-										CATEGORY_COLORS[tech.category] ??
-										"var(--accent)",
+					{techs.map((tech, i) => {
+						// A11y (2026-11-09): a filtered-out tag is faded
+						// to opacity 0.08 by the animation loop — still
+						// focusable at that opacity, so keyboard users
+						// would tab onto a near-invisible tag. While its
+						// category is filtered out it leaves the tab
+						// order and the accessibility tree; the filter
+						// chips remain the keyboard path back (clearing
+						// the filter restores the tag).
+						const isDimmed =
+							filter !== "All" && tech.category !== filter;
+						return (
+							<button
+								key={tech.name}
+								type="button"
+								ref={(el) => {
+									tagRefs.current[i] = el;
 								}}
-							/>
-							<TechLogo tech={tech} />
-							{tech.name}
-						</button>
-					))}
+								className="globe-tag"
+								data-tech={i}
+								tabIndex={isDimmed ? -1 : undefined}
+								aria-hidden={isDimmed || undefined}
+								onClick={(e) => {
+									// Pointer taps open via pointer-up (see
+									// onPointerUp); a click with detail 0 is
+									// keyboard activation.
+									if (e.detail === 0) handleTap(i);
+								}}
+								aria-label={`${tech.name} — ${catLabel(tech.category)}`}
+							>
+								<span
+									aria-hidden="true"
+									className="globe-tag-dot"
+									style={{
+										background:
+											CATEGORY_COLORS[tech.category] ??
+											"var(--accent)",
+									}}
+								/>
+								<TechLogo tech={tech} />
+								{tech.name}
+							</button>
+						);
+					})}
 				</div>
 				<div className="globe-now-row">
 					<p className="globe-now">

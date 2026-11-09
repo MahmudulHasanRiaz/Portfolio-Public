@@ -26,7 +26,7 @@ const clients = (await getClients()).map((c) =>
 	<div class="clients-grid">
 		{clients.map((client) => {
 			const inner = client.logo_url ? (
-				<img src={client.logo_url} alt={client.name} loading="lazy" />
+				<img src={client.logo_url} alt={client.name} loading="lazy" decoding="async" />
 			) : (
 				<span class="client-wordmark">{client.name}</span>
 			);

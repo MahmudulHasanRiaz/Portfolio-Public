@@ -10,7 +10,7 @@ import { createPublicContentLoader } from "../../loaders/public-content";
 import { getReleases } from "../../lib/content";
 import { youtubeEmbed, youtubeIdFromUrl, youtubeThumb } from "../../lib/youtube";
 import {
-	resolveSiteUrl,
+	resolveCanonicalBase,
 	absUrl,
 	mergeDetail,
 	yearOf,
@@ -119,10 +119,13 @@ const youtubeId =
 	);
 const hasYouTube = Boolean(youtubeId) || platforms.some((p) => p.name === "YouTube");
 const isVideo = Boolean(youtubeId) && hasYouTube;
+// Canonical base: explicit admin site_url wins; else the request
+// host (Astro.url), else the SITE_URL fallback — see detail.ts.
+const siteBase = resolveCanonicalBase(settings.siteUrl, Astro.url);
 const coverImage = isVideo
 	? youtubeThumb(youtubeId)
 	: data?.thumbnail
-		? absUrl(data.thumbnail)
+		? absUrl(data.thumbnail, siteBase)
 		: null;
 const firstPlatform = platforms[0];
 const year = yearOf(data?.publishedAt);
@@ -147,9 +150,6 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 	SoundCloud: "soundcloud",
 };
 
-// Canonical base: the admin site_url setting wins; resolveSiteUrl()
-// falls back to the live workers.dev base when it is absent/invalid.
-const siteBase = resolveSiteUrl(settings.siteUrl);
 const pageUrl = `${siteBase}/releases/${slug}`;
 const jsonLd = data
 	? {
@@ -248,7 +248,14 @@ const jsonLd = data
 				</div>
 			) : data.thumbnail ? (
 				<div class="detail-hero">
-					<img src={data.thumbnail} alt={title} />
+					<img
+						src={data.thumbnail}
+						alt={title}
+						fetchpriority="high"
+						decoding="async"
+						srcset={data.thumbnail?.includes("images.unsplash.com") ? `${data.thumbnail.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${data.thumbnail.replace(/q=\d+/, "q=75")} 1200w` : undefined}
+						sizes="(max-width: 640px) 100vw, 1088px"
+					/>
 				</div>
 			) : (
 				<div class="audio-tile" aria-label={t.audioRelease}>

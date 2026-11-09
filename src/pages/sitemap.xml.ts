@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
 import { getSiteSettings } from "../lib/settings";
 import { resolvePublicContentToken } from "../loaders/public-content";
-import { resolveSiteUrl } from "../lib/detail";
+import { resolveHostBase } from "../lib/detail";
 
 // GET /sitemap.xml — on-demand (prerender = false) so detail pages
 // are included: they are on-demand routes, not in the static build,
@@ -14,8 +14,11 @@ import { resolveSiteUrl } from "../lib/detail";
 //
 // x-default = the admin-configured default language version (read live
 // via getSiteSettings()): default "bn" → Bangla URL; "en"/"system" →
-// English URL. Absolute URLs from the live base (workers.dev for now;
-// the custom domain later) — never hardcoded.
+// English URL. Absolute URLs from the REQUEST HOST (resolveHostBase):
+// the request host wins so every <loc> lives on the host the crawler
+// actually fetched the sitemap from; the admin site_url only fills in
+// when there is no request host, and SITE_URL is the last resort.
+// Never hardcoded — no served output here contains a fixed domain.
 export const prerender = false;
 
 const STATIC_PATHS = [
@@ -88,7 +91,7 @@ async function liveSlugs(
 	}
 }
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
 	const settings = await getSiteSettings();
 	// Search-indexing gate (admin toggle
 	// "search_indexing_enabled"): OFF (default) → an EMPTY sitemap —
@@ -108,7 +111,7 @@ export const GET: APIRoute = async () => {
 			},
 		});
 	}
-	const siteUrl = resolveSiteUrl(settings.siteUrl);
+	const siteUrl = resolveHostBase(settings.siteUrl, request);
 	const base = apiBase();
 	// Resolved once per sitemap request (Worker runtime env, then
 	// build-time env) and passed to every liveSlugs call below.
