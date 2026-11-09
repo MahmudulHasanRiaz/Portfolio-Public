@@ -17,7 +17,7 @@ export default defineConfig({
 	output: "static",
 	adapter: cloudflare(),
 	integrations: [react()],
-	site: "https://portfolio-public.mahmudriaz-bd.workers.dev",
+	site: "https://portfolio-public.riaaz.workers.dev",
 
 	// Cloudflare edge cache provider — emits Cloudflare-CDN-Cache-Control
 	// + Cache-Tag headers so the edge caches live pages and purges by tag.

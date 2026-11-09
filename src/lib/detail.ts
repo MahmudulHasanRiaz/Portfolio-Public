@@ -17,7 +17,7 @@
 //   invents content.
 
 export const SITE_URL =
-	"https://portfolio-public.mahmudriaz-bd.workers.dev";
+	"https://portfolio-public.riaaz.workers.dev";
 
 /** Resolve a stored URL to an absolute URL against the live base. */
 export function absUrl(url: string | null | undefined): string | undefined {
