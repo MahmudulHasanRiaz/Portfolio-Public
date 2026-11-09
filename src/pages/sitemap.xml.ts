@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
 import { getSiteSettings } from "../lib/settings";
+import { resolvePublicContentToken } from "../loaders/public-content";
 import { SITE_URL } from "../lib/detail";
 
 // GET /sitemap.xml — on-demand (prerender = false) so detail pages
@@ -58,9 +59,13 @@ function apiBase(): string | undefined {
 async function liveSlugs(
 	base: string,
 	type: string,
+	token: string | undefined,
 ): Promise<string[] | undefined> {
 	try {
 		const res = await fetch(`${base}/api/public/content/${type}`, {
+			// PR #90 made the API auth-required: no Bearer token =
+			// 401 = live slugs silently missing from the sitemap.
+			headers: token ? { Authorization: `Bearer ${token}` } : {},
 			signal: AbortSignal.timeout(8000),
 		});
 		if (!res.ok) return undefined;
@@ -86,12 +91,15 @@ async function liveSlugs(
 export const GET: APIRoute = async () => {
 	const settings = await getSiteSettings();
 	const base = apiBase();
+	// Resolved once per sitemap request (Worker runtime env, then
+	// build-time env) and passed to every liveSlugs call below.
+	const token = await resolvePublicContentToken();
 
 	const paths = [...STATIC_PATHS];
 	for (const t of DETAIL_TYPES) {
 		let slugs: string[] = [];
 		if (base) {
-			const live = await liveSlugs(base, t.api);
+			const live = await liveSlugs(base, t.api, token);
 			if (live) slugs = live;
 		}
 		if (!slugs.length) {
