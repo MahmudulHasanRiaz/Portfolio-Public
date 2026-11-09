@@ -15,7 +15,26 @@ import react from "@astrojs/react";
 //     tag (POST /api/cache/invalidate) and trigger a debounced rebuild.
 export default defineConfig({
 	output: "static",
-	adapter: cloudflare(),
+	// Prerender in Node, NOT in workerd (the adapter default).
+	//
+	// WHY (build c77c0055, 2026-11-09 — 30m 59s FAILED build): the
+	// adapter's default `prerenderEnvironment: "workerd"` runs `astro
+	// build` prerendering inside a workerd preview server, where
+	// `navigator.userAgent === "Cloudflare-Workers"`. The live loader
+	// gate in src/loaders/public-content.ts (isLiveFetchAllowed) uses
+	// exactly that userAgent to tell "deployed Worker" from "build" —
+	// so under workerd prerender the gate OPENED and every prerendered
+	// page made its live API fetches (2–4 per page; the build machine
+	// cannot reach admin.riaz.com.bd, so each hung for the full 8s
+	// timeout: +16s/+24s/+32s per route, 29m 25s of Building). With
+	// Node prerender, navigator.userAgent is "Node.js/24", the gate
+	// stays closed, and the build is ~1 min with byte-identical
+	// output (callers already fall back to build-time rows). DO NOT
+	// flip this back to "workerd" without also reworking the loader
+	// gate — there is no in-workerd signal that separates prerender
+	// from a real request. Request-time behaviour is untouched: the
+	// deployed Worker still runs in workerd and still fetches live.
+	adapter: cloudflare({ prerenderEnvironment: "node" }),
 	integrations: [react()],
 	site: "https://portfolio-public.riaaz.workers.dev",
 
