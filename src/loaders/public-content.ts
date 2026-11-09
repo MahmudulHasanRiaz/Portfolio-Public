@@ -318,8 +318,27 @@ export interface SettingsBn {
 	statsLabels?: (string | null)[];
 }
 
+export interface AvailabilitySetting {
+	available: boolean;
+	badgeText: string;
+}
+
 export interface PublicSettings {
 	portraitUrl: string | null;
+	/**
+	 * Admin-managed availability badge (settings key "availability",
+	 * live shape verified against GET /api/public/settings). Absent /
+	 * unset = not available (badge hidden). Consumed by the
+	 * availability badge — not wired yet.
+	 */
+	availability: AvailabilitySetting;
+	/**
+	 * Search-indexing switch (settings key
+	 * "search_indexing_enabled"). Only a real boolean true enables
+	 * indexing; default false = noindex. Consumed by robots meta /
+	 * sitemap — not wired yet.
+	 */
+	searchIndexingEnabled: boolean;
 	/** Admin-managed favicon URL (settings key "favicon_url"). Null =
 	    no admin favicon — the public site falls back to its repo
 	    /favicon.svg. */
@@ -351,6 +370,8 @@ export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
 	faviconUrl: null,
 	primaryIdentity: "developer",
 	defaultLanguage: "en",
+	availability: { available: false, badgeText: "Available for projects" },
+	searchIndexingEnabled: false,
 	heroHeadline: "I build products people rely on every day.",
 	heroDescription:
 		"ERP, e-commerce and SaaS systems for businesses in Bangladesh and beyond — designed to hold up at real-world scale.",
@@ -364,8 +385,14 @@ export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
  * Resolve the optional read-only token for the Public Content API.
  * Explicit argument wins, then Worker runtime env, then build-time env.
  * Unset = public-read (the API serves settings without auth).
+ *
+ * Shared by the settings fetch AND the content loader (and the
+ * sitemap): since PR #90 the API 401s every endpoint without a Bearer
+ * token, so every live fetch must resolve this at request time. Lazy
+ * by design — callers behind the isLiveFetchAllowed() gate never pay
+ * for it at build time.
  */
-async function resolveSettingsToken(
+export async function resolvePublicContentToken(
 	explicit?: string,
 ): Promise<string | undefined> {
 	if (explicit) return explicit;
@@ -431,7 +458,7 @@ async function fetchPublicSettingsUncached(
 		const cached: ResolvedBase = { done: false };
 		const apiBase = await resolveApiBase({ apiUrl: base }, cached);
 		if (!apiBase) return { ...DEFAULT_PUBLIC_SETTINGS };
-		const resolvedToken = token ?? (await resolveSettingsToken());
+		const resolvedToken = token ?? (await resolvePublicContentToken());
 		const raw = await fetchJson(
 			`${apiBase}/api/public/settings`,
 			resolvedToken,
@@ -455,6 +482,25 @@ async function fetchPublicSettingsUncached(
 			record.defaultLanguage === "system"
 				? record.defaultLanguage
 				: "en";
+		// `availability` is an object ({ available, badgeText }) and
+		// `searchIndexingEnabled` a boolean — both returned by the API
+		// since PR #83 but dropped here until now. Fail-safe: not
+		// available, indexing off. Never throws on a wrong shape.
+		const availabilityRaw =
+			typeof record.availability === "object" &&
+			record.availability !== null
+				? (record.availability as Record<string, unknown>)
+				: undefined;
+		const availability: AvailabilitySetting = {
+			available: availabilityRaw?.available === true,
+			badgeText:
+				typeof availabilityRaw?.badgeText === "string" &&
+				availabilityRaw.badgeText.trim()
+					? availabilityRaw.badgeText
+					: DEFAULT_PUBLIC_SETTINGS.availability.badgeText,
+		};
+		const searchIndexingEnabled =
+			record.searchIndexingEnabled === true;
 		const strField = (v: unknown, fallback: string): string =>
 			typeof v === "string" && v ? v : fallback;
 		const heroHeadline = strField(
@@ -501,6 +547,8 @@ async function fetchPublicSettingsUncached(
 			faviconUrl,
 			primaryIdentity,
 			defaultLanguage,
+			availability,
+			searchIndexingEnabled,
 			heroHeadline,
 			heroDescription,
 			knowMeHeadline,
@@ -517,7 +565,6 @@ export function createPublicContentLoader(
 	type: PublicContentType,
 	options: LoaderOptions = {},
 ) {
-	const token = options.token;
 	const cached: ResolvedBase = { done: false };
 
 	return {
@@ -529,7 +576,17 @@ export function createPublicContentLoader(
 			if (!(await isLiveFetchAllowed())) return { entries: [] };
 			const base = await resolveApiBase(options, cached);
 			if (!base) return { entries: [] };
-			const raw = await fetchJson(`${base}/api/public/content/${type}`, token);
+			// Request-time token (PR #90 made the API auth-required):
+			// explicit option wins, else the Worker runtime env /
+			// build-time env — the same resolver the settings fetch
+			// uses. Never resolved at build time: the gate above
+			// already skipped build-time fetches.
+			const resolvedToken =
+				options.token ?? (await resolvePublicContentToken());
+			const raw = await fetchJson(
+				`${base}/api/public/content/${type}`,
+				resolvedToken,
+			);
 			const items = Array.isArray(raw)
 				? raw
 				: Array.isArray((raw as { items?: unknown }).items)
@@ -548,9 +605,13 @@ export function createPublicContentLoader(
 			if (!(await isLiveFetchAllowed())) return undefined;
 			const base = await resolveApiBase(options, cached);
 			if (!base) return undefined;
+			// Request-time token — same resolver as loadCollection
+			// above (PR #90: the API 401s without a Bearer token).
+			const resolvedToken =
+				options.token ?? (await resolvePublicContentToken());
 			const raw = await fetchJson(
 				`${base}/api/public/content/${type}/${encodeURIComponent(filter.id)}`,
-				token,
+				resolvedToken,
 			);
 			if (raw === undefined) return undefined;
 			const item = (raw as { item?: unknown }).item ?? raw;
