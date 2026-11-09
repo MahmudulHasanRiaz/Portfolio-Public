@@ -200,8 +200,12 @@ function toEntry(item: PublicContentItem, type: PublicContentType) {
  * WHEN live fetching is ALLOWED (any one of these):
  *   - `astro dev` (import.meta.env.DEV) — a developer machine CAN
  *     reach the API, so local dev keeps live data;
- *   - running inside the deployed Cloudflare Worker (the
- *     `cloudflare:workers` runtime env resolves) — on-demand routes
+ *   - running inside the deployed Cloudflare Worker — detected by
+ *     navigator.userAgent === "Cloudflare-Workers" (see
+ *     isLiveFetchAllowed below for why the old `cloudflare:workers`
+ *     import check was WRONG: it also resolves during `astro build`,
+ *     so the gate opened and Run #19 paid +8s/+16s/+24s/+32s per page
+ *     in API timeouts, ~20 min total) — on-demand routes
  *     (/api/settings, /sitemap.xml, the twin SSR fallback) run in the
  *     Worker and MUST keep fetching live;
  *   - the PUBLIC_CONTENT_LIVE_BUILD escape hatch is set to "1" as a
@@ -235,17 +239,32 @@ async function isLiveFetchAllowed(): Promise<boolean> {
 		liveFetchDecision = true;
 		return true;
 	}
-	try {
-		// Worker runtime — dynamic import so the Node prerender build
-		// stays green (same pattern as resolveApiBase below).
-		await import("cloudflare:workers");
+	// Worker runtime detection — CORRECTED (Run #19 build log,
+	// 2026-11-09). The old check, `await import("cloudflare:workers")`,
+	// ALSO resolves during `astro build` (Vite / the Cloudflare adapter
+	// provides the module at build time), so the gate opened and every
+	// prerendered page paid +8s/+16s/+24s/+32s in API timeouts — the
+	// build took ~20 min. Run #18 only looked fast because of the build
+	// output cache. The reliable signal is navigator.userAgent: workerd
+	// reports "Cloudflare-Workers", while Node (the build machine,
+	// Node 24) reports "Node.js/24" (verified: node -e prints
+	// "Node.js/24"). NOTE wrangler.jsonc enables nodejs_compat, so
+	// `process` exists in the Worker too — a `process.versions.node`
+	// check would wrongly skip live fetching at request time and break
+	// the twin fallback / /api/settings. Anything that is not
+	// verifiably the Worker (including an absent navigator) defaults
+	// to SKIP: a skipped fetch costs nothing (callers fall back to
+	// build-time data, which is the output anyway), while a
+	// wrongly-allowed fetch costs 8s per call.
+	const ua =
+		(globalThis as { navigator?: { userAgent?: string } }).navigator
+			?.userAgent ?? "";
+	if (ua === "Cloudflare-Workers") {
 		liveFetchDecision = true;
-	} catch {
-		// Not running in a Worker: `astro build` prerender in Node.
-		// Skip the live fetch; callers fall back to build-time data.
-		liveFetchDecision = false;
+		return true;
 	}
-	return liveFetchDecision;
+	liveFetchDecision = false;
+	return false;
 }
 
 async function fetchJson(
@@ -300,6 +319,10 @@ export interface SettingsBn {
 
 export interface PublicSettings {
 	portraitUrl: string | null;
+	/** Admin-managed favicon URL (settings key "favicon_url"). Null =
+	    no admin favicon — the public site falls back to its repo
+	    /favicon.svg. */
+	faviconUrl: string | null;
 	primaryIdentity: PrimaryIdentity;
 	defaultLanguage: DefaultLanguage;
 	/**
@@ -324,6 +347,7 @@ export interface PublicSettings {
 /** Fail-safe defaults: repo portrait + Software Engineer profile. */
 export const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
 	portraitUrl: null,
+	faviconUrl: null,
 	primaryIdentity: "developer",
 	defaultLanguage: "en",
 	heroHeadline: "I build products people rely on every day.",
@@ -419,6 +443,10 @@ async function fetchPublicSettingsUncached(
 			typeof record.portraitUrl === "string" && record.portraitUrl
 				? record.portraitUrl
 				: null;
+		const faviconUrl =
+			typeof record.faviconUrl === "string" && record.faviconUrl
+				? record.faviconUrl
+				: null;
 		const primaryIdentity: PrimaryIdentity =
 			record.primaryIdentity === "know-me" ? "know-me" : "developer";
 		const defaultLanguage: DefaultLanguage =
@@ -469,6 +497,7 @@ async function fetchPublicSettingsUncached(
 		}
 		return {
 			portraitUrl,
+			faviconUrl,
 			primaryIdentity,
 			defaultLanguage,
 			heroHeadline,
