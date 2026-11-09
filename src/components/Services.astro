@@ -1,14 +1,16 @@
 ---
-import { SERVICES } from "../data/site";
+import { SERVICES, type Service } from "../data/site";
 import BrandIcon from "./BrandIcon.astro";
 import ServiceModal from "./ServiceModal";
 import { getDict, pickDict, SERVICE_MODAL_DICT_KEYS, type Lang } from "../lib/i18n";
 
 interface Props {
 	lang?: Lang;
+	/** Live-merged services (getServices()); defaults to build-time SERVICES. */
+	services?: Service[];
 }
 
-const { lang = "en" } = Astro.props;
+const { lang = "en", services = SERVICES } = Astro.props;
 const t = getDict(lang);
 ---
 
@@ -20,18 +22,23 @@ const t = getDict(lang);
 		</div>
 	</div>
 	<div class="services-grid">
-		{SERVICES.map((service) => (
+		{services.map((service) => {
+			const displayName =
+				lang === "bn" && service.bn?.title
+					? service.bn.title
+					: service.name;
+			return (
 			<button
 				type="button"
 				class="service-card"
 				style="text-align:left;"
 				data-service-slug={service.slug}
 				aria-haspopup="dialog"
-				aria-label={`${t.learnMoreAbout} ${service.name}`}
+				aria-label={`${t.learnMoreAbout} ${displayName}`}
 			>
 				<span class="service-icon">
 					{service.icon ? (
-						<BrandIcon icon={service.icon} name={service.name} size={26} />
+						<BrandIcon icon={service.icon} name={displayName} size={26} />
 					) : service.lucide === "Database" ? (
 						<svg
 							width="26"
@@ -81,14 +88,15 @@ const t = getDict(lang);
 					)}
 				</span>
 				<span style="min-width:0;flex:1;">
-					<h3>{service.name}</h3>
+					<h3>{displayName}</h3>
 				</span>
 			</button>
-		))}
+			);
+		})}
 	</div>
 	{/* Service detail modal — the brief + CTA live here, not on the card. */}
 	{/* Subset dict only (Issue 7B): 3 keys, not the whole dictionary. */}
-	<ServiceModal lang={lang} dict={pickDict(t, SERVICE_MODAL_DICT_KEYS)} client:load />
+	<ServiceModal services={services} lang={lang} dict={pickDict(t, SERVICE_MODAL_DICT_KEYS)} client:load />
 </section>
 
 <style>

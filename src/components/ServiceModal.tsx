@@ -31,11 +31,15 @@ interface OpenServiceDetail {
 export default function ServiceModal({
 	lang = "en",
 	dict,
+	services: servicesProp,
 }: {
 	lang?: Lang;
 	/** Subset dict only (Issue 7B) — close + contactAboutService + openingContact. */
 	dict?: ServiceModalDict;
+	/** Live-merged services (getServices()); defaults to build-time SERVICES. */
+	services?: Service[];
 }) {
+	const services = servicesProp ?? SERVICES;
 	const [open, setOpen] = useState(false);
 	const [service, setService] = useState<Service | undefined>(undefined);
 	// "Contact about this service" shows a spinner while handing over
@@ -46,14 +50,14 @@ export default function ServiceModal({
 	useEffect(() => {
 		const handler = (e: Event) => {
 			const detail = (e as CustomEvent<OpenServiceDetail>).detail ?? {};
-			const found = SERVICES.find((s) => s.slug === detail.slug);
+			const found = services.find((s) => s.slug === detail.slug);
 			if (!found) return;
 			setService(found);
 			setOpen(true);
 		};
 		window.addEventListener("open-service", handler);
 		return () => window.removeEventListener("open-service", handler);
-	}, []);
+	}, [services]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -75,6 +79,16 @@ export default function ServiceModal({
 	}, [open ]);
 
 	if (!open || !service) return null;
+
+	// Bangla display copy when lang is bn (bn overlay from the API);
+	// English otherwise. The contact handover below KEEPS service.name
+	// (the English canonical name) — the contact form pre-selects by it.
+	const displayName =
+		lang === "bn" && service.bn?.title ? service.bn.title : service.name;
+	const displayDescription =
+		lang === "bn"
+			? (service.bn?.description ?? service.bn?.summary ?? service.description)
+			: service.description;
 
 	const openContact = () => {
 		if (openingContact) return;
@@ -104,7 +118,7 @@ export default function ServiceModal({
 				className="modal-sheet"
 				role="dialog"
 				aria-modal="true"
-				aria-label={service.name}
+				aria-label={displayName}
 				tabIndex={-1}
 				onClick={(e) => e.stopPropagation()}
 				style={{
@@ -183,9 +197,9 @@ export default function ServiceModal({
 						</svg>
 					)}
 				</span>
-				<h2 style={{ marginTop: "14px" }}>{service.name}</h2>
+				<h2 style={{ marginTop: "14px" }}>{displayName}</h2>
 				<p className="modal-sub" style={{ fontSize: "15px", lineHeight: 1.6 }}>
-					{service.description}
+					{displayDescription}
 				</p>
 				<div className="form-field">
 					<button

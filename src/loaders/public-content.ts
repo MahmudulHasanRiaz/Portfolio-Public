@@ -27,7 +27,8 @@ export type PublicContentType =
 	| "projects"
 	| "case-studies"
 	| "ventures"
-	| "releases";
+	| "releases"
+	| "services";
 
 export interface PublicContentItem {
 	slug: string;

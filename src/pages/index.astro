@@ -8,7 +8,7 @@ import StackGlobe from "../components/StackGlobe";
 import Combined from "../components/Combined.astro";
 import ClientsWall from "../components/ClientsWall.astro";
 import ContactForm from "../components/ContactForm";
-import { getProjects, getCaseStudies, getPosts, formatDate, readingTimeFromText, truncateShort } from "../lib/content";
+import { getProjects, getCaseStudies, getPosts, getServices, formatDate, readingTimeFromText, truncateShort } from "../lib/content";
 import { getDict, langUrl, pickDict, CONTACT_FORM_DICT_KEYS, PROJECTS_CAROUSEL_DICT_KEYS, STACK_GLOBE_DICT_KEYS, readingTimeLabel } from "../lib/i18n";
 import { PROFILE } from "../data/site";
 
@@ -24,6 +24,7 @@ const t = getDict(lang);
 const projects = await getProjects();
 const caseStudies = await getCaseStudies();
 const posts = await getPosts();
+const services = await getServices();
 
 const carouselProjects = projects.map((p) => ({
 	slug: p.data.slug,
@@ -60,7 +61,7 @@ const personJsonLd = {
 
 	<Stats lang={lang} />
 
-	<Services lang={lang} />
+	<Services services={services} lang={lang} />
 
 	<section class="glass section" id="projects">
 		<div class="section-head">
