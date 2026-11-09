@@ -12,6 +12,7 @@ export const en: Dict = {
 	navNasheed: "Nasheed",
 	navAbout: "About",
 	navContact: "Contact",
+	navHome: "Home",
 	profileSe: "Software Engineer",
 	profileKnowMe: "Know Me",
 	chooseProfile: "Choose a profile",

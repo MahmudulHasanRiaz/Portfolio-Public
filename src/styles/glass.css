@@ -783,6 +783,116 @@ main {
 	}
 }
 
+/* Hamburger polish (2026-11-09, home-shortcut round): the preview's
+   mark is a 12px icon in a 22px button (App.tsx:353) — the live 18px
+   icon was 50% heavier and read as a chunky button. The button stays
+   exactly 22px (preview) with the mark centred inside it, so the
+   pill's size and layout never change; only the mark gets thinner,
+   smaller and more minimal. */
+.pill-hamb-btn {
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	justify-content: center;
+}
+
+/* Open → X morph: both marks stay mounted and crossfade (opacity +
+   scale + rotate only, 200ms) — a smooth morph, never a swap flash.
+   Menu exits counter-clockwise, X enters clockwise. Reduced-motion
+   users get an instant swap (transition off). */
+.pill-hamb-btn .hamb-morph {
+	position: relative;
+	width: 12px;
+	height: 12px;
+	display: inline-flex;
+	flex: none;
+}
+
+.pill-hamb-btn .hamb-icon {
+	position: absolute;
+	inset: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0;
+	transform: scale(0.6) rotate(-90deg);
+	transition:
+		opacity 200ms ease,
+		transform 200ms ease;
+}
+
+.pill-hamb-btn .hamb-icon--x {
+	transform: scale(0.6) rotate(90deg);
+}
+
+.pill-hamb-btn .hamb-icon.is-active {
+	opacity: 1;
+	transform: scale(1) rotate(0deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pill-hamb-btn .hamb-icon {
+		transition: none;
+	}
+}
+
+/* Floating "back home" button (2026-11-09, home shortcut): a small
+   glass circle with a teal Home icon, fixed bottom-right. It is
+   NEVER in the header pill and never on the homepage (rendered only
+   off-home by Layout.astro). Visibility is driven by the .is-visible
+   class from its inline script: shown only once the visitor has
+   scrolled down a bit, hidden while a modal is open and while the
+   footer is in the button's zone. z-index 40 sits below the modal
+   backdrop (60) and the header panels (50), so even in the single
+   frame before the script hides it, a modal still covers it.
+   Entrance is transform + opacity only (rise + fade, 220ms);
+   reduced-motion users get an instant show/hide. */
+.home-fab {
+	position: fixed;
+	right: 16px;
+	bottom: 16px;
+	z-index: 40;
+	width: 44px;
+	height: 44px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	background: var(--card);
+	border: 1px solid var(--card-border);
+	box-shadow: var(--shadow);
+	backdrop-filter: blur(18px) saturate(1.4);
+	-webkit-backdrop-filter: blur(18px) saturate(1.4);
+	color: var(--accent-strong);
+	text-decoration: none;
+	opacity: 0;
+	transform: translateY(8px) scale(0.92);
+	visibility: hidden;
+	pointer-events: none;
+	transition:
+		opacity 220ms ease,
+		transform 220ms ease,
+		visibility 220ms;
+}
+
+.home-fab.is-visible {
+	opacity: 1;
+	transform: translateY(0) scale(1);
+	visibility: visible;
+	pointer-events: auto;
+}
+
+.home-fab:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.home-fab {
+		transition: none;
+	}
+}
+
 /* The chevron button needs 4px padding so the 14px icon makes a 22px
    button (preview), matching the hamburger's 22px. */
 .sticky-pill .pill-chev-btn {

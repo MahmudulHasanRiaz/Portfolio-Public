@@ -4,9 +4,10 @@ import "../styles/loading.css";
 import { ClientRouter } from "astro:transitions";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter.astro";
+import HomeButton from "../components/HomeButton.astro";
 import ContactModal from "../components/ContactModal";
 import { getSiteSettings } from "../lib/settings";
-import { enPath, getDict, pickDict, CONTACT_MODAL_DICT_KEYS, SITE_HEADER_DICT_KEYS, type Lang } from "../lib/i18n";
+import { enPath, getDict, langUrl, pickDict, CONTACT_MODAL_DICT_KEYS, SITE_HEADER_DICT_KEYS, type Lang } from "../lib/i18n";
 import { SITE_URL } from "../lib/detail";
 
 interface Props {
@@ -73,6 +74,16 @@ const xDefaultUrl =
 const canonicalUrl = canonical ?? Astro.url.href;
 const ogLocale = lang === "bn" ? "bn_BD" : "en_US";
 const ogLocaleAlt = lang === "bn" ? "en_US" : "bn_BD";
+
+// Floating home button (2026-11-09, home shortcut): rendered on
+// every page EXCEPT the homepage itself ("/" and "/bn[/]") — there
+// it would point at the page you're already on. A direct <body>
+// child (never inside .page) so no ancestor can disturb its fixed
+// positioning.
+const isHome =
+	Astro.url.pathname === "/" ||
+	Astro.url.pathname === "/bn" ||
+	Astro.url.pathname === "/bn/";
 ---
 
 <!doctype html>
@@ -189,6 +200,12 @@ const ogLocaleAlt = lang === "bn" ? "en_US" : "bn_BD";
 			<SiteFooter profile={profile} lang={lang} dict={t} />
 		</div>
 		<ContactModal lang={lang} dict={pickDict(t, CONTACT_MODAL_DICT_KEYS)} client:load />
+		{/* Floating home button — off-home pages only (see isHome
+		    above); the button itself is a plain link home, its
+		    inline script only controls when it is visible. */}
+		{!isHome ? (
+			<HomeButton href={langUrl("/", lang)} label={t.navHome} />
+		) : null}
 		<div id="page-progress" aria-hidden="true"></div>
 		<noscript>
 			<style>

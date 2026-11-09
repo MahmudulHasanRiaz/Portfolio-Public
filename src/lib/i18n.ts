@@ -67,6 +67,7 @@ export const SITE_HEADER_DICT_KEYS = [
 	"navNasheed",
 	"navAbout",
 	"navContact",
+	"navHome",
 	"switchLanguage",
 	"switchToLight",
 	"switchToDark",

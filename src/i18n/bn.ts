@@ -10,6 +10,7 @@ export interface Dict {
 	navNasheed: string;
 	navAbout: string;
 	navContact: string;
+	navHome: string;
 	profileSe: string;
 	profileKnowMe: string;
 	chooseProfile: string;
@@ -239,6 +240,7 @@ export const bn: Dict = {
 	navNasheed: "নাশিদ",
 	navAbout: "আমার সম্পর্কে",
 	navContact: "যোগাযোগ",
+	navHome: "হোম",
 	profileSe: "সফটওয়্যার ইঞ্জিনিয়ার",
 	profileKnowMe: "আমাকে জানুন",
 	chooseProfile: "একটা প্রোফাইল বেছে নিন",

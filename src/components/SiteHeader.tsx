@@ -3,6 +3,7 @@ import {
 	Check,
 	ChevronDown,
 	Code,
+	Home,
 	Menu,
 	Moon,
 	Play,
@@ -488,6 +489,13 @@ export default function SiteHeader({
 	// The mobile nav menu (preview, App.tsx:440-456): the SAME 5
 	// NAV_LINKS as the desktop pill nav — same dictionary labels, same
 	// language-aware hrefs — so mobile and desktop navigate identically.
+	// PLUS a "Home" row first (2026-11-09 home shortcut): the menu is
+	// the hamburger's panel, so the home shortcut lives WITH the
+	// hamburger — nothing new is added to the header pill itself. The
+	// Home row carries a Lucide Home icon (like the picker rows) so it
+	// reads as a destination at a glance; the other rows stay text-only,
+	// exactly as the preview has them. The desktop pill nav below is
+	// untouched (no Home link there — the menu is mobile-only).
 	// NOTE on hrefs: the preview is a single page, so its links are bare
 	// anchors (#projects / #ventures / #releases / #about / #contact).
 	// The live site is multi-route, so the live NAV_LINKS (which the
@@ -511,6 +519,16 @@ export default function SiteHeader({
 				pointerEvents: panelShown ? undefined : "none",
 			}}
 		>
+			<a
+				href={langUrl("/", lang)}
+				onClick={closePanel}
+				className="picker-row"
+			>
+				<span className="picker-icon">
+					<Home size={18} />
+				</span>
+				<span>{dict.navHome}</span>
+			</a>
 			{NAV_LINKS.map((l) => (
 				<a
 					key={l.label}
@@ -533,7 +551,11 @@ export default function SiteHeader({
 		<div className="sticky-pill">
 			{arcs}
 			{/* Hamburger — opens the mobile nav MENU (preview), never the
-			    picker. Shows an X while the menu is open (preview). */}
+			    picker. The mark is the preview's own 12px icon in the
+			    22px button (App.tsx:353) — the live 18px icon was 50%
+			    heavier and read as a chunky button. Both marks stay
+			    mounted and crossfade (opacity + scale + rotate, 200ms)
+			    so open → X is a smooth morph, never a swap flash. */}
 			<button
 				type="button"
 				className="pill-menu-btn pill-hamb-btn"
@@ -541,7 +563,22 @@ export default function SiteHeader({
 				aria-label={panel === "menu" ? "Close menu" : "Open menu"}
 				aria-expanded={panel === "menu"}
 			>
-				{panel === "menu" ? <X size={18} /> : <Menu size={18} />}
+				<span className="hamb-morph" aria-hidden="true">
+					<span
+						className={`hamb-icon hamb-icon--menu${
+							panel === "menu" ? "" : " is-active"
+						}`}
+					>
+						<Menu size={12} />
+					</span>
+					<span
+						className={`hamb-icon hamb-icon--x${
+							panel === "menu" ? " is-active" : ""
+						}`}
+					>
+						<X size={11} />
+					</span>
+				</span>
 			</button>
 			<button
 				type="button"
