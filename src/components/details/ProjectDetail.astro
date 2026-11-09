@@ -94,10 +94,12 @@ const d = view.d;
 			</section>
 			<TechChips techs={d.techs ?? []} lang={lang} dict={t} />
 			<DetailMedia
+				lang={lang}
+				dict={t}
 				gallery={d.gallery ?? []}
 				videos={d.videos ?? []}
 				exclude={d.thumbnail}
-				altBase={`${d.title} gallery image`}
+				altBase={`${d.title} ${t.galleryImage}`}
 			/>
 			<DetailCta
 				title={`${t.wantSystemLike} ${d.title}?`}

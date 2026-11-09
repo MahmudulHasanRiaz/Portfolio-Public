@@ -94,10 +94,12 @@ const data = view.data;
 		) : null}
 
 		<DetailMedia
+				lang={lang}
+				dict={t}
 			gallery={data.gallery ?? []}
 			videos={data.videos ?? []}
 			exclude={view.thumb}
-			altBase={`${view.title} gallery image`}
+			altBase={`${view.title} ${t.galleryImage}`}
 		/>
 
 		<div class="author-card">

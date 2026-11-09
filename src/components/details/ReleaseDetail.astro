@@ -77,7 +77,7 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 				<img src={data.thumbnail} alt={view.title} />
 			</div>
 		) : (
-			<div class="audio-tile" aria-label="Audio release">
+			<div class="audio-tile" aria-label={t.audioRelease}>
 				{view.firstPlatform &&
 				RELEASE_PLATFORM_ICONS[view.firstPlatform.name] ? (
 					<BrandIcon
@@ -177,7 +177,7 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 			</section>
 		) : null}
 
-		<DetailMedia videos={data.videos ?? []} altBase={`${view.title} video`} />
+		<DetailMedia lang={lang} dict={t} videos={data.videos ?? []} altBase={`${view.title} video`} />
 
 		<PrevNext prev={view.prev} next={view.next} lang={lang} dict={t} />
 	</section>

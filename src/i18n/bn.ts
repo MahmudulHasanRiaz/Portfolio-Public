@@ -15,6 +15,10 @@ export interface Dict {
 	profileKnowMe: string;
 	chooseProfile: string;
 	resumeRotation: string;
+	openMenu: string;
+	closeMenu: string;
+	mobileNav: string;
+	primaryNav: string;
 	switchLanguage: string;
 	switchToLight: string;
 	switchToDark: string;
@@ -59,6 +63,14 @@ export interface Dict {
 	nowLabel: string;
 	spin: string;
 	spinLabel: string;
+	globeHint: string;
+	catFrontend: string;
+	catBackend: string;
+	catDatabase: string;
+	catCloudTools: string;
+	catCmsEcommerce: string;
+	catConcepts: string;
+	catAuth: string;
 	beyondTitle: string;
 	beyondSub: string;
 	entrepreneurTitle: string;
@@ -219,6 +231,16 @@ export interface Dict {
 	playVideo: string;
 	playHere: string;
 	watchOnYouTube: string;
+	galleryLabel: string;
+	videosLabel: string;
+	prevImages: string;
+	nextImages: string;
+	prevVideos: string;
+	nextVideos: string;
+	mediaCounter: string;
+	galleryImage: string;
+	audioRelease: string;
+	ventureMetrics: string;
 	homeTitle: string;
 	homeDescription: string;
 	knowMeTitle: string;
@@ -248,6 +270,10 @@ export const bn: Dict = {
 	profileKnowMe: "আমাকে জানুন",
 	chooseProfile: "একটা প্রোফাইল বেছে নিন",
 	resumeRotation: "অটো-রোটেশন চালু করুন",
+	openMenu: "মেনু খুলুন",
+	closeMenu: "মেনু বন্ধ করুন",
+	mobileNav: "মোবাইল মেনু",
+	primaryNav: "প্রধান মেনু",
 	switchLanguage: "ভাষা বদলান",
 	switchToLight: "লাইট মোডে যান",
 	switchToDark: "ডার্ক মোডে যান",
@@ -304,6 +330,15 @@ export const bn: Dict = {
 	nowLabel: "এখন:",
 	spin: "ঘোরান",
 	spinLabel: "গ্লোব ঘুরিয়ে একটা র‍্যান্ডম টেকনোলজি দেখুন",
+	globeHint:
+		"টেনে ঘোরান · বিস্তারিত দেখতে কোনো টেকনোলজিতে ট্যাপ করুন — ৪৪টা টেকনোলজিই গ্লোবে আছে।",
+	catFrontend: "ফ্রন্টএন্ড",
+	catBackend: "ব্যাকএন্ড",
+	catDatabase: "ডেটাবেজ",
+	catCloudTools: "ক্লাউড ও টুলস",
+	catCmsEcommerce: "CMS ও ই-কমার্স",
+	catConcepts: "কনসেপ্ট",
+	catAuth: "Auth",
 	beyondTitle: "কোডের বাইরে",
 	beyondSub:
 		"এক মানুষ, আরও দুটি পরিচয় — কোম্পানি গড়া, আর নাশিদ রেকর্ড করা।",
@@ -487,6 +522,16 @@ export const bn: Dict = {
 	playVideo: "ভিডিও প্লে করুন",
 	playHere: "এখানেই প্লে করুন",
 	watchOnYouTube: "ইউটিউবে দেখুন",
+	galleryLabel: "গ্যালারি",
+	videosLabel: "ভিডিও",
+	prevImages: "আগের ছবিগুলো",
+	nextImages: "পরের ছবিগুলো",
+	prevVideos: "আগের ভিডিওগুলো",
+	nextVideos: "পরের ভিডিওগুলো",
+	mediaCounter: "{current} / {total}",
+	galleryImage: "গ্যালারি ছবি",
+	audioRelease: "অডিও রিলিজ",
+	ventureMetrics: "উদ্যোগের মেট্রিক",
 	homeTitle: "মাহমুদুল হাসান রিয়াজ — সফটওয়্যার ইঞ্জিনিয়ার, উদ্যোক্তা ও নাশিদ শিল্পী",
 	homeDescription:
 		"ঢাকা, বাংলাদেশের সফটওয়্যার ইঞ্জিনিয়ার, উদ্যোক্তা ও নাশিদ শিল্পী। বাংলাদেশ আর বিশ্বের বিজনেসের জন্য ERP, ই-কমার্স আর SaaS সিস্টেম।",

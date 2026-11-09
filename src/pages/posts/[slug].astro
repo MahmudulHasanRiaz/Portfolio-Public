@@ -263,10 +263,12 @@ const jsonLd = data
 			) : null}
 
 			<DetailMedia
+				lang={lang}
+				dict={t}
 				gallery={data.gallery ?? []}
 				videos={data.videos ?? []}
 				exclude={thumb}
-				altBase={`${title} gallery image`}
+				altBase={`${title} ${t.galleryImage}`}
 			/>
 
 			<div class="author-card">

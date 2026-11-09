@@ -76,7 +76,7 @@ const total = projects.length;
 		if (!row || !grid || !countLine) return;
 		const total = grid.querySelectorAll(".grid-card").length;
 		const template = countLine.getAttribute("data-count-template") || "";
-		const fmt = (n) =>
+		const fmt = (n: number) =>
 			template.includes("টি") ? n.toLocaleString("bn-BD") : String(n);
 		row.addEventListener("click", function (event) {
 			const target = event.target;

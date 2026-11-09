@@ -20,7 +20,7 @@ export default function ReleasePlayer({
 	dict?: ReleasePlayerDict;
 }) {
 	const t = dict ?? getDict(lang);
-	const playLabel = lang === "bn" ? `${title} চালান` : `Play ${title}`;
+	const playLabel = lang === "bn" ? `${title} প্লে করুন` : `Play ${title}`;
 	const [playing, setPlaying] = useState(false);
 	const thumb = youtubeThumb(youtubeId);
 
