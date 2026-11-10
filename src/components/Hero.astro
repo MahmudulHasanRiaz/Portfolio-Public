@@ -76,7 +76,16 @@ const designations =
 				src={speakerFallback}
 				formats={["avif", "webp"]}
 				widths={[352, 576, 704, 1068]}
-				sizes="(max-width: 1023px) 352px, 412px"
+				// sizes is honest to the RENDERED frame (PageSpeed
+				// 2026-11-10: displayed 574 device px at DPR 1.75 ≈
+				// 328 CSS px — the frame is viewport−80px (.page
+				// 16px + .glass 24px padding each side), capped at
+				// 22rem/352px. The old 352px overstated small phones,
+				// so the browser picked the 704w variant (46KB AVIF)
+				// when the 576w (35KB) covers the rendered size —
+				// ~12KB wasted per load. Desktop (412px) and tablet
+				// (352px) unchanged.
+				sizes="(max-width: 412px) 328px, (max-width: 1023px) 352px, 412px"
 				quality={75}
 				priority
 				// LCP render delay (PageSpeed 2026-11-10: the hero
