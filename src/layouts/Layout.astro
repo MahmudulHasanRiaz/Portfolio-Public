@@ -268,8 +268,11 @@ const isHome =
 			    it looks identical before hydration, and the
 			    hamburger / theme / language controls follow as soon
 			    as the browser is idle (right after first paint). The
-			    hero badge island stays `client:load` — its typing
-			    animation is the hero's visual identity. */}
+			    hero badge island also hydrates on `client:idle` (PR #23):
+			    its SSR HTML carries the designation text, so the badge is
+			    never empty, and the typing animation starts as soon as the
+			    browser is idle — the React runtime stays out of the
+			    pre-paint window. */}
 			<SiteHeader
 				current={effectiveProfile}
 				defaultProfile={defaultProfile}
