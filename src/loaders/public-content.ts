@@ -280,6 +280,60 @@ async function isLiveFetchAllowed(): Promise<boolean> {
 	return false;
 }
 
+/**
+ * Per-build fetch cache (Build #21faeab0, 2026-11-10).
+ *
+ * WHY: during `astro build` prerender, every page that reads a live
+ * collection pays a full HTTP fetch for it — `getLiveCollection` re-invokes
+ * the loader's `loadCollection` on every call, and the loader had no
+ * memoisation across pages. Measured on a local build (gate open,
+ * PUBLIC_CONTENT_LIVE_BUILD=1): 204 live fetches for 58 pages —
+ * `platforms` 64×, `projects` 26×, `releases` 20×, `ventures` 14×,
+ * `posts` 12×, `case-studies` 12×, `services` 6×, `clients` 4×,
+ * `technologies` 2×, settings 2×, plus 21 single entries 2× each.
+ * At ~1 s per fetch (401, no token) the build took 93 s; with a token
+ * the real API answers in ~1–3.6 s per call, so the same 204 fetches
+ * cost ~7.5 min on Cloudflare (build #21faeab0, cancelled by the user).
+ * Caching each distinct URL once per build drops the count to 31 (9
+ * collections + settings + 21 entries) with IDENTICAL output — the
+ * build is a snapshot, and the data does not change mid-build.
+ *
+ * SCOPE — build-time ONLY. The cache is active only during a production
+ * `astro build` prerender (not `astro dev`, not the Worker):
+ *   - `import.meta.env.DEV` is true in dev → cache OFF (dev keeps
+ *     fetching fresh per request, so admin edits show up without a
+ *     restart);
+ *   - `navigator.userAgent === "Cloudflare-Workers"` in the Worker →
+ *     cache OFF (the twin SSR fallback, /api/settings and /sitemap.xml
+ *     must keep fetching live per request; the settings 60 s TTL memo
+ *     still applies there).
+ * During `astro build` (Node, PROD) neither condition holds, so the
+ * cache is ON for the whole build. The gate (isLiveFetchAllowed) is
+ * untouched — this only dedupes fetches the gate already allowed, it
+ * never skips live data. Closing the gate would regress /bn/
+ * hero+services to English; this fix keeps them live.
+ *
+ * Failures ARE cached too (the promise, resolve or reject, is kept for
+ * the build): a failed fetch means the API is unreachable / unauthorised
+ * for this build, and re-paying the 8 s timeout on every page for the
+ * same URL is exactly the waste this cache removes. The caller already
+ * treats a failure as "use build-time rows", so a cached failure yields
+ * the identical fallback output — just without the repeated waits. A
+ * transient failure that resolves mid-build is not retried, but the
+ * build is a minutes-long snapshot and the fallback is the designed
+ * safe behaviour; the gate and the 8 s timeout are unchanged.
+ * Concurrent callers share the single in-flight promise for a URL.
+ */
+const buildFetchCache = new Map<string, Promise<unknown>>();
+
+function isBuildFetchCacheActive(): boolean {
+	if (import.meta.env.DEV) return false;
+	const ua =
+		(globalThis as { navigator?: { userAgent?: string } }).navigator
+			?.userAgent ?? "";
+	return ua !== "Cloudflare-Workers";
+}
+
 async function fetchJson(
 	url: string,
 	token: string | undefined,
@@ -291,6 +345,20 @@ async function fetchJson(
 	// NOTE: build-time skipping happens at the loader entry points
 	// (isLiveFetchAllowed above) — fetchJson itself still fetches live
 	// whenever it is called, i.e. at request time in the Worker.
+	if (isBuildFetchCacheActive()) {
+		const hit = buildFetchCache.get(url);
+		if (hit) return hit;
+		const promise = fetchJsonUncached(url, token);
+		buildFetchCache.set(url, promise);
+		return promise;
+	}
+	return fetchJsonUncached(url, token);
+}
+
+async function fetchJsonUncached(
+	url: string,
+	token: string | undefined,
+): Promise<unknown> {
 	const res = await fetch(url, {
 		headers: token ? { Authorization: `Bearer ${token}` } : {},
 		signal: AbortSignal.timeout(8000),
