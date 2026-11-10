@@ -26,7 +26,9 @@
 	"images": { "binding": "IMAGES" },
 	// Runtime env for the live loader (src/loaders/public-content.ts).
 	// Mirrors the Worker Variable set in the Cloudflare dashboard so Git
-	// deploys and dashboard settings stay in sync. This is a public URL,
-	// not a secret.
-	"vars": { "PUBLIC_CONTENT_API_URL": "https://admin.riaz.com.bd" }
+	// deploys and dashboard settings stay in sync. Both values are
+	// public, not secrets (a URL and the "1" build flag). NOTE: dashboard
+	// Runtime Variables do NOT reach the build — the build reads this
+	// file, so LIVE_BUILD must be set here.
+	"vars": { "PUBLIC_CONTENT_API_URL": "https://admin.riaz.com.bd", "PUBLIC_CONTENT_LIVE_BUILD": "1" }
 }
