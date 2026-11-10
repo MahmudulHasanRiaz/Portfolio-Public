@@ -261,13 +261,22 @@ const isHome =
 	<body>
 		{/* Bottom padding removed so the footer attaches flush to the page edge. */}
 		<div class="page" style="padding-bottom:0;">
+			{/* LCP render delay (PageSpeed 2026-11-10: the hero loads in
+			    210ms but paints 1,930ms later — main-thread JS in the
+			    LCP window). The header hydrates on `client:idle`
+			    instead of `client:load`: its SSR HTML is complete, so
+			    it looks identical before hydration, and the
+			    hamburger / theme / language controls follow as soon
+			    as the browser is idle (right after first paint). The
+			    hero badge island stays `client:load` — its typing
+			    animation is the hero's visual identity. */}
 			<SiteHeader
 				current={effectiveProfile}
 				defaultProfile={defaultProfile}
 				lang={lang}
 				currentPath={Astro.url.pathname}
 				dict={pickDict(t, SITE_HEADER_DICT_KEYS)}
-				client:load
+				client:idle
 			/>
 			<main>
 				<slot />

@@ -76,6 +76,15 @@ const designations =
 					sizes="(max-width: 1023px) 352px, 412px"
 					quality={75}
 					priority
+					// LCP render delay (PageSpeed 2026-11-10: the hero
+					// loads in 210ms but paints 1,930ms later): `priority`
+					// sets decoding="sync" by default, which forces the
+					// AVIF decode onto the main thread and blocks the
+					// paint on it. An explicit decoding="async" wins
+					// over that default (Astro resolves with ??=), so
+					// the image still loads eager + fetchpriority high
+					// but decodes off the paint path. No visual change.
+					decoding="async"
 					alt={t.photoAlt}
 					data-hero-photo
 				/>
