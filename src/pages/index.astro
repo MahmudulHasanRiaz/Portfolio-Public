@@ -110,10 +110,16 @@ const personJsonLd = {
 			</div>
 			<a class="view-all" href={langUrl("/projects", lang)}>{t.viewAllProjects}</a>
 		</div>
+		{/* client:idle (not client:visible): the island hydrates on idle
+		    time after load, so the skeleton resolves to real cards
+		    even if the visitor never scrolls — with client:visible
+		    the section sat as a skeleton ("boro faka jayga") until
+		    it entered the viewport. The skeleton footprint now
+		    matches the real layout, so the swap has no jump. */}
 		{projects.length === 0 ? (
 			<p class="empty-state">{t.emptyProjects}</p>
 		) : (
-			<ProjectsCarousel projects={carouselProjects} lang={lang} dict={pickDict(t, PROJECTS_CAROUSEL_DICT_KEYS)} client:visible />
+			<ProjectsCarousel projects={carouselProjects} lang={lang} dict={pickDict(t, PROJECTS_CAROUSEL_DICT_KEYS)} client:idle />
 		)}
 	</section>
 

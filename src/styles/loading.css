@@ -117,6 +117,15 @@ button.is-navigating {
 	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 	gap: 16px;
 }
+/* Footprint match (2026-11-10): the grid renders 6 cards (2 rows) from
+   640px, but the mobile carousel shows ONE card — so below 640px only
+   the first skeleton card shows, matching the single carousel card's
+   footprint instead of 3 stacked cards (~900px of "empty gap"). */
+@media (max-width: 639px) {
+	.skel-grid .skel-card:nth-child(n + 2) {
+		display: none;
+	}
+}
 
 /* Modal skeleton: shown inside the sheet for the first frame(s) while
    the modal content mounts, so the sheet itself is never a dead wait. */
