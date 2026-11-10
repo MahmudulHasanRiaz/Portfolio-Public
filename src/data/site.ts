@@ -34,6 +34,11 @@ export interface Platform {
 
 export const PROFILE = {
 	name: "Mahmudul Hasan Riaz",
+	/** Bangla display name — shown wherever the name is DISPLAYED on
+	 * /bn/ pages (hero h1, footer identity, author bylines), via
+	 * displayName() in lib/i18n.ts. Structured data (JSON-LD, og,
+	 * canonical, <title>) keeps the Latin `name` above. */
+	nameBn: "মাহমুদুল হাসান রিয়াজ",
 	location: "Dhaka, Bangladesh",
 	email: "hello@riaz.com.bd",
 	designations: [

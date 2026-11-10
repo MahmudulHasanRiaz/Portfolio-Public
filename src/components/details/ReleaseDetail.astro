@@ -11,9 +11,10 @@ import DetailMedia from "../DetailMedia.astro";
 import DetailVideoFacade from "../DetailVideoFacade.astro";
 import PrevNext from "../PrevNext.astro";
 import ReleasePlayer from "../ReleasePlayer";
-import { PROFILE, WIKIMEDIA_LOGOS } from "../../data/site";
+import { WIKIMEDIA_LOGOS } from "../../data/site";
 import {
 	langUrl,
+	displayName,
 	pickDict,
 	RELEASE_PLAYER_DICT_KEYS,
 	platformActionLabelLang,
@@ -120,7 +121,7 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 			{` · ${view.isVideo ? t.videoLabel : t.audioLabel}`}
 		</p>
 		<h1 class="detail-title">{view.title}</h1>
-		<p class="detail-meta">{t.authorBy} {PROFILE.name}</p>
+		<p class="detail-meta">{t.authorBy} {displayName(lang)}</p>
 		{!view.isVideo ? (
 			<p style="margin:12px 0 0;">
 				<span class="audio-badge">{t.audioOnly}</span>

@@ -138,7 +138,7 @@ const sizedThumb = (url: string | null | undefined, w = 800) =>
 			if (count)
 				count.textContent = template
 					? template.replace("{shown}", fmt(shown)).replace("{total}", fmt(total))
-					: `Showing ${shown} of ${total} ventures`;
+					: `মোট ${total.toLocaleString("bn-BD")}টি উদ্যোগের মধ্যে ${shown.toLocaleString("bn-BD")}টি দেখাচ্ছে`;
 		});
 	});
 </script>

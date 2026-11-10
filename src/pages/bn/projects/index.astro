@@ -103,7 +103,7 @@ const total = projects.length;
 			});
 			countLine.textContent = template
 				? template.replace("{shown}", fmt(visible)).replace("{total}", fmt(total))
-				: "Showing " + visible + " of " + total + " projects";
+				: "মোট " + total.toLocaleString("bn-BD") + "টি প্রজেক্টের মধ্যে " + visible.toLocaleString("bn-BD") + "টি দেখাচ্ছে";
 		});
 	})();
 </script>

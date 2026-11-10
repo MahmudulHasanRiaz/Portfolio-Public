@@ -251,7 +251,7 @@ function releaseYear(publishedAt?: string): string {
 			if (count)
 				count.textContent = template
 					? template.replace("{shown}", fmt(shown)).replace("{total}", fmt(total))
-					: `Showing ${shown} of ${total} releases`;
+					: `মোট ${total.toLocaleString("bn-BD")}টি রিলিজের মধ্যে ${shown.toLocaleString("bn-BD")}টি দেখাচ্ছে`;
 		});
 	});
 </script>

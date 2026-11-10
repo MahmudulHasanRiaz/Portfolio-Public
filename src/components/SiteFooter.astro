@@ -10,7 +10,7 @@
 import BrandIcon from "./BrandIcon.astro";
 import { PROFILE } from "../data/site";
 import { getFooterPrimaries, getPlatforms } from "../lib/content";
-import { langUrl, type Dict, type Lang } from "../lib/i18n";
+import { langUrl, displayName, type Dict, type Lang } from "../lib/i18n";
 
 interface Props {
 	profile?: "se" | "knowme";
@@ -43,7 +43,9 @@ const rightsLabel = dict?.footerRights ?? "All rights reserved.";
 		style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;"
 	>
 		<div style="min-width:0;">
-			<p class="footer-identity">{PROFILE.name}</p>
+			{/* Identity line: display name — Bangla on /bn/ pages.
+			    The COPYRIGHT line below keeps the Latin name. */}
+			<p class="footer-identity">{displayName(lang)}</p>
 			<p class="footer-sub">{sub}</p>
 		</div>
 		<div class="footer-socials" style="margin-top:0;flex:none;">

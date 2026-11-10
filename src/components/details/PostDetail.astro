@@ -13,7 +13,7 @@ import DetailVideoFacade from "../DetailVideoFacade.astro";
 import PrevNext from "../PrevNext.astro";
 import { formatDate } from "../../lib/content";
 import { PROFILE } from "../../data/site";
-import { langUrl, readingTimeLabel, type Dict, type Lang } from "../../lib/i18n";
+import { langUrl, displayName, readingTimeLabel, type Dict, type Lang } from "../../lib/i18n";
 import {
 	optimizedImageUrl,
 	optimizedSrcset,
@@ -74,7 +74,7 @@ const data = view.data;
 			))}
 		<h1 class="detail-title">{view.title}</h1>
 		<p class="detail-meta">
-			{t.authorBy} {PROFILE.name}
+			{t.authorBy} {displayName(lang)}
 			{formatDate(data.publishedAt, lang)
 				? ` · ${formatDate(data.publishedAt, lang)}`
 				: ""}
@@ -129,13 +129,13 @@ const data = view.data;
 			<img
 				class="author-photo"
 				src={PROFILE.photo}
-				alt={PROFILE.name}
+				alt={displayName(lang)}
 				width="56"
 				height="56"
 				loading="lazy"
 			/>
 			<div class="author-info">
-				<strong>{PROFILE.name}</strong>
+				<strong>{displayName(lang)}</strong>
 				<span>
 					{t.authorLine}
 				</span>

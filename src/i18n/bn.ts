@@ -338,7 +338,7 @@ export const bn: Dict = {
 	catCloudTools: "ক্লাউড ও টুলস",
 	catCmsEcommerce: "CMS ও ই-কমার্স",
 	catConcepts: "কনসেপ্ট",
-	catAuth: "Auth",
+	catAuth: "অথেন্টিকেশন",
 	beyondTitle: "কোডের বাইরে",
 	beyondSub:
 		"এক মানুষ, আরও দুটি পরিচয় — কোম্পানি গড়া, আর নাশিদ রেকর্ড করা।",
