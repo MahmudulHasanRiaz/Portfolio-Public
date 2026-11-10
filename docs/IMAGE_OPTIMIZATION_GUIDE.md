@@ -57,8 +57,13 @@ original-e redirect kore.
 
 ### Kothay kothay automatic (shob cover kora)
 
-- **Hero portrait** (`Hero.astro`) — remote branch + live swap (admin-e
-  portrait bodlale rebuild charai swap hoy, optimized URL-e).
+- **Hero portrait** (`Hero.astro`) — **INTENTIONALLY STATIC, /api/image
+  na, live swap-o na** (LCP exception): build-time Sharp `<Picture>`
+  (`public/speaker.jpg` theke, AVIF/WebP, widths 352/576/704/1068).
+  PageSpeed 2026-11-10: hero-ke /api/image diye serve korle mobile
+  100→98 regression hoyechilo (dynamic route cold hit-e slow, ar
+  post-load swap LCP element-ta abar paint koray). Notun portrait
+  chaile `public/speaker.jpg` bodle deploy korte hoy.
 - **Project / venture / post / case-study / release thumbnail** —
   card (`ThumbImage.astro`), carousel (`ProjectsCarousel.tsx`),
   detail hero (5 twin component + 10 static page) — shob jaygay.
@@ -103,7 +108,7 @@ shudhu ei recommended size/format gulo mathay rakho:
 
 | Type | Display size | Recommended upload | Route ki dey |
 | --- | --- | --- | --- |
-| **Hero portrait** | 352px mobile / 412px desktop | JPEG/WebP, **1280px proshosto** porjonto, portrait 4:5, ≤ 500KB | srcset 360 / 720 / 1024, AVIF/WebP, q75 |
+| **Hero portrait** | 352px mobile / 412px desktop | JPEG/WebP, **1280px proshosto** porjonto, portrait 4:5, ≤ 500KB — file-ta `public/speaker.jpg` (repo) bodle deploy koro; admin portraitUrl hero-te use hoy na (og:image-te hoy) | build-time Sharp srcset 352 / 576 / 704 / 1068, AVIF/WebP, q75 — **/api/image na** |
 | **Thumbnail** (project / venture / post / case-study / release) | 360px card / 1088px detail hero | JPEG/WebP, **1600px proshosto** porjonto, 16:10 ba 4:3, ≤ 500KB | card srcset 360 / 720 / 1024; hero srcset 800 / 1200 |
 | **Gallery image** | ~720px | JPEG/WebP, **1600px proshosto** porjonto, ≤ 500KB | src 800, srcset 360 / 720 / 1024 |
 | **Post-er vitore inline image** | ~720px column | JPEG/WebP, **1600px proshosto** porjonto, ≤ 500KB; markdown-e **alada line-e** `![alt text](url)` likho | src 1024, srcset 360 / 720 / 1024, lazy |
