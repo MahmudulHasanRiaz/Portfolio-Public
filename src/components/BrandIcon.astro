@@ -7,7 +7,12 @@
 // - "woocommerce-w"    -> the latest WooCommerce "W" lettermark (inline SVG)
 // - null               -> honest plain name chip, never a fake logo
 // Dark logos render white in dark mode only (class logo-dark-invert).
-import { LOCAL_LOGO_OVERRIDES, WOOCOMMERCE_W_PATH, simpleIconsUrl } from "../data/site";
+import {
+	LOCAL_LOGO_OVERRIDES,
+	WIKIMEDIA_LOGOS,
+	WOOCOMMERCE_W_PATH,
+	simpleIconsUrl,
+} from "../data/site";
 import { ICON_SPRITE_URL, hasSpriteIcon } from "../lib/icons";
 
 interface Props {
@@ -24,6 +29,12 @@ interface Props {
 const { icon, name, size = 20, darkInvert = false, class: cls = "", decorative = false } = Astro.props;
 
 // Logos that are dark-on-transparent and need inverting in dark mode.
+// Entries are the icon values BrandIcon receives: Simple Icons slugs,
+// plus the two `wikimedia:` canonical values for JioSaavn and Boomplay
+// (dark wordmarks that blend into a dark background — reported on
+// /platforms, 2026-11-10). The invert check runs on the canonical
+// `icon`, before the Boomplay local-file override, so the live API
+// value is covered too.
 export const DARK_INVERT_SLUGS = new Set([
 	"nextdotjs",
 	"express",
@@ -37,6 +48,9 @@ export const DARK_INVERT_SLUGS = new Set([
 	"github",
 	"tiktok",
 	"threads",
+	"x",
+	`wikimedia:${WIKIMEDIA_LOGOS.jiosaavn}`,
+	`wikimedia:${WIKIMEDIA_LOGOS.boomplay}`,
 ]);
 
 const invert = darkInvert || (icon !== null && DARK_INVERT_SLUGS.has(icon));
