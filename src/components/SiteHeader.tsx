@@ -105,10 +105,26 @@ export default function SiteHeader({
 		},
 	];
 
-	const NAV_LINKS = [
-		{ label: dict.navWork, href: langUrl("/#projects", lang) },
-		{ label: dict.navVentures, href: langUrl("/#beyond", lang) },
-		{ label: dict.navNasheed, href: langUrl("/releases", lang) },
+	const NAV_LINKS: Array<{
+		label: string;
+		href: string;
+		/** Sub-menu items (desktop dropdown + nested mobile rows). */
+		children?: Array<{ label: string; href: string }>;
+	}> = [
+		{
+			label: dict.navWork,
+			href: langUrl("/#projects", lang),
+			children: [
+				{ label: dict.navProjects, href: langUrl("/projects", lang) },
+				{
+					label: dict.navCaseStudies,
+					href: langUrl("/case-studies", lang),
+				},
+				{ label: dict.navPosts, href: langUrl("/posts", lang) },
+			],
+		},
+		{ label: dict.navVentures, href: langUrl("/ventures", lang) },
+		{ label: dict.navReleases, href: langUrl("/releases", lang) },
 		{ label: dict.navAbout, href: langUrl("/know-me", lang) },
 		{ label: dict.navContact, href: langUrl("/#contact", lang) },
 	];
@@ -557,15 +573,20 @@ export default function SiteHeader({
 	// reads as a destination at a glance; the other rows stay text-only,
 	// exactly as the preview has them. The desktop pill nav below is
 	// untouched (no Home link there — the menu is mobile-only).
+	// A link with `children` (Work) renders its sub-menu items as
+	// nested, indented rows directly beneath it (2026-11-10 nav
+	// round) — always visible, never a collapsible accordion — so the
+	// archive pages (Projects, Case Studies, Posts) are reachable from
+	// the menu without adding a 6th top-level item.
 	// NOTE on hrefs: the preview is a single page, so its links are bare
 	// anchors (#projects / #ventures / #releases / #about / #contact).
 	// The live site is multi-route, so the live NAV_LINKS (which the
 	// desktop pill already uses) are absolute instead: Work → /#projects,
-	// Ventures → /#beyond (the homepage ventures section id), Nasheed →
-	// /releases (a route), About → /know-me (a route), Contact →
-	// /#contact — all via langUrl, so they work from any page and in
-	// either language. Bare #ventures / #releases / #about anchors do
-	// NOT exist live and must not be reintroduced here.
+	// Ventures → /ventures (the archive route — 2026-11-10 nav round,
+	// was /#beyond), Releases → /releases (a route), About → /know-me
+	// (a route), Contact → /#contact — all via langUrl, so they work
+	// from any page and in either language. Bare #ventures / #releases /
+	// #about anchors do NOT exist live and must not be reintroduced here.
 	// The panel reuses .header-picker positioning/styling (absolute,
 	// below the pill, glass, z-50) and .picker-row rows; .header-menu
 	// only adds the mobile-only rule (see the <style> in the header
@@ -591,14 +612,27 @@ export default function SiteHeader({
 				<span>{dict.navHome}</span>
 			</a>
 			{NAV_LINKS.map((l) => (
-				<a
-					key={l.label}
-					href={l.href}
-					onClick={closePanel}
-					className="picker-row"
-				>
-					{l.label}
-				</a>
+				<span key={l.label} className="menu-group">
+					<a
+						href={l.href}
+						onClick={closePanel}
+						className="picker-row"
+					>
+						{l.label}
+					</a>
+					{l.children
+						? l.children.map((s) => (
+								<a
+									key={s.label}
+									href={s.href}
+									onClick={closePanel}
+									className="picker-row picker-subrow"
+								>
+									{s.label}
+								</a>
+							))
+						: null}
+				</span>
 			))}
 		</nav>
 	) : null;
@@ -714,11 +748,36 @@ export default function SiteHeader({
 				</span>
 			</button>
 			<nav className="pill-nav" aria-label={dict.primaryNav}>
-				{NAV_LINKS.map((l) => (
-					<a key={l.label} href={l.href}>
-						{l.label}
-					</a>
-				))}
+				{NAV_LINKS.map((l) =>
+					l.children ? (
+						<span key={l.label} className="nav-dropdown">
+							{/* The Work label stays a plain link (existing
+							    behavior): it navigates to /#projects, the
+							    homepage Projects section. The dropdown
+							    panel opens on hover / keyboard focus
+							    (glass.css :hover + :focus-within) — no
+							    new button or icon in the pill, so the
+							    header stays thin and premium. */}
+							<a href={l.href}>{l.label}</a>
+							<span className="nav-dropdown-panel" role="menu">
+								{l.children.map((s) => (
+									<a
+										key={s.label}
+										href={s.href}
+										className="nav-dropdown-link"
+										role="menuitem"
+									>
+										{s.label}
+									</a>
+								))}
+							</span>
+						</span>
+					) : (
+						<a key={l.label} href={l.href}>
+							{l.label}
+						</a>
+					),
+				)}
 			</nav>
 			{picker}
 			{menu}

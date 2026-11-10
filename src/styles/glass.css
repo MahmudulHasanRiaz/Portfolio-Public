@@ -1111,6 +1111,22 @@ button:focus-visible {
 	flex: none;
 }
 
+/* Mobile menu sub-rows (2026-11-10 nav round): the Work sub-menu
+   items (Projects, Case Studies, Posts) sit nested beneath the Work
+   row — indented, slightly smaller and dimmer, so the grouping reads
+   at a glance. The .menu-group wrapper is a plain span (no layout
+   of its own) so the rows keep the picker's exact flow. */
+.header-picker .menu-group {
+	display: contents;
+}
+
+.header-picker .picker-row.picker-subrow {
+	min-height: 36px;
+	padding-left: 28px;
+	font-size: 13px;
+	color: var(--ink-dim);
+}
+
 .header-picker .picker-row.active {
 	background: var(--accent-soft);
 }
@@ -1277,6 +1293,90 @@ button:focus-visible {
 	.pill-nav a:hover {
 		background: var(--accent-wash);
 		color: var(--ink);
+	}
+}
+
+/* Work sub-menu (2026-11-10 nav round): the "Work" pill-nav link
+   carries a glass dropdown with the archive pages (Projects, Case
+   Studies, Posts). The wrapper is a plain inline-flex span — no new
+   button or icon in the pill, so the header stays thin and premium.
+   The panel opens on hover and on keyboard focus (:focus-within), so
+   it works for mouse and keyboard alike; the Work label itself stays
+   a plain link to /#projects. The ::before bridge covers the 6px gap
+   between the link and the panel, so moving the pointer down never
+   drops the hover. The panel reuses the picker's glass tokens
+   (background, border, radius, shadow) so it reads as the same
+   component family. Reduced-motion kills the fade/slide (see the
+   reduced-motion block below). */
+.nav-dropdown {
+	position: relative;
+	display: inline-flex;
+}
+
+.nav-dropdown-panel {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 50%;
+	transform: translateX(-50%) translateY(-4px);
+	min-width: 180px;
+	max-width: calc(100vw - 16px);
+	padding: 6px;
+	border: 1px solid var(--card-border);
+	border-radius: var(--radius-sm);
+	background: var(--bg);
+	box-shadow: var(--shadow);
+	z-index: 60;
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	transition:
+		opacity 200ms ease-out,
+		transform 200ms ease-out,
+		visibility 200ms;
+}
+
+/* Invisible hover bridge over the gap between link and panel. */
+.nav-dropdown-panel::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 100%;
+	height: 8px;
+}
+
+.nav-dropdown:hover .nav-dropdown-panel,
+.nav-dropdown:focus-within .nav-dropdown-panel {
+	opacity: 1;
+	visibility: visible;
+	transform: translateX(-50%) translateY(0);
+	pointer-events: auto;
+}
+
+.nav-dropdown-link {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	min-height: 36px;
+	padding: 6px 10px;
+	border-radius: var(--radius-xs);
+	color: var(--ink);
+	font-size: 13px;
+	font-weight: 500;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.nav-dropdown-link:hover {
+		background: var(--accent-wash);
+		color: var(--ink);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.nav-dropdown-panel {
+		transition: none;
 	}
 }
 
@@ -3523,13 +3623,17 @@ html[lang="bn"] .hero-name {
 	text-align: center;
 }
 
-/* Dark-mode logo treatment: dark logos render white in dark mode only. */
-[data-theme="dark"] img.logo-dark-invert {
+/* Dark-mode logo treatment: dark logos render white in dark mode only.
+   The selector is the bare class (no `img` qualifier): the icons are
+   SVG sprite <use> elements, not <img> — the old `img.` qualifier
+   matched nothing, so the GitHub footer mark and the dark tech logos
+   stayed black and blended into the dark background. */
+[data-theme="dark"] .logo-dark-invert {
 	filter: brightness(0) invert(1);
 }
 
 @media (prefers-color-scheme: dark) {
-	:root:not([data-theme="light"]) img.logo-dark-invert {
+	:root:not([data-theme="light"]) .logo-dark-invert {
 		filter: brightness(0) invert(1);
 	}
 }
