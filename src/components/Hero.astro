@@ -9,6 +9,7 @@ import { PROFILE, STATS } from "../data/site";
 import { getStats } from "../lib/content";
 import { getSiteSettings, type SettingsBn } from "../lib/settings";
 import { applySiteCopy, getDict, type Lang } from "../lib/i18n";
+import { optimizedImageUrl, optimizedSrcset } from "../lib/images";
 import HeroDesignation from "./HeroDesignation";
 
 interface Props {
@@ -64,10 +65,14 @@ const designations =
 			    sets loading=eager + decoding=sync + fetchpriority
 			    high; `sizes` is honest to the frame (22rem / 352px
 			    mobile, 5fr column / ~412px desktop). The admin
-			    portrait (live settings) is remote — it cannot go
-			    through the build-time pipeline, so it keeps the plain
-			    <img> (dev / on-demand renders only; the static build
-			    always takes the Picture branch). */}
+			    portrait (live settings) is remote — it goes through
+			    the /api/image route when it lives on
+			    files.riaz.com.bd (AVIF/WebP, quality 75, widths
+			    352/704/1068 clamped to the whitelist), so a new
+			    admin portrait is optimized on first request with no
+			    rebuild; any other remote URL renders unchanged.
+			    Dev / on-demand renders only; the static build always
+			    takes the Picture branch. */}
 			{photoUrl === PROFILE.photo ? (
 				<Picture
 					src={speakerFallback}
@@ -90,7 +95,9 @@ const designations =
 				/>
 			) : (
 				<img
-					src={photoUrl}
+					src={optimizedImageUrl(photoUrl, 704)}
+					srcset={optimizedSrcset(photoUrl, [352, 704, 1068])}
+					sizes="(max-width: 1023px) 352px, 412px"
 					alt={t.photoAlt}
 					width="640"
 					height="800"
@@ -219,6 +226,44 @@ const designations =
 	// no visual change — when the fetch fails or a URL already matches
 	// the rendered one.
 	(function () {
+		// Same rule as src/lib/images.ts, inlined for this script:
+		// a files.riaz.com.bd portrait goes through /api/image
+		// (widths clamped to the route whitelist); anything else
+		// renders unchanged.
+		function optimizedPortrait(url) {
+			if (
+				typeof url === "string" &&
+				url.indexOf("https://files.riaz.com.bd/") === 0
+			) {
+				return (
+					"/api/image?u=" +
+					encodeURIComponent(url) +
+					"&w=720"
+				);
+			}
+			return url;
+		}
+		function optimizedSrcset(url) {
+			if (
+				typeof url === "string" &&
+				url.indexOf("https://files.riaz.com.bd/") === 0
+			) {
+				return [360, 720, 1024]
+					.map(function (w) {
+						return (
+							"/api/image?u=" +
+							encodeURIComponent(url) +
+							"&w=" +
+							w +
+							" " +
+							w +
+							"w"
+						);
+					})
+					.join(", ");
+			}
+			return null;
+		}
 		function swap() {
 			try {
 				fetch("/api/settings", { signal: AbortSignal.timeout(8000) })
@@ -232,9 +277,10 @@ const designations =
 							data.portraitUrl
 						) {
 							var img = document.querySelector("img[data-hero-photo]");
+							var nextSrc = optimizedPortrait(data.portraitUrl);
 							if (
 								img &&
-								img.getAttribute("src") !== data.portraitUrl
+								img.getAttribute("src") !== nextSrc
 							) {
 								// The hero renders as a <picture>
 								// (AVIF/WebP sources); a bare img.src
@@ -248,7 +294,24 @@ const designations =
 											s.remove();
 										});
 								}
-								img.setAttribute("src", data.portraitUrl);
+								// The <Picture> branch also leaves a
+								// stale img srcset (local variants) —
+								// with a srcset present the browser
+								// ignores img.src, so drop it too and
+								// set the optimized srcset instead.
+								img.removeAttribute("srcset");
+								img.removeAttribute("sizes");
+								var nextSrcset = optimizedSrcset(
+									data.portraitUrl,
+								);
+								if (nextSrcset) {
+									img.setAttribute("srcset", nextSrcset);
+									img.setAttribute(
+										"sizes",
+										"(max-width: 1023px) 352px, 412px",
+									);
+								}
+								img.setAttribute("src", nextSrc);
 							}
 						}
 						if (

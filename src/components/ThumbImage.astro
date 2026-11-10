@@ -9,10 +9,10 @@
 //   2. Unsplash URL → plain <img> with a srcset built from the
 //      Unsplash w= parameter (q=75); Unsplash resizes server-side,
 //      so no build-time work is needed.
-//   3. Any other remote URL (live API / files.riaz.com.bd) → plain
-//      <img> at the given width/height; it cannot be resized without
-//      an image CDN, and Cloudflare Image Transformations are
-//      deliberately NOT layered on top of the build pipeline.
+//   3. Any other remote URL (live API / files.riaz.com.bd) → the
+//      /api/image route when it is a files.riaz.com.bd URL (AVIF/
+//      WebP, quality 75, widths clamped to the whitelist), else a
+//      plain <img> at the given width/height.
 //
 // The caller passes the layout context (widths + sizes). The
 // width/height attributes are the layout size for the remote
@@ -21,7 +21,11 @@
 // (aspect-ratio + object-fit: cover), so no layout shift either way.
 import { Picture } from "astro:assets";
 import type { ImageMetadata } from "astro";
-import { unsplashSrcset } from "../lib/images";
+import {
+	optimizedImageUrl,
+	optimizedSrcset,
+	unsplashSrcset,
+} from "../lib/images";
 
 interface Props {
 	src: string;
@@ -65,7 +69,11 @@ const asset = byUrl.get(src);
 
 // Unsplash srcset: same image at the responsive widths, q=75.
 // Only when the URL actually carries a w= parameter to rewrite.
-const remoteSrcset = unsplashSrcset(src, widths);
+// A files.riaz.com.bd URL gets the /api/image srcset instead;
+// anything else gets no srcset (plain <img>, original URL).
+const remoteSrcset =
+	unsplashSrcset(src, widths) ?? optimizedSrcset(src, widths);
+const remoteSrc = optimizedImageUrl(src, width);
 ---
 
 {
@@ -84,7 +92,7 @@ const remoteSrcset = unsplashSrcset(src, widths);
 		/>
 	) : (
 		<img
-			src={src}
+			src={remoteSrc}
 			srcset={remoteSrcset}
 			sizes={remoteSrcset ? sizes : undefined}
 			alt={alt}

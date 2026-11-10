@@ -15,6 +15,15 @@
 	"cache": { "enabled": true },
 	"name": "portfolio-public",
 	"observability": { "enabled": true },
+	// Images binding (Cloudflare Images) — the /api/image route
+	// transforms admin remote images on demand through env.IMAGES.
+	// The Astro adapter also auto-provisions this binding under its
+	// default `cloudflare-binding` image service; declaring it here
+	// keeps the intent explicit and the local `wrangler dev`
+	// simulation available. No paid add-on: the first 5,000 unique
+	// transformations/month are free, and the route 302s to the
+	// original image if the quota is ever hit.
+	"images": { "binding": "IMAGES" },
 	// Runtime env for the live loader (src/loaders/public-content.ts).
 	// Mirrors the Worker Variable set in the Cloudflare dashboard so Git
 	// deploys and dashboard settings stay in sync. This is a public URL,

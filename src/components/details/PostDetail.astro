@@ -14,6 +14,11 @@ import PrevNext from "../PrevNext.astro";
 import { formatDate } from "../../lib/content";
 import { PROFILE } from "../../data/site";
 import { langUrl, readingTimeLabel, type Dict, type Lang } from "../../lib/i18n";
+import {
+	optimizedImageUrl,
+	optimizedSrcset,
+	remoteSrcset,
+} from "../../lib/images";
 import type { PostView } from "../../lib/twin-detail";
 
 interface Props {
@@ -58,11 +63,11 @@ const data = view.data;
 			) : (
 				<div class="detail-hero">
 					<img
-						src={view.thumb}
+						src={optimizedImageUrl(view.thumb, 1200)}
 						alt={view.title}
 						fetchpriority="high"
 						decoding="async"
-						srcset={view.thumb?.includes("images.unsplash.com") ? `${view.thumb.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${view.thumb.replace(/q=\d+/, "q=75")} 1200w` : undefined}
+						srcset={view.thumb?.includes("images.unsplash.com") ? `${view.thumb.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${view.thumb.replace(/q=\d+/, "q=75")} 1200w` : optimizedSrcset(view.thumb, [800, 1200])}
 						sizes="(max-width: 640px) 100vw, 1088px"
 					/>
 				</div>
@@ -89,6 +94,17 @@ const data = view.data;
 				{view.storyBlocks.map((block) =>
 					block.kind === "h2" ? (
 						<h2>{block.text}</h2>
+					) : block.kind === "img" && block.src ? (
+						<figure class="body-image">
+							<img
+								src={optimizedImageUrl(block.src, 1024)}
+								srcset={remoteSrcset(block.src, [360, 720, 1024])}
+								sizes="(max-width: 640px) 100vw, 720px"
+								alt={block.alt ?? ""}
+								loading="lazy"
+								decoding="async"
+							/>
+						</figure>
 					) : (
 						<p>{block.text}</p>
 					),

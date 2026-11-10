@@ -15,6 +15,7 @@ import {
 	mergeDetail,
 	yearOf,
 } from "../../../lib/detail";
+import { optimizedImageUrl, optimizedSrcset } from "../../../lib/images";
 import { PROFILE, WIKIMEDIA_LOGOS } from "../../../data/site";
 import { applySiteCopy, getDict, langUrl, localizeData, pickDict, RELEASE_PLAYER_DICT_KEYS, platformActionLabelLang } from "../../../lib/i18n";
 import { getSiteSettings } from "../../../lib/settings";
@@ -191,7 +192,7 @@ const jsonLd = data
 							...(firstPlatform
 								? { contentUrl: firstPlatform.url }
 								: {}),
-							...(coverImage ? { thumbnailUrl: coverImage } : {}),
+							...(coverImage ? { thumbnailUrl: absUrl(optimizedImageUrl(coverImage, 1200), siteBase) } : {}),
 						},
 				{
 					"@type": "BreadcrumbList",
@@ -225,7 +226,7 @@ const jsonLd = data
 	title={`${title} — Mahmudul Hasan Riaz`}
 	description={description}
 	ogType="website"
-	ogImage={coverImage}
+	ogImage={coverImage ? (absUrl(optimizedImageUrl(coverImage, 1200), siteBase) ?? null) : null}
 	canonical={pageUrl}
 	lang={lang}
 >
@@ -262,11 +263,11 @@ const jsonLd = data
 			) : data.thumbnail ? (
 				<div class="detail-hero">
 					<img
-						src={data.thumbnail}
+						src={optimizedImageUrl(data.thumbnail, 1200)}
 						alt={title}
 						fetchpriority="high"
 						decoding="async"
-						srcset={data.thumbnail?.includes("images.unsplash.com") ? `${data.thumbnail.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${data.thumbnail.replace(/q=\d+/, "q=75")} 1200w` : undefined}
+						srcset={data.thumbnail?.includes("images.unsplash.com") ? `${data.thumbnail.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${data.thumbnail.replace(/q=\d+/, "q=75")} 1200w` : optimizedSrcset(data.thumbnail, [800, 1200])}
 						sizes="(max-width: 640px) 100vw, 1088px"
 					/>
 				</div>

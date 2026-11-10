@@ -17,6 +17,7 @@ import {
 	mergeDetail,
 	parseBodyBlocks,
 } from "../../../lib/detail";
+import { optimizedImageUrl, optimizedSrcset } from "../../../lib/images";
 import { applySiteCopy, getDict, langUrl, localizeCaseStudy } from "../../../lib/i18n";
 import { getSiteSettings } from "../../../lib/settings";
 
@@ -193,7 +194,7 @@ const jsonLd = d
 						url: siteBase,
 					},
 					mainEntityOfPage: pageUrl,
-					...(coverImage ? { image: absUrl(coverImage, siteBase) } : {}),
+					...(coverImage ? { image: absUrl(optimizedImageUrl(coverImage, 1200), siteBase) } : {}),
 				},
 				{
 					"@type": "BreadcrumbList",
@@ -231,7 +232,7 @@ const jsonLd = d
 	}
 	description={d?.description}
 	ogType="article"
-	ogImage={coverImage ? absUrl(coverImage, siteBase) : null}
+	ogImage={coverImage ? absUrl(optimizedImageUrl(coverImage, 1200), siteBase) : null}
 	canonical={pageUrl}
 	lang={lang}
 >
@@ -262,11 +263,11 @@ const jsonLd = d
 					) : (
 						<div class="detail-hero">
 							<img
-								src={d.thumbnail}
+								src={optimizedImageUrl(d.thumbnail, 1200)}
 								alt={d.title}
 								fetchpriority="high"
 								decoding="async"
-								srcset={d.thumbnail?.includes("images.unsplash.com") ? `${d.thumbnail.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${d.thumbnail.replace(/q=\d+/, "q=75")} 1200w` : undefined}
+								srcset={d.thumbnail?.includes("images.unsplash.com") ? `${d.thumbnail.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${d.thumbnail.replace(/q=\d+/, "q=75")} 1200w` : optimizedSrcset(d.thumbnail, [800, 1200])}
 								sizes="(max-width: 640px) 100vw, 1088px"
 							/>
 						</div>

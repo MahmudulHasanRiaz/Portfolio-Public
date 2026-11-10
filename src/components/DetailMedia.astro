@@ -18,7 +18,11 @@
 // on data attributes so public/js/detail.js can re-render them in the
 // page language on scroll.
 import { getDict, type Dict, type Lang } from "../lib/i18n";
-import { unsplashSrcset } from "../lib/images";
+import {
+	optimizedImageUrl,
+	optimizedSrcset,
+	unsplashSrcset,
+} from "../lib/images";
 
 interface VideoItem {
 	url: string;
@@ -64,11 +68,17 @@ function stripQuery(url: string): string {
 
 // Unsplash gallery images ship at w=1200 in content/API rows but render
 // at most ~720px wide (2x retina) — request w=800/q=75 instead: measured
-// 124KB → 67KB per image (~46% less). Non-Unsplash URLs pass through.
+// 124KB → 67KB per image (~46% less). A files.riaz.com.bd image goes
+// through /api/image at the same width; any other URL passes through.
 const sizedThumb = (url: string, w = 800) =>
 	url.includes("images.unsplash.com")
 		? url.replace(/w=\d+/, `w=${w}`).replace(/q=\d+/, "q=75")
-		: url;
+		: (optimizedImageUrl(url, w) ?? url);
+// Gallery srcset: Unsplash w= rewrite, else the /api/image srcset
+// (widths clamped to the whitelist), else none.
+const gallerySrcset = (url: string) =>
+	unsplashSrcset(url, [360, 720, 1080]) ??
+	optimizedSrcset(url, [360, 720, 1024]);
 const excluded = exclude ? stripQuery(exclude) : null;
 const seen = new Set<string>();
 const cleanGallery = gallery.filter((src) => {
@@ -103,7 +113,7 @@ const videoGridClass =
 								<figure class="media-slide">
 									<img
 										src={sizedThumb(src)}
-										srcset={unsplashSrcset(src, [360, 720, 1080])}
+										srcset={gallerySrcset(src)}
 										sizes="(max-width: 640px) 100vw, (max-width: 1023px) 50vw, 720px"
 										alt={`${base} ${counterText(i + 1, cleanGallery.length)}`}
 										loading="lazy"
@@ -149,7 +159,7 @@ const videoGridClass =
 							<figure>
 								<img
 									src={sizedThumb(src)}
-									srcset={unsplashSrcset(src, [360, 720, 1080])}
+									srcset={gallerySrcset(src)}
 									sizes="(max-width: 640px) 100vw, (max-width: 1023px) 50vw, 720px"
 									alt={`${base} ${counterText(i + 1, cleanGallery.length)}`}
 									loading="lazy"

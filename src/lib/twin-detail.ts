@@ -53,6 +53,7 @@ import {
 	type Lang,
 } from "./i18n";
 import { PROFILE } from "../data/site";
+import { optimizedImageUrl } from "./images";
 import { youtubeEmbed, youtubeIdFromUrl, youtubeThumb } from "./youtube";
 
 export type DetailType =
@@ -520,7 +521,7 @@ async function prepareProject(
 						inLanguage: lang,
 						applicationCategory: "BusinessApplication",
 						url: pageUrl,
-						...(coverImage ? { image: absUrl(coverImage, baseUrl) } : {}),
+						...(coverImage ? { image: absUrl(optimizedImageUrl(coverImage, 1200), baseUrl) } : {}),
 						author: {
 							"@type": "Person",
 							name: "Mahmudul Hasan Riaz",
@@ -551,7 +552,7 @@ async function prepareProject(
 			: `${t.notFoundProject} — Mahmudul Hasan Riaz`,
 		description: d?.description,
 		ogType: "website",
-		ogImage: coverImage ? (absUrl(coverImage, baseUrl) ?? null) : null,
+		ogImage: coverImage ? (absUrl(optimizedImageUrl(coverImage, 1200), baseUrl) ?? null) : null,
 		canonical: pageUrl,
 		jsonLd,
 		d,
@@ -644,7 +645,7 @@ async function prepareCaseStudy(
 							url: baseUrl,
 						},
 						mainEntityOfPage: pageUrl,
-						...(coverImage ? { image: absUrl(coverImage, baseUrl) } : {}),
+						...(coverImage ? { image: absUrl(optimizedImageUrl(coverImage, 1200), baseUrl) } : {}),
 					},
 					breadcrumb(
 						t,
@@ -669,7 +670,7 @@ async function prepareCaseStudy(
 			: `${t.notFoundCaseStudy} — Mahmudul Hasan Riaz`,
 		description: d?.description,
 		ogType: "article",
-		ogImage: coverImage ? (absUrl(coverImage, baseUrl) ?? null) : null,
+		ogImage: coverImage ? (absUrl(optimizedImageUrl(coverImage, 1200), baseUrl) ?? null) : null,
 		canonical: pageUrl,
 		jsonLd,
 		d,
@@ -778,7 +779,7 @@ async function prepareVenture(
 		layoutTitle: `${title} — Mahmudul Hasan Riaz`,
 		description,
 		ogType: "website",
-		ogImage: coverImage ? (absUrl(coverImage, baseUrl) ?? null) : null,
+		ogImage: coverImage ? (absUrl(optimizedImageUrl(coverImage, 1200), baseUrl) ?? null) : null,
 		canonical: pageUrl,
 		jsonLd,
 		data,
@@ -899,7 +900,9 @@ async function prepareRelease(
 								...(firstPlatform
 									? { contentUrl: firstPlatform.url }
 									: {}),
-								...(coverImage ? { thumbnailUrl: coverImage } : {}),
+								...(coverImage
+								? { thumbnailUrl: absUrl(optimizedImageUrl(coverImage, 1200), baseUrl) }
+								: {}),
 							},
 					breadcrumb(
 						t,
@@ -922,7 +925,9 @@ async function prepareRelease(
 		layoutTitle: `${title} — Mahmudul Hasan Riaz`,
 		description,
 		ogType: "website",
-		ogImage: coverImage,
+		ogImage: coverImage
+			? (absUrl(optimizedImageUrl(coverImage, 1200), baseUrl) ?? null)
+			: null,
 		canonical: pageUrl,
 		jsonLd,
 		data,
@@ -1041,7 +1046,7 @@ async function preparePost(
 						...(data.publishedAt
 							? { datePublished: data.publishedAt }
 							: {}),
-						...(coverImage ? { image: absUrl(coverImage, baseUrl) } : {}),
+						...(coverImage ? { image: absUrl(optimizedImageUrl(coverImage, 1200), baseUrl) } : {}),
 						mainEntityOfPage: pageUrl,
 					},
 					breadcrumb(
@@ -1065,7 +1070,7 @@ async function preparePost(
 		layoutTitle: `${title} — Mahmudul Hasan Riaz`,
 		description,
 		ogType: "article",
-		ogImage: coverImage ? (absUrl(coverImage, baseUrl) ?? null) : null,
+		ogImage: coverImage ? (absUrl(optimizedImageUrl(coverImage, 1200), baseUrl) ?? null) : null,
 		canonical: pageUrl,
 		jsonLd,
 		data,
