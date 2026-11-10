@@ -16,8 +16,8 @@ import {
 	yearOf,
 } from "../../../lib/detail";
 import { optimizedImageUrl, optimizedSrcset } from "../../../lib/images";
-import { PROFILE, WIKIMEDIA_LOGOS } from "../../../data/site";
-import { applySiteCopy, getDict, langUrl, localizeData, pickDict, RELEASE_PLAYER_DICT_KEYS, platformActionLabelLang } from "../../../lib/i18n";
+import { WIKIMEDIA_LOGOS } from "../../../data/site";
+import { applySiteCopy, displayName, getDict, langUrl, localizeData, pickDict, RELEASE_PLAYER_DICT_KEYS, platformActionLabelLang } from "../../../lib/i18n";
 import { getSiteSettings } from "../../../lib/settings";
 
 // Bangla static detail route — same hybrid as the English route.
@@ -307,7 +307,7 @@ const jsonLd = data
 				{` · ${isVideo ? t.videoLabel : t.audioLabel}`}
 			</p>
 			<h1 class="detail-title">{title}</h1>
-			<p class="detail-meta">{t.authorBy} {PROFILE.name}</p>
+			<p class="detail-meta">{t.authorBy} {displayName(lang)}</p>
 			{!isVideo ? (
 				<p style="margin:12px 0 0;">
 					<span class="audio-badge">{t.audioOnly}</span>

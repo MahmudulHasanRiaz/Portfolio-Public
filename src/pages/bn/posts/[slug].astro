@@ -23,7 +23,7 @@ import {
 	remoteSrcset,
 } from "../../../lib/images";
 import { PROFILE } from "../../../data/site";
-import { applySiteCopy, getDict, langUrl, localizeData, readingTimeLabel } from "../../../lib/i18n";
+import { applySiteCopy, displayName, getDict, langUrl, localizeData, readingTimeLabel } from "../../../lib/i18n";
 import { getSiteSettings } from "../../../lib/settings";
 
 // Bangla static detail route — same hybrid as the English route.
@@ -268,7 +268,7 @@ const jsonLd = data
 				))}
 			<h1 class="detail-title">{title}</h1>
 			<p class="detail-meta">
-				{t.authorBy} {PROFILE.name}
+				{t.authorBy} {displayName(lang)}
 				{formatDate(data.publishedAt, lang)
 					? ` · ${formatDate(data.publishedAt, lang)}`
 					: ""}
@@ -348,14 +348,14 @@ const jsonLd = data
 				<img
 					class="author-photo"
 					src={PROFILE.photo}
-					alt={PROFILE.name}
+					alt={displayName(lang)}
 					width="56"
 					height="56"
 					loading="lazy"
 					decoding="async"
 				/>
 				<div class="author-info">
-					<strong>{PROFILE.name}</strong>
+					<strong>{displayName(lang)}</strong>
 					<span>
 						{t.authorLine}
 					</span>

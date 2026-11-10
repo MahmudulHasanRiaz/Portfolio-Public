@@ -15,12 +15,23 @@ export const SITE_LANG_KEY = "site-lang";
 
 import { en } from "../i18n/en";
 import { bn, type Dict } from "../i18n/bn";
+import { PROFILE } from "../data/site";
 
 export type { Dict };
 
 /** The fixed-UI dictionary for a page language. */
 export function getDict(lang: Lang): Dict {
 	return lang === "bn" ? bn : en;
+}
+
+/**
+ * Display name for the page language: Bangla on /bn/ pages, Latin
+ * elsewhere. DISPLAY ONLY — hero h1, footer identity, author bylines.
+ * Structured data (JSON-LD, og:title, canonical, <title>) always keeps
+ * PROFILE.name, the Latin name.
+ */
+export function displayName(lang: Lang): string {
+	return lang === "bn" ? PROFILE.nameBn : PROFILE.name;
 }
 /**
  * Admin-overridable site copy (gap group (f)).

@@ -8,7 +8,7 @@ import speakerFallback from "../../public/speaker.jpg";
 import { PROFILE, STATS } from "../data/site";
 import { getStats } from "../lib/content";
 import { getSiteSettings, type SettingsBn } from "../lib/settings";
-import { applySiteCopy, getDict, type Lang } from "../lib/i18n";
+import { applySiteCopy, displayName, getDict, type Lang } from "../lib/i18n";
 import HeroDesignation from "./HeroDesignation";
 
 interface Props {
@@ -39,15 +39,19 @@ const chipOrders = settings.heroChips?.[1] ?? "2,000–5,000";
 // Admin Bangla hero copy (settings.bn) wins over the English settings
 // copy on /bn/ pages; the English settings copy (admin-managed) wins
 // over the dictionary; the dictionary is the last resort — never a
-// blank headline.
+// blank headline. Know Me reads the KNOW-ME keys (bnCopy.knowMeHeadline
+// / bnCopy.knowMeSub, then settings.knowMeHeadline / settings.knowMeSub)
+// — the SE keys are never reused for Know Me (that was the bug: the
+// Know Me page showed the English settings copy on /bn/ because the
+// bn knowMe keys were never read).
 const bnCopy: SettingsBn = lang === "bn" ? (settings.bn ?? {}) : {};
 const str = (v: unknown) => (typeof v === "string" && v ? v : undefined);
 const heroHeadline =
-	str(bnCopy.heroHeadline) ??
+	str(isKnowMe ? bnCopy.knowMeHeadline : bnCopy.heroHeadline) ??
 	str(isKnowMe ? settings.knowMeHeadline : settings.heroHeadline) ??
 	(isKnowMe ? t.knowMeHeadline : t.heroHeadline);
 const heroDesc =
-	str(bnCopy.heroDescription) ??
+	str(isKnowMe ? bnCopy.knowMeSub : bnCopy.heroDescription) ??
 	str(isKnowMe ? settings.knowMeSub : settings.heroDescription) ??
 	(isKnowMe ? t.knowMeSub : t.heroDescription);
 const designations =
@@ -139,7 +143,7 @@ const designations =
 		</div>
 	</div>
 	<div class="hero-copy">
-		<h1 class="hero-name">{PROFILE.name}</h1>
+		<h1 class="hero-name">{displayName(lang)}</h1>
 		{
 			isKnowMe ? (
 				<>
