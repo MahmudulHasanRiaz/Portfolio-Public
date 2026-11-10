@@ -401,6 +401,40 @@ const isHome =
 					}, 250);
 				}
 
+				// Full stylesheet: critters inlines critical CSS and loads
+				// the full stylesheet non-blockingly via a
+				// <script data-href> loader in <head> ($loadcss — creates
+				// a <link rel="stylesheet">). That loader is deduped by
+				// View Transitions (identical script on every page), so
+				// after a client-side navigation the new <head> has only
+				// the <link rel="preload"> and the full stylesheet is
+				// gone — the page runs on critical CSS only, which has
+				// no [data-theme] variable blocks, so the stored theme
+				// cannot override the system preference (system-dark:
+				// every navigated-to page renders dark whatever is
+				// stored; 2026-11-10 theme/language order bug). Re-apply
+				// it on every page-load: the preload link in the new
+				// <head> carries the hashed href, and the guard below
+				// keeps the initial load to exactly one stylesheet link.
+				function ensureStylesheet() {
+					try {
+						var preload = document.querySelector(
+							'link[rel="preload"][as="style"]',
+						);
+						if (!preload || !preload.href) return;
+						var links = document.querySelectorAll(
+							'link[rel="stylesheet"]',
+						);
+						for (var i = 0; i < links.length; i++) {
+							if (links[i].href === preload.href) return;
+						}
+						var l = document.createElement("link");
+						l.rel = "stylesheet";
+						l.href = preload.href;
+						document.head.appendChild(l);
+					} catch (e) {}
+				}
+
 				// Theme: same resolution as the head script (stored
 				// choice wins, else system preference). Re-applied on
 				// every page-load because swapRootAttributes() strips
@@ -494,6 +528,7 @@ const isHome =
 				// Transition navigation (astro:page-load). Idempotent.
 				function onPageLoad() {
 					finishNav();
+					ensureStylesheet();
 					applyTheme();
 					watchImages(document);
 					resetObserver();
