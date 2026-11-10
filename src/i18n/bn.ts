@@ -7,7 +7,10 @@
 export interface Dict {
 	navWork: string;
 	navVentures: string;
-	navNasheed: string;
+	navReleases: string;
+	navProjects: string;
+	navCaseStudies: string;
+	navPosts: string;
 	navAbout: string;
 	navContact: string;
 	navHome: string;
@@ -262,7 +265,10 @@ export interface Dict {
 export const bn: Dict = {
 	navWork: "কাজ",
 	navVentures: "উদ্যোগ",
-	navNasheed: "নাশিদ",
+	navReleases: "রিলিজ",
+	navProjects: "প্রজেক্ট",
+	navCaseStudies: "কেস স্টাডি",
+	navPosts: "পোস্ট",
 	navAbout: "আমার সম্পর্কে",
 	navContact: "যোগাযোগ",
 	navHome: "হোম",

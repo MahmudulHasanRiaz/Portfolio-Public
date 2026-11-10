@@ -9,7 +9,10 @@ export const en: Dict = {
 	// Header / nav
 	navWork: "Work",
 	navVentures: "Ventures",
-	navNasheed: "Nasheed",
+	navReleases: "Releases",
+	navProjects: "Projects",
+	navCaseStudies: "Case Studies",
+	navPosts: "Posts",
 	navAbout: "About",
 	navContact: "Contact",
 	navHome: "Home",
