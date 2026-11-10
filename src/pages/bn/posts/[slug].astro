@@ -17,6 +17,11 @@ import {
 	mergeDetail,
 	parseBodyBlocks,
 } from "../../../lib/detail";
+import {
+	optimizedImageUrl,
+	optimizedSrcset,
+	remoteSrcset,
+} from "../../../lib/images";
 import { PROFILE } from "../../../data/site";
 import { applySiteCopy, getDict, langUrl, localizeData, readingTimeLabel } from "../../../lib/i18n";
 import { getSiteSettings } from "../../../lib/settings";
@@ -181,7 +186,7 @@ const jsonLd = data
 					...(data.publishedAt
 						? { datePublished: data.publishedAt }
 						: {}),
-					...(coverImage ? { image: absUrl(coverImage, siteBase) } : {}),
+					...(coverImage ? { image: absUrl(optimizedImageUrl(coverImage, 1200), siteBase) } : {}),
 					mainEntityOfPage: pageUrl,
 				},
 				{
@@ -216,7 +221,7 @@ const jsonLd = data
 	title={`${title} — Mahmudul Hasan Riaz`}
 	description={description}
 	ogType="article"
-	ogImage={coverImage ? absUrl(coverImage, siteBase) : null}
+	ogImage={coverImage ? absUrl(optimizedImageUrl(coverImage, 1200), siteBase) : null}
 	canonical={pageUrl}
 	lang={lang}
 >
@@ -252,11 +257,11 @@ const jsonLd = data
 				) : (
 					<div class="detail-hero">
 						<img
-							src={thumb}
+							src={optimizedImageUrl(thumb, 1200)}
 							alt={title}
 							fetchpriority="high"
 							decoding="async"
-							srcset={thumb?.includes("images.unsplash.com") ? `${thumb.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${thumb.replace(/q=\d+/, "q=75")} 1200w` : undefined}
+							srcset={thumb?.includes("images.unsplash.com") ? `${thumb.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${thumb.replace(/q=\d+/, "q=75")} 1200w` : optimizedSrcset(thumb, [800, 1200])}
 							sizes="(max-width: 640px) 100vw, 1088px"
 						/>
 					</div>
@@ -283,6 +288,17 @@ const jsonLd = data
 					{storyBlocks.map((block) =>
 						block.kind === "h2" ? (
 							<h2>{block.text}</h2>
+						) : block.kind === "img" && block.src ? (
+							<figure class="body-image">
+								<img
+									src={optimizedImageUrl(block.src, 1024)}
+									srcset={remoteSrcset(block.src, [360, 720, 1024])}
+									sizes="(max-width: 640px) 100vw, 720px"
+									alt={block.alt ?? ""}
+									loading="lazy"
+									decoding="async"
+								/>
+							</figure>
 						) : (
 							<p>{block.text}</p>
 						),
@@ -297,6 +313,17 @@ const jsonLd = data
 					{storyBlocks.map((block) =>
 						block.kind === "h2" ? (
 							<h2>{block.text}</h2>
+						) : block.kind === "img" && block.src ? (
+							<figure class="body-image">
+								<img
+									src={optimizedImageUrl(block.src, 1024)}
+									srcset={remoteSrcset(block.src, [360, 720, 1024])}
+									sizes="(max-width: 640px) 100vw, 720px"
+									alt={block.alt ?? ""}
+									loading="lazy"
+									decoding="async"
+								/>
+							</figure>
 						) : (
 							<p>{block.text}</p>
 						),

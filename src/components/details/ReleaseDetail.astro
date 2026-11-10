@@ -21,6 +21,7 @@ import {
 	type Lang,
 } from "../../lib/i18n";
 import type { ReleaseView } from "../../lib/twin-detail";
+import { optimizedImageUrl, optimizedSrcset } from "../../lib/images";
 
 interface Props {
 	view: ReleaseView;
@@ -75,11 +76,11 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 		) : data.thumbnail ? (
 			<div class="detail-hero">
 				<img
-					src={data.thumbnail}
+					src={optimizedImageUrl(data.thumbnail, 1200)}
 					alt={view.title}
 					fetchpriority="high"
 					decoding="async"
-					srcset={data.thumbnail?.includes("images.unsplash.com") ? `${data.thumbnail.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${data.thumbnail.replace(/q=\d+/, "q=75")} 1200w` : undefined}
+					srcset={data.thumbnail?.includes("images.unsplash.com") ? `${data.thumbnail.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=75")} 800w, ${data.thumbnail.replace(/q=\d+/, "q=75")} 1200w` : optimizedSrcset(data.thumbnail, [800, 1200])}
 					sizes="(max-width: 640px) 100vw, 1088px"
 				/>
 			</div>

@@ -17,7 +17,8 @@ import HomeButton from "../components/HomeButton.astro";
 import ContactModal from "../components/ContactModal";
 import { getSiteSettings } from "../lib/settings";
 import { applySiteCopy, enPath, getDict, langUrl, pickDict, CONTACT_MODAL_DICT_KEYS, SITE_HEADER_DICT_KEYS, type Lang } from "../lib/i18n";
-import { resolveCanonicalBase } from "../lib/detail";
+import { resolveCanonicalBase, absUrl } from "../lib/detail";
+import { optimizedImageUrl } from "../lib/images";
 import { type Service } from "../data/site";
 
 interface Props {
@@ -76,7 +77,19 @@ const settingsPortrait = settings.portraitUrl
 const ogImageUrl =
 	ogImage === null
 		? null
-		: (ogImage ?? settingsPortrait ?? `${Astro.url.origin}/speaker.jpg`);
+		: (ogImage ??
+			// Portrait fallback (home / archives / pages with no cover):
+			// a files.riaz.com.bd portrait goes through /api/image at
+			// width 1200 (og:image's recommended width); any other
+			// portrait URL renders unchanged. The local /speaker.jpg
+			// default is untouched.
+			(settingsPortrait
+				? (absUrl(
+						optimizedImageUrl(settingsPortrait, 1200),
+						Astro.url.origin,
+					) ?? settingsPortrait)
+				: undefined) ??
+			`${Astro.url.origin}/speaker.jpg`);
 
 // Favicon: admin-managed URL wins, repo default /favicon.svg otherwise.
 const faviconUrl = settings.faviconUrl ?? "/favicon.svg";

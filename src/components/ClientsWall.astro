@@ -2,6 +2,7 @@
 import { getClients } from "../lib/content";
 import { applySiteCopy, getDict, localizeData, type Lang } from "../lib/i18n";
 import { getSiteSettings } from "../lib/settings";
+import { optimizedImageUrl } from "../lib/images";
 
 interface Props {
 	lang?: Lang;
@@ -14,6 +15,9 @@ const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
 // `clients` type exists this is the same 2 rows. Logo renders when
 // `logo_url` exists (CSS caps it at 36px), else the text wordmark;
 // the cell links out only when a real `website` exists.
+// A files.riaz.com.bd logo goes through /api/image at width 144
+// (clamped to the 360 minimum — a 36px logo never needs more);
+// any other logo URL renders unchanged.
 const clients = (await getClients()).map((c) =>
 	localizeData({ ...c }, lang),
 );
@@ -26,7 +30,12 @@ const clients = (await getClients()).map((c) =>
 	<div class="clients-grid">
 		{clients.map((client) => {
 			const inner = client.logo_url ? (
-				<img src={client.logo_url} alt={client.name} loading="lazy" decoding="async" />
+				<img
+					src={optimizedImageUrl(client.logo_url, 144)}
+					alt={client.name}
+					loading="lazy"
+					decoding="async"
+				/>
 			) : (
 				<span class="client-wordmark">{client.name}</span>
 			);

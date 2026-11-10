@@ -4,7 +4,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 // island cannot import lib/content.ts (server-only astro:content).
 import { truncateShort } from "../lib/text";
 import { getDict, langUrl, type ProjectsCarouselDict, type Lang } from "../lib/i18n";
-import { unsplashSrcset } from "../lib/images";
+import {
+	optimizedImageUrl,
+	optimizedSrcset,
+	unsplashSrcset,
+} from "../lib/images";
 
 // Projects carousel — stacked deck ported from the approved React preview.
 // The page renders the section wrapper (heading + "View all projects →");
@@ -37,11 +41,17 @@ interface Props {
 
 // Unsplash card thumbs ship at w=1200 in content/API rows but render at
 // ~360px wide (2x retina ≈ 720px) — request w=800/q=75 instead: measured
-// 124KB → 67KB per image (~46% less). Non-Unsplash URLs pass through.
+// 124KB → 67KB per image (~46% less). A files.riaz.com.bd thumb goes
+// through /api/image at the same width; any other URL passes through.
 const sizedThumb = (url: string | null | undefined, w = 800) =>
 	url?.includes("images.unsplash.com")
 		? url.replace(/w=\d+/, `w=${w}`).replace(/q=\d+/, "q=75")
-		: (url ?? undefined);
+		: optimizedImageUrl(url, w);
+// Carousel srcset: Unsplash w= rewrite, else the /api/image srcset,
+// else none — the <img> keeps its plain src in that case.
+const carouselSrcset = (url: string | null | undefined) =>
+	unsplashSrcset(url, [360, 720, 1080]) ??
+	optimizedSrcset(url, [360, 720, 1024]);
 
 const SWIPE_THRESHOLD = 28;
 // Page-flip (preview): one 0.52s turn around the RIGHT edge (the spine),
@@ -253,7 +263,7 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 								) : (
 									<img
 										src={sizedThumb(project.thumbnail)}
-										srcSet={unsplashSrcset(project.thumbnail, [360, 720, 1080])}
+										srcSet={carouselSrcset(project.thumbnail)}
 										sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px"
 										alt={project.title}
 										width="800"
@@ -435,7 +445,7 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 							) : (
 								<img
 									src={sizedThumb(current.thumbnail)}
-									srcSet={unsplashSrcset(current.thumbnail, [360, 720, 1080])}
+									srcSet={carouselSrcset(current.thumbnail)}
 									sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px"
 									alt={current.title}
 									width="800"

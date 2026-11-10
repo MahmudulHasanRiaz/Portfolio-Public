@@ -178,14 +178,26 @@ export function splitParagraphs(text: string | null | undefined): string[] {
 }
 
 export interface BodyBlock {
-	kind: "h2" | "p";
+	kind: "h2" | "p" | "img";
 	text: string;
+	/** Image URL — img blocks only. */
+	src?: string;
+	/** Image alt text — img blocks only. */
+	alt?: string;
 }
 
 /**
  * The preview's content blocks: a '## ' line is an h2 section heading,
- * every other block is a paragraph. Single newlines inside a block are
- * line wraps, not new blocks.
+ * a line that is exactly a markdown image `![alt](url)` is an img
+ * block, every other block is a paragraph. Single newlines inside a
+ * block are line wraps, not new blocks.
+ *
+ * Inline images inside a paragraph (text before/after the `![...]`)
+ * stay literal text — only a standalone image line becomes an <img>,
+ * so body copy can never silently gain an image it did not ask for.
+ * The img block renders through MarkdownBody with the same automatic
+ * optimization as every other remote image (files.riaz.com.bd →
+ * /api/image, Unsplash → w= rewrite, anything else unchanged).
  */
 export function parseBodyBlocks(
 	text: string | null | undefined,
@@ -203,6 +215,14 @@ export function parseBodyBlocks(
 					kind: "h2",
 					text: trimmed.replace(/^#{1,2}\s+/, "").trim(),
 				});
+			} else if (
+				/^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)$/.test(trimmed)
+			) {
+				const [, alt, src] =
+					trimmed.match(
+						/^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)$/,
+					) ?? [];
+				blocks.push({ kind: "img", text: alt ?? "", src, alt });
 			} else if (blocks.length > 0 && blocks[blocks.length - 1].kind === "p") {
 				// A wrapped line of the same paragraph.
 				blocks[blocks.length - 1].text += ` ${trimmed}`;
