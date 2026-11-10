@@ -18,6 +18,7 @@
 // on data attributes so public/js/detail.js can re-render them in the
 // page language on scroll.
 import { getDict, type Dict, type Lang } from "../lib/i18n";
+import { unsplashSrcset } from "../lib/images";
 
 interface VideoItem {
 	url: string;
@@ -102,6 +103,8 @@ const videoGridClass =
 								<figure class="media-slide">
 									<img
 										src={sizedThumb(src)}
+										srcset={unsplashSrcset(src, [360, 720, 1080])}
+										sizes="(max-width: 640px) 100vw, (max-width: 1023px) 50vw, 720px"
 										alt={`${base} ${counterText(i + 1, cleanGallery.length)}`}
 										loading="lazy"
 										decoding="async"
@@ -146,6 +149,8 @@ const videoGridClass =
 							<figure>
 								<img
 									src={sizedThumb(src)}
+									srcset={unsplashSrcset(src, [360, 720, 1080])}
+									sizes="(max-width: 640px) 100vw, (max-width: 1023px) 50vw, 720px"
 									alt={`${base} ${counterText(i + 1, cleanGallery.length)}`}
 									loading="lazy"
 									decoding="async"

@@ -61,7 +61,7 @@ const RELEASE_PLATFORM_ICONS: Record<string, string> = {
 		</a>
 
 		{view.isVideo && view.youtubeId ? (
-			<ReleasePlayer client:load youtubeId={view.youtubeId} title={view.title} lang={lang} dict={pickDict(t, RELEASE_PLAYER_DICT_KEYS)} />
+			<ReleasePlayer client:visible youtubeId={view.youtubeId} title={view.title} lang={lang} dict={pickDict(t, RELEASE_PLAYER_DICT_KEYS)} />
 		) : data.thumbnailType === "video" && data.thumbnail ? (
 			<div class="detail-hero">
 				<DetailVideoFacade

@@ -2,6 +2,7 @@
 // Grid card for the projects archive — thumbnail, title, description, tags.
 import { truncateShort } from "../lib/content";
 import { langUrl, type Lang } from "../lib/i18n";
+import ThumbImage from "./ThumbImage.astro";
 
 interface Props {
 	project: {
@@ -41,13 +42,13 @@ const sizedThumb = (url: string | null | undefined, w = 800) =>
 					preload="metadata"
 				/>
 			) : project.thumbnail ? (
-				<img
-					src={sizedThumb(project.thumbnail)}
+				<ThumbImage
+					src={project.thumbnail}
 					alt={project.title}
-					width="800"
-					height="500"
-					loading="lazy"
-					decoding="async"
+					widths={[360, 720, 1080]}
+					sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px"
+					width={800}
+					height={500}
 				/>
 			) : (
 				<span class="thumb-fallback" aria-hidden="true">

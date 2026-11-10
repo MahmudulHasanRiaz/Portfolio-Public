@@ -7,6 +7,7 @@ import {
 } from "../../lib/content";
 import { applySiteCopy, getDict, langUrl, readingTimeLabel, showingLabel } from "../../lib/i18n";
 import { getSiteSettings } from "../../lib/settings";
+import ThumbImage from "../../components/ThumbImage.astro";
 
 // Posts archive — fixed strings from the dictionary (same keys as the
 // /bn/ archive). Reading time is computed from the actual post text.
@@ -87,13 +88,13 @@ const sizedThumb = (url: string | null | undefined, w = 800) =>
 											preload="metadata"
 										/>
 									) : post.data.thumbnail ? (
-										<img
-											src={sizedThumb(post.data.thumbnail)}
+										<ThumbImage
+											src={post.data.thumbnail}
 											alt={post.data.title}
-											width="800"
-											height="500"
-											loading="lazy"
-											decoding="async"
+											widths={[360, 720, 1080]}
+											sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px"
+											width={800}
+											height={500}
 										/>
 									) : (
 										<div class="thumb-fallback">

@@ -2,6 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 import { getVentures, formatDate, truncateShort } from "../../lib/content";
 import { getDict, langUrl, showingLabel } from "../../lib/i18n";
+import ThumbImage from "../../components/ThumbImage.astro";
 
 // Ventures archive — fixed strings from the dictionary (same keys as
 // the /bn/ archive).
@@ -73,13 +74,13 @@ const sizedThumb = (url: string | null | undefined, w = 800) =>
 										preload="metadata"
 									/>
 								) : venture.data.thumbnail ? (
-									<img
-										src={sizedThumb(venture.data.thumbnail)}
+									<ThumbImage
+										src={venture.data.thumbnail}
 										alt={venture.data.title}
-										width="800"
-										height="500"
-										loading="lazy"
-										decoding="async"
+										widths={[360, 720, 1080]}
+										sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px"
+										width={800}
+										height={500}
 									/>
 								) : (
 									<div class="thumb-fallback">

@@ -13,6 +13,7 @@ import {
 	type Lang,
 } from "../lib/i18n";
 import { getSiteSettings } from "../lib/settings";
+import ThumbImage from "./ThumbImage.astro";
 
 // "Latest" block — preview presentation: cards with thumbnail (or a
 // deliberate monogram tile when a post has none) + tag chip + title +
@@ -68,13 +69,13 @@ const latest = posts.slice(0, 3);
 									preload="metadata"
 								/>
 							) : post.data.thumbnail ? (
-								<img
-									src={sizedThumb(post.data.thumbnail)}
+								<ThumbImage
+									src={post.data.thumbnail}
 									alt={post.data.title}
-									width="800"
-									height="500"
-									loading="lazy"
-									decoding="async"
+									widths={[360, 720, 1080]}
+									sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px"
+									width={800}
+									height={500}
 								/>
 							) : (
 								<span class="thumb-fallback" aria-hidden="true">

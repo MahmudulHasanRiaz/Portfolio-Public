@@ -1,5 +1,6 @@
 ---
 import BrandIcon from "./BrandIcon.astro";
+import ThumbImage from "./ThumbImage.astro";
 import { getPlatforms, getVentures, truncateShort } from "../lib/content";
 import { applySiteCopy, getDict, langUrl, localizeData, type Lang } from "../lib/i18n";
 import { getSiteSettings } from "../lib/settings";
@@ -10,14 +11,6 @@ interface Props {
 
 const { lang = "en" } = Astro.props;
 const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
-
-// Unsplash thumbs ship at w=1200 in content/API rows but the mini-thumb
-// renders at 64×48 (2x retina ≈ 128px) — request w=320/q=75 instead:
-// measured 124KB → ~30KB per image. Non-Unsplash URLs pass through.
-const sizedThumb = (url: string | null | undefined, w = 320) =>
-	url?.includes("images.unsplash.com")
-		? url.replace(/w=\d+/, `w=${w}`).replace(/q=\d+/, "q=75")
-		: url;
 
 const venturesRaw = await getVentures();
 const ventures = venturesRaw.map((v) => ({
@@ -126,18 +119,16 @@ const artistShortPoints = t.artistPoints;
 									/>
 								) : venture.data.thumbnail ||
 								  VENTURE_FALLBACK_THUMB[venture.data.slug] ? (
-									<img
-										src={sizedThumb(
+									<ThumbImage
+										src={
 											venture.data.thumbnail ??
-											VENTURE_FALLBACK_THUMB[
-												venture.data.slug
-											],
-										)}
+											VENTURE_FALLBACK_THUMB[venture.data.slug]
+										}
 										alt=""
-										width="64"
-										height="48"
-										loading="lazy"
-										decoding="async"
+										widths={[72, 144]}
+										sizes="72px"
+										width={64}
+										height={48}
 									/>
 								) : (
 									<span

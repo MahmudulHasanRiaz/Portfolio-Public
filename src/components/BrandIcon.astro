@@ -1,11 +1,14 @@
 ---
 // Brand logo — original logos only, never hand-drawn.
-// - Simple Icons slug  -> CDN image (https://cdn.simpleicons.org/<slug>)
+// - Simple Icons slug  -> ONE self-hosted sprite (src/assets/icons.svg,
+//   see scripts/generate-icons.mjs); a slug missing from the sprite
+//   falls back to the CDN image (https://cdn.simpleicons.org/<slug>)
 // - "wikimedia:<url>"  -> real official logo from Wikimedia Commons
 // - "woocommerce-w"    -> the latest WooCommerce "W" lettermark (inline SVG)
 // - null               -> honest plain name chip, never a fake logo
 // Dark logos render white in dark mode only (class logo-dark-invert).
-import { WOOCOMMERCE_W_PATH, simpleIconsUrl } from "../data/site";
+import { LOCAL_LOGO_OVERRIDES, WOOCOMMERCE_W_PATH, simpleIconsUrl } from "../data/site";
+import { ICON_SPRITE_URL, hasSpriteIcon } from "../lib/icons";
 
 interface Props {
 	icon: string | null;
@@ -38,10 +41,16 @@ export const DARK_INVERT_SLUGS = new Set([
 
 const invert = darkInvert || (icon !== null && DARK_INVERT_SLUGS.has(icon));
 const imgClass = `${invert ? "logo-dark-invert" : ""} ${cls}`.trim();
+
+// Render-time logo override: an oversized remote logo (Boomplay) is
+// swapped for its local optimized file. The data keeps the canonical
+// value, so the live API value is covered too.
+const resolvedIcon =
+	icon !== null ? (LOCAL_LOGO_OVERRIDES[icon] ?? icon) : null;
 ---
 
 {
-	icon === "woocommerce-w" ? (
+	resolvedIcon === "woocommerce-w" ? (
 		<svg
 			viewBox="0 0 88 47.5"
 			width={size}
@@ -53,9 +62,9 @@ const imgClass = `${invert ? "logo-dark-invert" : ""} ${cls}`.trim();
 		>
 			<path d={WOOCOMMERCE_W_PATH} fill="#873EFF" />
 		</svg>
-	) : icon !== null && icon.startsWith("wikimedia:") ? (
+	) : resolvedIcon !== null && resolvedIcon.startsWith("wikimedia:") ? (
 		<img
-			src={icon.slice("wikimedia:".length)}
+			src={resolvedIcon.slice("wikimedia:".length)}
 			alt={decorative ? "" : name}
 			width={size}
 			height={size}
@@ -63,9 +72,31 @@ const imgClass = `${invert ? "logo-dark-invert" : ""} ${cls}`.trim();
 			decoding="async"
 			class={imgClass}
 		/>
-	) : icon !== null ? (
+	) : resolvedIcon !== null && resolvedIcon.startsWith("/") ? (
 		<img
-			src={simpleIconsUrl(icon)}
+			src={resolvedIcon}
+			alt={decorative ? "" : name}
+			width={size}
+			height={size}
+			loading="lazy"
+			decoding="async"
+			class={imgClass}
+		/>
+	) : resolvedIcon !== null && hasSpriteIcon(resolvedIcon) ? (
+		<svg
+			viewBox="0 0 24 24"
+			width={size}
+			height={size}
+			role={decorative ? undefined : "img"}
+			aria-label={decorative ? undefined : name}
+			aria-hidden={decorative ? "true" : undefined}
+			class={imgClass}
+		>
+			<use href={`${ICON_SPRITE_URL}#${resolvedIcon}`} />
+		</svg>
+	) : resolvedIcon !== null ? (
+		<img
+			src={simpleIconsUrl(resolvedIcon)}
 			alt={decorative ? "" : name}
 			width={size}
 			height={size}

@@ -27,6 +27,7 @@ import { PROFILE, PUBLIC_FIGURE_POINTS } from "../data/site";
 import { formatDate, getPlatforms, getPosts, getProjects, getReleases, getServices, readingTimeFromText, truncateShort } from "../lib/content";
 import { applySiteCopy, getDict, langUrl, localizeData, pickDict, CONTACT_FORM_DICT_KEYS, readingTimeLabel, type Lang } from "../lib/i18n";
 import { getSiteSettings } from "../lib/settings";
+import ThumbImage from "./ThumbImage.astro";
 
 interface Props {
 	/** Page language. English at /<page>, Bangla at /bn/<page>. */
@@ -254,13 +255,13 @@ const publicFigureTexts = [
 										preload="metadata"
 									/>
 								) : project.data.thumbnail ? (
-									<img
-										src={sizedThumb(project.data.thumbnail)}
+									<ThumbImage
+										src={project.data.thumbnail}
 										alt={project.data.title}
-										width="800"
-										height="500"
-										loading="lazy"
-										decoding="async"
+										widths={[360, 720, 1080]}
+										sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px"
+										width={800}
+										height={500}
 									/>
 								) : (
 									<div class="thumb-fallback">
@@ -313,13 +314,13 @@ const publicFigureTexts = [
 											preload="metadata"
 										/>
 									) : post.data.thumbnail ? (
-										<img
-											src={sizedThumb(post.data.thumbnail)}
+										<ThumbImage
+											src={post.data.thumbnail}
 											alt={post.data.title}
-											width="800"
-											height="500"
-											loading="lazy"
-											decoding="async"
+											widths={[360, 720, 1080]}
+											sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px"
+											width={800}
+											height={500}
 										/>
 									) : (
 										<div class="thumb-fallback">{post.data.title.charAt(0)}</div>

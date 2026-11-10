@@ -3,6 +3,7 @@ import Layout from "../../layouts/Layout.astro";
 import { getCaseStudies, truncateShort } from "../../lib/content";
 import { applySiteCopy, getDict, langUrl } from "../../lib/i18n";
 import { getSiteSettings } from "../../lib/settings";
+import ThumbImage from "../../components/ThumbImage.astro";
 
 // Static archive — no filters (one case study now); grid of cards with
 // title + one-line hook, linking to the case-study detail page.
@@ -52,13 +53,13 @@ const sizedThumb = (url: string | null | undefined, w = 800) =>
 										preload="metadata"
 									/>
 								) : s.data.thumbnail ? (
-									<img
-										src={sizedThumb(s.data.thumbnail)}
+									<ThumbImage
+										src={s.data.thumbnail}
 										alt={s.data.title}
-										width="800"
-										height="500"
-										loading="lazy"
-										decoding="async"
+										widths={[360, 720, 1080]}
+										sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px"
+										width={800}
+										height={500}
 									/>
 								) : (
 									<span class="thumb-fallback" aria-hidden="true">

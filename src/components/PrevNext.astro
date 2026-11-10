@@ -6,6 +6,7 @@
 // words) instead of truncating at the card edge. An optional 80×56
 // thumbnail renders beside the label, as in the preview.
 import { getDict, type Dict, type Lang } from "../lib/i18n";
+import ThumbImage from "./ThumbImage.astro";
 interface PrevNextItem {
 	href: string;
 	title: string;
@@ -21,14 +22,6 @@ interface Props {
 
 const { prev = null, next = null, lang = "en", dict } = Astro.props;
 const t = dict ?? getDict(lang);
-
-// Unsplash thumbs ship at w=1200 in content/API rows but the prev/next
-// thumb renders at 80×56 (2x retina ≈ 160px) — request w=320/q=75
-// instead. Non-Unsplash URLs pass through.
-const sizedThumb = (url: string | null | undefined, w = 320) =>
-	url?.includes("images.unsplash.com")
-		? url.replace(/w=\d+/, `w=${w}`).replace(/q=\d+/, "q=75")
-		: url;
 ---
 
 {
@@ -37,14 +30,14 @@ const sizedThumb = (url: string | null | undefined, w = 320) =>
 			{prev ? (
 				<a href={prev.href}>
 					{prev.thumb ? (
-						<img
-							class="pn-thumb"
-							src={sizedThumb(prev.thumb)}
+						<ThumbImage
+							src={prev.thumb}
 							alt=""
-							width="80"
-							height="56"
-							loading="lazy"
-							decoding="async"
+							widths={[80, 160]}
+							sizes="80px"
+							width={80}
+							height={56}
+							class="pn-thumb"
 						/>
 					) : null}
 					<span class="pn-body">
@@ -58,14 +51,14 @@ const sizedThumb = (url: string | null | undefined, w = 320) =>
 			{next ? (
 				<a class="next" href={next.href}>
 					{next.thumb ? (
-						<img
-							class="pn-thumb"
-							src={sizedThumb(next.thumb)}
+						<ThumbImage
+							src={next.thumb}
 							alt=""
-							width="80"
-							height="56"
-							loading="lazy"
-							decoding="async"
+							widths={[80, 160]}
+							sizes="80px"
+							width={80}
+							height={56}
+							class="pn-thumb"
 						/>
 					) : null}
 					<span class="pn-body">

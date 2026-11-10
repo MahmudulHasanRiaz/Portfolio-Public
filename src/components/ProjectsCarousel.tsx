@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 // island cannot import lib/content.ts (server-only astro:content).
 import { truncateShort } from "../lib/text";
 import { getDict, langUrl, type ProjectsCarouselDict, type Lang } from "../lib/i18n";
+import { unsplashSrcset } from "../lib/images";
 
 // Projects carousel — stacked deck ported from the approved React preview.
 // The page renders the section wrapper (heading + "View all projects →");
@@ -252,6 +253,8 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 								) : (
 									<img
 										src={sizedThumb(project.thumbnail)}
+										srcSet={unsplashSrcset(project.thumbnail, [360, 720, 1080])}
+										sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px"
 										alt={project.title}
 										width="800"
 										height="500"
@@ -432,6 +435,8 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 							) : (
 								<img
 									src={sizedThumb(current.thumbnail)}
+									srcSet={unsplashSrcset(current.thumbnail, [360, 720, 1080])}
+									sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 360px"
 									alt={current.title}
 									width="800"
 									height="500"
