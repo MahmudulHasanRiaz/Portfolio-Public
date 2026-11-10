@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import type { MouseEvent, PointerEvent } from "preact/compat";
 import { RotateCw, X } from "lucide-react";
 import { getDict, type StackGlobeDict, type Lang } from "../lib/i18n";
 import { hasSpriteIcon } from "../lib/icons";
@@ -989,7 +990,7 @@ export default function StackGlobe({
 
 	return (
 		<section className="glass section" id="stack">
-			<style>{`
+			<style dangerouslySetInnerHTML={{ __html: `
 				/* Globe skeleton (loading state): the frosted ball is
 				   already in the stage from SSR; while the island
 				   hydrates the unpositioned tags stay hidden and a soft
@@ -1019,7 +1020,7 @@ export default function StackGlobe({
 				@media (prefers-reduced-motion: reduce) {
 					.globe-skeleton-shimmer::after { animation: none; }
 				}
-			`}</style>
+			` }} />
 			<div className="section-head">
 				<div>
 					<h2>{t.stackTitle}</h2>

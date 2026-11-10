@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "preact/hooks";
+import type { FormEvent } from "preact/compat";
 import { PROFILE, SERVICES, type Service } from "../data/site";
 import { leadPayload, validateLead, type LeadError } from "../lib/lead";
 import { getDict, type ContactFormDict, type Lang } from "../lib/i18n";
@@ -191,7 +192,7 @@ export default function ContactForm({
 					id="contact-name"
 					type="text"
 					value={name}
-					onChange={(e) => setName(e.target.value)}
+					onChange={(e) => setName(e.currentTarget.value)}
 					autoComplete="name"
 					placeholder={t.formNamePlaceholder}
 				/>
@@ -205,7 +206,7 @@ export default function ContactForm({
 						id="contact-email"
 						type="email"
 						value={email}
-						onChange={(e) => setEmail(e.target.value)}
+						onChange={(e) => setEmail(e.currentTarget.value)}
 						autoComplete="email"
 						placeholder={t.formEmailPlaceholder}
 					/>
@@ -218,7 +219,7 @@ export default function ContactForm({
 						id="contact-phone"
 						type="tel"
 						value={phone}
-						onChange={(e) => setPhone(e.target.value)}
+						onChange={(e) => setPhone(e.currentTarget.value)}
 						autoComplete="tel"
 						placeholder={t.formPhonePlaceholder}
 					/>
@@ -236,7 +237,7 @@ export default function ContactForm({
 				<select
 					id="contact-service"
 					value={selectedService}
-					onChange={(e) => setSelectedService(e.target.value)}
+					onChange={(e) => setSelectedService(e.currentTarget.value)}
 				>
 					<option value="">{t.formSelectService}</option>
 					{serviceOptions.map((s) => (
@@ -259,7 +260,7 @@ export default function ContactForm({
 				<textarea
 					id="contact-message"
 					value={message}
-					onChange={(e) => setMessage(e.target.value)}
+					onChange={(e) => setMessage(e.currentTarget.value)}
 					placeholder={t.formMessagePlaceholder}
 				/>
 			</div>

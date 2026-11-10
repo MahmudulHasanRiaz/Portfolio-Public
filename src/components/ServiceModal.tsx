@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { SERVICES, simpleIconsUrl, type Service } from "../data/site";
 import { hasSpriteIcon } from "../lib/icons";
 import SpriteIcon from "./SpriteIcon";

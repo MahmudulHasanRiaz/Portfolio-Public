@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "preact/hooks";
 import { Play } from "lucide-react";
 import { youtubeEmbed, youtubeThumb } from "../lib/youtube";
 import { getDict, type ReleasePlayerDict, type Lang } from "../lib/i18n";

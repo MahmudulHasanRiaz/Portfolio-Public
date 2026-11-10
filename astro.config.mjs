@@ -1,7 +1,7 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
-import react from "@astrojs/react";
+import preact from "@astrojs/preact";
 
 // Public site for riaz.com.bd — Astro + Cloudflare Workers (static assets).
 // Hybrid live-then-static (plan ASTRO_HYBRID_PLAN.md §§2–6):
@@ -35,7 +35,18 @@ export default defineConfig({
 	// from a real request. Request-time behaviour is untouched: the
 	// deployed Worker still runs in workerd and still fetches live.
 	adapter: cloudflare({ prerenderEnvironment: "node" }),
-	integrations: [react()],
+	// Preact (not React) for the islands — the React 19 runtime was
+	// 212KB raw / 64.7KiB transfer with ~95KB unused (PageSpeed +
+	// SpeedVitals code coverage, 2026-11-10). Preact is ~3KB and covers
+	// the same hooks API the islands use (useState/useEffect/useRef/
+	// useCallback/useMemo) via preact/hooks; `compat: true` enables
+	// preact/compat so React-component libraries (lucide-react) keep
+	// working — their `react` imports resolve to preact/compat (see
+	// package.json `overrides`). Island source imports preact directly
+	// (preact/hooks + preact/compat for event types); no island uses
+	// React 19-only APIs, portals, context or Suspense. No visual or
+	// behavioural change — same islands, same client:* directives.
+	integrations: [preact({ compat: true })],
 	site: "https://portfolio-public.riaaz.workers.dev",
 
 	// Cloudflare edge cache provider — emits Cloudflare-CDN-Cache-Control
