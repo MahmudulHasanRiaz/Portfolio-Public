@@ -506,14 +506,20 @@ export default function SiteHeader({
 					</a>
 				);
 			})}
-			<button
-				type="button"
-				className="picker-resume-btn"
-				onClick={resumeRotation}
-			>
-				<Play size={14} />
-				{dict.resumeRotation}
-			</button>
+			{/* The resume button shows ONLY while the label rotation is
+			    paused (same rule as the in-pill play button): it was
+			    unconditional before, so it sat at the picker's bottom
+			    even while the rotation was running. */}
+			{rotationPaused ? (
+				<button
+					type="button"
+					className="picker-resume-btn"
+					onClick={resumeRotation}
+				>
+					<Play size={14} />
+					{dict.resumeRotation}
+				</button>
+			) : null}
 		</div>
 	) : null;
 

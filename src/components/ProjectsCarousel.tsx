@@ -16,9 +16,12 @@ import {
 // this island renders the deck, the indicator row and (mobile only) the
 // flip controls. No auto-rotation: slides change only on user action.
 //
-// MOBILE (< 1024px): single-card carousel, one at a time, page-flip.
-// DESKTOP (>= 1024px): 3-per-row grid, all projects visible, staggered
-// reveal entrance + hover lift — no one-at-a-time flip, no dots/chevrons.
+// MOBILE (< 640px): single-card carousel, one at a time, page-flip.
+// GRID (>= 640px): 2-per-row at 640–1023px, 3-per-row at >= 1024px,
+// all projects visible, staggered reveal entrance + hover lift —
+// no one-at-a-time flip, no dots/chevrons. (Desktop 3-col grid is the
+// user's 2026-11-08 decision; the 2-col tablet grid reuses the
+// .projects-grid CSS that already existed for 640px+.)
 
 export interface CarouselProject {
 	slug: string;
@@ -62,7 +65,12 @@ const SWIPE_THRESHOLD = 28;
 const FLIP_MS = 520;
 const FLIP_EASE = "cubic-bezier(0.35, 0.55, 0.35, 1)";
 const PEEK_COUNT = 3;
-const DESKTOP_QUERY = "(min-width: 1024px)";
+// Grid from 640px: a 640–1039px-wide browser window has a viewport
+// below 1024px once the ~15px scrollbar is subtracted, so a 1024px
+// query kept showing the mobile single-card carousel at desktop-ish
+// widths. 640px matches the .projects-grid CSS (2-col from 640px,
+// 3-col from 1024px) and the carousel image sizes (50vw at 640–1023px).
+const GRID_QUERY = "(min-width: 640px)";
 
 export default function ProjectsCarousel({ projects, lang = "en", dict }: Props) {
 	const t = dict ?? getDict(lang);
@@ -70,9 +78,10 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 	const [leaving, setLeaving] = useState<1 | -1 | null>(null);
 	const [entering, setEntering] = useState(false);
 	const [reducedMotion, setReducedMotion] = useState(false);
-	const [isDesktop, setIsDesktop] = useState(false);
+	const [isGrid, setIsGrid] = useState(false);
 	// Pre-hydration skeleton: false until the island mounts, so the
-	// section shows a glass skeleton card (same footprint as a real card)
+	// section shows glass skeleton cards (same footprint as the real
+	// layout — 1 card below 640px, 6 cards in the grid from 640px)
 	// while the carousel JS loads instead of a blank gap.
 	const [ready, setReady] = useState(false);
 	const [loadedThumbs, setLoadedThumbs] = useState<Record<string, boolean>>({});
@@ -94,15 +103,15 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 			setReducedMotion(e.matches);
 		motionMq.addEventListener("change", onMotionChange);
 
-		const desktopMq = window.matchMedia(DESKTOP_QUERY);
-		setIsDesktop(desktopMq.matches);
-		const onDesktopChange = (e: MediaQueryListEvent) =>
-			setIsDesktop(e.matches);
-		desktopMq.addEventListener("change", onDesktopChange);
+		const gridMq = window.matchMedia(GRID_QUERY);
+		setIsGrid(gridMq.matches);
+		const onGridChange = (e: MediaQueryListEvent) =>
+			setIsGrid(e.matches);
+		gridMq.addEventListener("change", onGridChange);
 
 		return () => {
 			motionMq.removeEventListener("change", onMotionChange);
-			desktopMq.removeEventListener("change", onDesktopChange);
+			gridMq.removeEventListener("change", onGridChange);
 		};
 	}, []);
 
@@ -212,12 +221,14 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 		return <p className="empty-state">{t.emptyProjects}</p>;
 	}
 
-	// Skeleton while the island hydrates — same card footprint, glass
-	// shimmer (loading.css), no layout jump when the real card lands.
+	// Skeleton while the island hydrates — same footprint as the real
+	// layout, glass shimmer (loading.css), no layout jump when the real
+	// cards land: 6 cards so the grid (2 rows) is covered; CSS hides
+	// cards 2–6 below 640px where only one carousel card shows.
 	if (!ready) {
 		return (
 			<div className="skel-grid" role="status" aria-label={t.loadingProjects}>
-				{[0, 1, 2].map((i) => (
+				{[0, 1, 2, 3, 4, 5].map((i) => (
 					<div key={i} className="skel-card" aria-hidden="true">
 						<div className="skel skel-thumb" />
 						<div className="skel-body">
@@ -234,9 +245,10 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 	const markThumbLoaded = (slug: string) =>
 		setLoadedThumbs((prev) => (prev[slug] ? prev : { ...prev, [slug]: true }));
 
-	// DESKTOP: 3-per-row grid with a staggered fade+rise reveal.
-	// No carousel, no dots, no chevrons — every project is visible.
-	if (isDesktop) {
+	// GRID: 2-per-row at 640–1023px, 3-per-row at >= 1024px, with a
+	// staggered fade+rise reveal. No carousel, no dots, no chevrons —
+	// every project is visible.
+	if (isGrid) {
 		return (
 			<div className="projects-grid">
 				{projects.map((project, i) => (

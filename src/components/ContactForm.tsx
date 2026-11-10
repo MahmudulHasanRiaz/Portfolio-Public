@@ -1,5 +1,6 @@
-import { useEffect, useState } from "preact/hooks";
-import type { FormEvent } from "preact/compat";
+import { useEffect, useRef, useState } from "preact/hooks";
+import type { FormEvent, KeyboardEvent } from "preact/compat";
+import { Check, ChevronDown } from "lucide-react";
 import { PROFILE, SERVICES, type Service } from "../data/site";
 import { leadPayload, validateLead, type LeadError } from "../lib/lead";
 import { getDict, type ContactFormDict, type Lang } from "../lib/i18n";
@@ -43,6 +44,116 @@ export default function ContactForm({
 	const [phone, setPhone] = useState("");
 	const [selectedService, setSelectedService] = useState(service ?? "");
 	const [message, setMessage] = useState("");
+	// Service listbox (custom glass listbox, like the header profile
+	// picker — NOT a native <select>: the native open list is the
+	// browser/OS default and looks styleless). The VALUE stays the
+	// English service name — that is what the lead payload sends.
+	const [serviceOpen, setServiceOpen] = useState(false);
+	const [serviceActive, setServiceActive] = useState(0);
+	const serviceWrapRef = useRef<HTMLDivElement>(null);
+	const serviceBtnRef = useRef<HTMLButtonElement>(null);
+	const serviceOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+	// Options: the placeholder first (value "" = no service, the field
+	// is optional), then the same 5 services as the native select had.
+	const serviceOptionsList = [
+		{ value: "", label: t.formSelectService },
+		...serviceOptions.map((s) => ({
+			value: s.name,
+			label: lang === "bn" && s.bn?.title ? s.bn.title : s.name,
+		})),
+	];
+	const selectedServiceLabel =
+		serviceOptionsList.find((o) => o.value === selectedService)?.label ??
+		t.formSelectService;
+
+	// When the listbox opens, scroll the field into view (inside the
+	// modal sheet it can sit near the bottom edge) and focus the
+	// active option so arrow keys work immediately.
+	useEffect(() => {
+		if (!serviceOpen) return;
+		serviceWrapRef.current?.scrollIntoView({ block: "nearest" });
+		serviceOptionRefs.current[serviceActive]?.focus();
+	}, [serviceOpen, serviceActive]);
+
+	// Close on an outside click.
+	useEffect(() => {
+		if (!serviceOpen) return;
+		const onDown = (e: MouseEvent) => {
+			if (
+				serviceWrapRef.current &&
+				!serviceWrapRef.current.contains(e.target as Node)
+			) {
+				setServiceOpen(false);
+			}
+		};
+		document.addEventListener("mousedown", onDown);
+		return () => document.removeEventListener("mousedown", onDown);
+	}, [serviceOpen]);
+
+	const openServiceList = (focusIndex: number) => {
+		setServiceActive(focusIndex);
+		setServiceOpen(true);
+	};
+
+	const chooseService = (value: string) => {
+		setSelectedService(value);
+		setServiceOpen(false);
+		serviceBtnRef.current?.focus();
+	};
+
+	const onServiceButtonKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+		const selectedIndex = Math.max(
+			0,
+			serviceOptionsList.findIndex((o) => o.value === selectedService),
+		);
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			openServiceList(selectedIndex);
+		} else if (e.key === "ArrowUp") {
+			e.preventDefault();
+			openServiceList(selectedIndex);
+		} else if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			if (serviceOpen) setServiceOpen(false);
+			else openServiceList(selectedIndex);
+		} else if (e.key === "Escape" && serviceOpen) {
+			e.preventDefault();
+			setServiceOpen(false);
+		}
+	};
+
+	const onServiceOptionKeyDown = (
+		e: KeyboardEvent<HTMLButtonElement>,
+		index: number,
+	) => {
+		const last = serviceOptionsList.length - 1;
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			const next = index >= last ? 0 : index + 1;
+			setServiceActive(next);
+			serviceOptionRefs.current[next]?.focus();
+		} else if (e.key === "ArrowUp") {
+			e.preventDefault();
+			const prev = index <= 0 ? last : index - 1;
+			setServiceActive(prev);
+			serviceOptionRefs.current[prev]?.focus();
+		} else if (e.key === "Home") {
+			e.preventDefault();
+			setServiceActive(0);
+			serviceOptionRefs.current[0]?.focus();
+		} else if (e.key === "End") {
+			e.preventDefault();
+			setServiceActive(last);
+			serviceOptionRefs.current[last]?.focus();
+		} else if (e.key === "Escape") {
+			e.preventDefault();
+			setServiceOpen(false);
+			serviceBtnRef.current?.focus();
+		} else if (e.key === "Tab") {
+			setServiceOpen(false);
+		}
+	};
+
 	const [errors, setErrors] = useState<LeadError[]>([]);
 	// Server-side failure (rate limit, upstream/downstream error) — shown
 	// IN the form, never a browser popup. Cleared on the next submit.
@@ -230,22 +341,75 @@ export default function ContactForm({
 			<p className="form-hint">{t.formHintContact}</p>
 			{errorFor("contact") && <p className="form-error">{errorFor("contact")}</p>}
 
-			<div className="form-field">
+			<div className="form-field service-select" ref={serviceWrapRef}>
 				<label htmlFor="contact-service">
 					{t.formService}
 				</label>
-				<select
+				<button
+					type="button"
 					id="contact-service"
-					value={selectedService}
-					onChange={(e) => setSelectedService(e.currentTarget.value)}
+					ref={serviceBtnRef}
+					className="service-select-btn"
+					data-empty={selectedService === "" ? "true" : undefined}
+					aria-haspopup="listbox"
+					aria-expanded={serviceOpen}
+					aria-controls="contact-service-listbox"
+					onClick={() =>
+						serviceOpen
+							? setServiceOpen(false)
+							: openServiceList(
+									Math.max(
+										0,
+										serviceOptionsList.findIndex(
+											(o) => o.value === selectedService,
+										),
+									),
+								)
+					}
+					onKeyDown={onServiceButtonKeyDown}
 				>
-					<option value="">{t.formSelectService}</option>
-					{serviceOptions.map((s) => (
-						<option key={s.slug} value={s.name}>
-							{lang === "bn" && s.bn?.title ? s.bn.title : s.name}
-						</option>
-					))}
-				</select>
+					<span className="service-select-value">{selectedServiceLabel}</span>
+					<ChevronDown
+						size={18}
+						className="service-select-chev"
+						aria-hidden="true"
+					/>
+				</button>
+				{serviceOpen ? (
+					<div
+						id="contact-service-listbox"
+						className="service-select-panel"
+						role="listbox"
+						aria-label={t.formService}
+					>
+						{serviceOptionsList.map((o, i) => {
+							const selected = o.value === selectedService;
+							return (
+								<button
+									key={o.value || "placeholder"}
+									type="button"
+									role="option"
+									aria-selected={selected}
+									tabIndex={serviceActive === i ? 0 : -1}
+									ref={(el) => {
+										serviceOptionRefs.current[i] = el;
+									}}
+									className="service-select-option"
+									onClick={() => chooseService(o.value)}
+									onKeyDown={(e) => onServiceOptionKeyDown(e, i)}
+								>
+									<span>{o.label}</span>
+									<span
+										className="service-select-check"
+										aria-hidden="true"
+									>
+										{selected ? <Check size={16} /> : null}
+									</span>
+								</button>
+							);
+						})}
+					</div>
+				) : null}
 				{service ? (
 					<p className="form-hint">
 						{t.formPreselected}

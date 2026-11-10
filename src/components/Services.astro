@@ -57,7 +57,11 @@ const t = getDict(lang);
 	</div>
 	{/* Service detail modal — the brief + CTA live here, not on the card. */}
 	{/* Subset dict only (Issue 7B): 3 keys, not the whole dictionary. */}
-	<ServiceModal services={services} lang={lang} dict={pickDict(t, SERVICE_MODAL_DICT_KEYS)} client:visible />
+	{/* client:idle (not client:visible): the modal renders null while
+	    closed, so the island has no size and the visibility observer
+	    never fires — the modal could never open. ContactModal (Layout)
+	    already uses client:idle for the same reason. */}
+	<ServiceModal services={services} lang={lang} dict={pickDict(t, SERVICE_MODAL_DICT_KEYS)} client:idle />
 </section>
 
 <style>

@@ -1074,12 +1074,16 @@ button:focus-visible {
 }
 
 /* Preview: at sm+ the picker is 288px wide, anchored to the pill's
-   left edge (not centred). */
+   left edge (not centred). The max-width is a hard guard so the panel
+   can never leave the viewport even if its anchor ever shifts (e.g.
+   a browser that lays the pill out off-centre) — 288px < 100vw - 16px
+   at every width this rule applies to, so it changes nothing normally. */
 @media (min-width: 640px) {
 	.header-picker {
 		left: 0;
 		transform: none;
 		width: 288px;
+		max-width: calc(100vw - 16px);
 	}
 }
 
@@ -1794,8 +1798,13 @@ button:focus-visible {
 	.services-grid {
 		grid-template-columns: repeat(2, 1fr);
 	}
+	/* 5th card: same width as the others, centred in its own row —
+	   it must NEVER span the full row (2026-11-10: the full-width
+	   5th card read as a broken/odd layout at intermediate widths). */
 	.services-grid .service-card:nth-child(5) {
 		grid-column: 1 / -1;
+		justify-self: center;
+		width: calc(50% - 6px);
 	}
 }
 
@@ -1819,6 +1828,11 @@ button:focus-visible {
 	}
 	.services-grid .service-card:nth-child(5) {
 		grid-column: 4 / span 3;
+		/* Reset the 640px centring: at lg the 5th card fills its
+		   3-col area like card 4 — without this, the 50% width
+		   from the sm rule would shrink it to half its area. */
+		width: auto;
+		justify-self: stretch;
 	}
 }
 
@@ -4418,7 +4432,8 @@ button:focus-visible {
 
 .form-field input,
 .form-field select,
-.form-field textarea {
+.form-field textarea,
+.form-field .service-select-btn {
 	width: 100%;
 	padding: 12px 16px;
 	border-radius: 12px;
@@ -4454,8 +4469,103 @@ button:focus-visible {
 
 .form-field input:focus,
 .form-field select:focus,
-.form-field textarea:focus {
+.form-field textarea:focus,
+.form-field .service-select-btn:focus {
 	border-color: var(--accent);
+}
+
+/* Service listbox (2026-11-10): custom glass listbox like the header
+   profile picker — the native <select>'s open list is the browser/OS
+   default, styleless. The button looks like the other inputs when
+   closed; the panel opens below it. */
+.service-select {
+	position: relative;
+}
+
+.form-field .service-select-btn {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	font: inherit;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.form-field .service-select-btn:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.service-select-value {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.service-select-btn[data-empty="true"] .service-select-value {
+	color: var(--ink-dim);
+}
+
+.service-select-chev {
+	flex: none;
+	color: var(--ink-dim);
+	transition: transform 180ms ease;
+}
+
+.service-select-btn[aria-expanded="true"] .service-select-chev {
+	transform: rotate(180deg);
+}
+
+.service-select-panel {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	right: 0;
+	z-index: 60;
+	max-height: 248px;
+	overflow-y: auto;
+	padding: 6px;
+	background: var(--bg);
+	border: 1px solid var(--card-border);
+	border-radius: 12px;
+	box-shadow: var(--shadow);
+}
+
+.service-select-option {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	padding: 10px 12px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--ink);
+	font-size: 14px;
+	font-weight: 500;
+	text-align: left;
+	cursor: pointer;
+}
+
+.service-select-option:hover,
+.service-select-option[aria-selected="true"] {
+	background: var(--accent-soft);
+}
+
+.service-select-option:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+
+.service-select-check {
+	margin-left: auto;
+	display: inline-flex;
+	flex: none;
+	color: var(--accent);
 }
 
 .form-field textarea {
