@@ -1682,6 +1682,23 @@ button:focus-visible {
 	}
 }
 
+/* Bangla clipping fix (2026-11-10, user report): Li Ador Noirrit's
+   below-base vowel signs (ু ূ ৃ) extend ~4px below the 1.2 line box of
+   the hero name, and .hero-name's overflow:hidden (needed for the
+   ellipsis) cuts them — half the ু was missing in the /bn/ hero.
+   Padding-bottom gives the ink room inside the clip (padding) box;
+   the matching negative margin-bottom keeps the layout footprint
+   EXACTLY the same, so nothing moves and no space is added. Scoped to
+   Bangla only, so the English hero is pixel-identical. Measured with
+   canvas ink extents in Playwright: overBelow 3.8px @27px, 3.9px @36px;
+   0.2em = 5.4px / 7.2px covers both with margin for other renderers. Full /bn/ audit (all pages,
+   390/768/1280/1920) found this as the ONLY real clip — card text,
+   badge, pill label, chips, meta, picker rows all verified unclipped. */
+html[lang="bn"] .hero-name {
+	padding-bottom: 0.2em;
+	margin-bottom: -0.2em;
+}
+
 .hero-headline {
 	margin: 10px 0 0;
 	font-size: 20px;
