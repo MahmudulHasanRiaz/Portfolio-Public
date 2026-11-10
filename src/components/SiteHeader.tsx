@@ -323,7 +323,31 @@ export default function SiteHeader({
 	};
 
 	const toggleTheme = () => {
-		const next = theme === "dark" ? "light" : "dark";
+		// Current theme from the source of truth — stored choice, else
+		// the rendered data-theme, else system preference. Never from
+		// this island's state: the island re-mounts on every View
+		// Transition navigation (state restarts "light"), so a toggle
+		// that trusted state could flip the wrong way. (2026-11-10:
+		// the theme/language order bug itself was the full stylesheet
+		// going missing after navigation — the toggle was already
+		// correct — but it must not depend on state regardless.)
+		const saved = (() => {
+			try {
+				return localStorage.getItem("theme");
+			} catch {
+				return null;
+			}
+		})();
+		const dom = document.documentElement.getAttribute("data-theme");
+		const current: "light" | "dark" =
+			saved === "light" || saved === "dark"
+				? saved
+				: dom === "dark" || dom === "light"
+					? dom
+					: window.matchMedia("(prefers-color-scheme: dark)").matches
+						? "dark"
+						: "light";
+		const next = current === "dark" ? "light" : "dark";
 		setTheme(next);
 		try {
 			localStorage.setItem("theme", next);
