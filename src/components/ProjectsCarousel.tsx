@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import type { MouseEvent, PointerEvent, TouchEvent } from "preact/compat";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 // truncateShort lives in lib/text.ts (no astro:content) — a client
 // island cannot import lib/content.ts (server-only astro:content).
@@ -170,24 +171,24 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 		}
 	};
 
-	const onPointerDown = (e: React.PointerEvent) => {
+	const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
 		if (e.pointerType === "touch") return;
 		dragStart.current = { x: e.clientX, y: e.clientY };
 	};
 
-	const onPointerUp = (e: React.PointerEvent) => {
+	const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
 		if (e.pointerType === "touch" || !dragStart.current) return;
 		const dx = e.clientX - dragStart.current.x;
 		const dy = e.clientY - dragStart.current.y;
 		finishDrag(dx, dy);
 	};
 
-	const onTouchStart = (e: React.TouchEvent) => {
+	const onTouchStart = (e: TouchEvent<HTMLDivElement>) => {
 		const touch = e.touches[0];
 		if (touch) dragStart.current = { x: touch.clientX, y: touch.clientY };
 	};
 
-	const onTouchEnd = (e: React.TouchEvent) => {
+	const onTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
 		const touch = e.changedTouches[0];
 		if (!touch || !dragStart.current) return;
 		const dx = touch.clientX - dragStart.current.x;
@@ -199,7 +200,7 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 		dragStart.current = null;
 	};
 
-	const onClickCapture = (e: React.MouseEvent) => {
+	const onClickCapture = (e: MouseEvent<HTMLDivElement>) => {
 		if (suppressClick.current) {
 			e.preventDefault();
 			e.stopPropagation();
@@ -307,7 +308,7 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 			    circle, no border, no shadow — Prev on the LEFT, Next on
 			    the RIGHT, flanking the centred dots + counter. Scoped
 			    here (not glass.css) so parallel workers never clash. */}
-			<style>{`
+			<style dangerouslySetInnerHTML={{ __html: `
 				.deck-arrow {
 					width: 40px;
 					height: 40px;
@@ -330,7 +331,7 @@ export default function ProjectsCarousel({ projects, lang = "en", dict }: Props)
 				.deck-arrow:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 				.deck-arrow--prev { justify-self: start; }
 				.deck-arrow--next { justify-self: end; }
-			`}</style>
+			` }} />
 			<div
 				className={`deck${flipping ? " deck--flipping" : ""}`}
 				role="region"

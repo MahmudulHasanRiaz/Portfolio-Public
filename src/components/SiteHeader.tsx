@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import {
 	Check,
 	ChevronDown,
@@ -706,7 +706,7 @@ export default function SiteHeader({
 			    `display: none` ≥768px in glass.css). The reduced-motion
 			    rule keeps the panels' opacity fade off for users who
 			    ask for it (preview `motion-reduce:transition-none`). */}
-			<style>{`
+			<style dangerouslySetInnerHTML={{ __html: `
 				@media (min-width: 768px) {
 					.header-menu {
 						display: none;
@@ -718,7 +718,7 @@ export default function SiteHeader({
 						transition: none !important;
 					}
 				}
-			`}</style>
+			` }} />
 			<div className="header-top" aria-hidden={stuck || undefined}>
 				{langBtn(stuck)}
 				{themeBtn(stuck)}

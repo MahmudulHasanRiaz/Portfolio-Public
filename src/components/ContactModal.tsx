@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "preact/hooks";
 import ContactForm from "./ContactForm";
 import { SERVICES, type Service } from "../data/site";
 import { lockBodyScroll, unlockBodyScroll } from "../lib/scrollLock";

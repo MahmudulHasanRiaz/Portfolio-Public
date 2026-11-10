@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "preact/hooks";
 import { BookOpen, CodeXml, Megaphone, Mic, Rocket } from "lucide-react";
 import { PROFILE } from "../data/site";
 
@@ -134,8 +134,8 @@ export default function HeroDesignation({
 		<>
 			{/* Per-letter entrance + clean word exit. glass.css has no keyframes
 			    for these, so they live here, scoped to this island. */}
-			<style>{`@keyframes badge-letter-in { from { opacity: 0; transform: translateY(6px); filter: blur(2px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
-@keyframes badge-word-exit { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-6px); } }`}</style>
+			<style dangerouslySetInnerHTML={{ __html: `@keyframes badge-letter-in { from { opacity: 0; transform: translateY(6px); filter: blur(2px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+@keyframes badge-word-exit { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-6px); } }` }} />
 			<span className="hero-badge" aria-hidden="true">
 				{/* Invisible sizer (longest designation + cursor replica)
 				    reserves the badge width so it never grows/shrinks

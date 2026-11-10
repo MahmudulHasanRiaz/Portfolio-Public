@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "preact/hooks";
 import { getDict, type Lang, type ThemeToggleDict } from "../lib/i18n";
 
 // Theme toggle island — light / dark, system preference by default.
