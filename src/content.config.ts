@@ -3,9 +3,12 @@
 // Astro pulls the same DB content (via the Public Content API) and bakes it
 // into static HTML. The local src/content/* directories hold the real,
 // verified content rows (the same rows seeded in the Portfolio-V2 DB) so
-// the build ships real content — never dummy/preview rows. Dummy rows
-// (StyleNest, PharmaTrack, HisabKit, CloudDesk, SkillBridge) are NOT here;
-// sections with no real rows yet (ventures) render the honest empty state.
+// the build ships real content — never dummy/preview rows. The dummy
+// rows (StyleNest, PharmaTrack, HisabKit, CloudDesk, SkillBridge) were
+// deleted (fix plan §1a); the surviving files are only the outage
+// fallback for when the live API is unreachable at build time (the
+// authoritative merge in src/lib/content.ts drops any static row
+// absent from the live published set whenever the API is reachable).
 import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
