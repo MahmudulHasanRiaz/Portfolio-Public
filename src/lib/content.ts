@@ -25,6 +25,11 @@ import {
 	type StackTech,
 } from "../data/site";
 import { getSiteSettings } from "./settings";
+import {
+	liveCollectionReachable,
+	warnLiveFallbackOnce,
+	type PublicContentType,
+} from "../loaders/public-content";
 
 // Text helpers (truncateShort, SHORT_DESC_MAX) live in lib/text.ts —
 // this module re-exports them so .astro pages keep importing from
@@ -101,18 +106,44 @@ function mergeEntryData<T extends Record<string, unknown>>(
 	return out as T;
 }
 
+// Authoritative merge (fix plan §1b): when the live API is reachable
+// at build time, the published set from the API is authoritative —
+// live rows field-merge over matching static rows (as before) AND
+// every static row whose slug is absent from the live set is DROPPED,
+// so an archived/draft item disappears on the next rebuild with no
+// code change. When the API is unreachable, today's behaviour
+// (static rows only, live rows merged over them) is kept and a build
+// warning names the collection. A 200 with an empty published set
+// is reachable: the list then renders its honest empty state.
+// A reachability probe that passes but a collection load that then
+// fails is treated as unreachable — never ship an empty list on a
+// load error.
 async function mergeWithLive<
 	T extends { data: { slug: string; publishedAt?: string } },
->(buildTime: T[], liveName: LiveCollectionName): Promise<T[]> {
+>(
+	buildTime: T[],
+	liveName: LiveCollectionName,
+	liveType: PublicContentType,
+): Promise<T[]> {
+	let reachable = await liveCollectionReachable(liveType);
 	let live: Array<{ data: { slug: string } }> = [];
 	try {
 		const result = await getLiveCollection(liveName);
 		live = (result?.entries ?? []) as Array<{ data: { slug: string } }>;
 	} catch {
+		if (reachable) {
+			warnLiveFallbackOnce(liveType);
+			reachable = false;
+		}
 		live = [];
 	}
+	if (!reachable) warnLiveFallbackOnce(liveType);
+	const liveSlugs = new Set(live.map((item) => item.data.slug));
 	const bySlug = new Map<string, T>();
-	for (const item of buildTime) bySlug.set(item.data.slug, item);
+	for (const item of buildTime) {
+		if (reachable && !liveSlugs.has(item.data.slug)) continue;
+		bySlug.set(item.data.slug, item);
+	}
 	for (const item of live) {
 		// Field-wise merge, not a full-row replace: live wins where it has
 		// a value; build-time is kept where the live row is empty.
@@ -133,26 +164,27 @@ async function mergeWithLive<
 }
 
 export async function getProjects(): Promise<Project[]> {
-	return mergeWithLive(await getCollection("projects"), "liveProjects");
+	return mergeWithLive(await getCollection("projects"), "liveProjects", "projects");
 }
 
 export async function getCaseStudies(): Promise<CaseStudy[]> {
 	return mergeWithLive(
 		await getCollection("caseStudies"),
 		"liveCaseStudies",
+		"case-studies",
 	);
 }
 
 export async function getPosts(): Promise<Post[]> {
-	return mergeWithLive(await getCollection("posts"), "livePosts");
+	return mergeWithLive(await getCollection("posts"), "livePosts", "posts");
 }
 
 export async function getVentures(): Promise<Venture[]> {
-	return mergeWithLive(await getCollection("ventures"), "liveVentures");
+	return mergeWithLive(await getCollection("ventures"), "liveVentures", "ventures");
 }
 
 export async function getReleases(): Promise<Release[]> {
-	return mergeWithLive(await getCollection("releases"), "liveReleases");
+	return mergeWithLive(await getCollection("releases"), "liveReleases", "releases");
 }
 
 /**

@@ -10,7 +10,16 @@ interface Props {
 }
 
 const { lang = "en" } = Astro.props;
-const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
+const settings = await getSiteSettings();
+const t = applySiteCopy(getDict(lang), lang, settings);
+// Founder summary from the admin (fix plan §3 Break 2): the
+// multi-sentence bio from the homepage founder section. Bangla
+// wins on /bn/ pages, English is the fallback; absent = render
+// nothing extra (the dict entrepreneurText above stays as-is).
+const founderSummary =
+	lang === "bn"
+		? (settings.bn?.founderSummary ?? settings.founderSummary)
+		: settings.founderSummary;
 
 const venturesRaw = await getVentures();
 const ventures = venturesRaw.map((v) => ({
@@ -94,6 +103,7 @@ const artistShortPoints = t.artistPoints;
 			<p>
 				{t.entrepreneurText}
 			</p>
+			{founderSummary ? <p>{founderSummary}</p> : null}
 			{
 				orderedVentures.length === 0 ? (
 					<p class="muted" style="margin:0;font-size:14px;">
