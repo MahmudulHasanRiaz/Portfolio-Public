@@ -112,6 +112,7 @@ const liveVentures = defineLiveCollection({
 		location: z.string().optional(),
 		teamSize: z.string().optional(),
 		foundedDate: z.string().optional(),
+		foundedYear: z.number().optional(),
 		metrics: z.array(metricSchema).default([]),
 		thumbnailVideoUrl: z.string().optional(),
 	}),

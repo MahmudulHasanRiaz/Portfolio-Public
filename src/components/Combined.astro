@@ -10,7 +10,16 @@ interface Props {
 }
 
 const { lang = "en" } = Astro.props;
-const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
+const settings = await getSiteSettings();
+const t = applySiteCopy(getDict(lang), lang, settings);
+// Founder summary from the admin (fix plan §3 Break 2): the
+// multi-sentence bio from the homepage founder section. Bangla
+// wins on /bn/ pages, English is the fallback; absent = render
+// nothing extra (the dict entrepreneurText above stays as-is).
+const founderSummary =
+	lang === "bn"
+		? (settings.bn?.founderSummary ?? settings.founderSummary)
+		: settings.founderSummary;
 
 const venturesRaw = await getVentures();
 const ventures = venturesRaw.map((v) => ({
@@ -23,40 +32,12 @@ const platforms = (await getPlatforms()).map((p) =>
 	localizeData({ ...p }, lang),
 );
 const musicPlatforms = platforms.filter((p) => p.group === "music");
-// Preview mini-row copy (authorized preview content): SHORT one-line
-// descriptions that fit in full — the live API's long descriptions
-// get cut off mid-sentence here. Long descriptions stay on the
-// venture detail pages; only the mini-row uses the short one.
-const VENTURE_SHORT: Record<string, string> = {
-	hisabkit: "Accounting toolkit for small Bangladeshi businesses.",
-	clouddesk: "Remote-work tools for distributed teams.",
-	skillbridge: "Connecting skilled freelancers with local businesses.",
-};
-// Bangla mini-row copy (faithful translations of the English above).
-const VENTURE_SHORT_BN: Record<string, string> = {
-	hisabkit: "ছোট বাংলাদেশি বিজনেসের জন্য হিসাব রাখার টুলকিট।",
-	clouddesk: "দূরবর্তী দলের জন্য রিমোট-ওয়ার্ক টুল।",
-	skillbridge: "দক্ষ ফ্রিল্যান্সারদের সঙ্গে লোকাল বিজনেসের সংযোগ।",
-};
-const ventureShort = (slug: string) =>
-	lang === "bn"
-		? (VENTURE_SHORT_BN[slug] ?? VENTURE_SHORT[slug])
-		: VENTURE_SHORT[slug];
-// Preview order: HisabKit, CloudDesk, SkillBridge (live API sorts
-// newest-first, which renders them reversed).
-const VENTURE_ORDER = ["hisabkit", "clouddesk", "skillbridge"];
-const orderedVentures = [...ventures].sort((a, b) => {
-	const ai = VENTURE_ORDER.indexOf(a.data.slug);
-	const bi = VENTURE_ORDER.indexOf(b.data.slug);
-	return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-});
-// Real venture thumbnails from the preview assets (local files, never
-// a bare letter tile while a photo exists).
-const VENTURE_FALLBACK_THUMB: Record<string, string> = {
-	hisabkit: "/ventures/hisabkit.jpg",
-	clouddesk: "/ventures/clouddesk.jpg",
-	skillbridge: "/ventures/skillbridge.jpg",
-};
+// Mini-rows render the venture's own description (live API row,
+// build-time row as fallback) and its own thumbnail, or a letter
+// tile when it has none — no slug-keyed copy or thumbnails here:
+// the HisabKit / CloudDesk / SkillBridge rows were archived, so
+// their short copy, order list and fallback images were removed
+// with them (fix plan §1a).
 // Short artist points, verbatim from the React preview (English) /
 // faithful Bangla translation (dictionary).
 const artistShortPoints = t.artistPoints;
@@ -94,13 +75,14 @@ const artistShortPoints = t.artistPoints;
 			<p>
 				{t.entrepreneurText}
 			</p>
+			{founderSummary ? <p>{founderSummary}</p> : null}
 			{
-				orderedVentures.length === 0 ? (
+				ventures.length === 0 ? (
 					<p class="muted" style="margin:0;font-size:14px;">
 						{t.venturesEmptyShort}
 					</p>
 				) : (
-					orderedVentures.map((venture) => (
+					ventures.map((venture) => (
 						<a
 							class="mini-row"
 							href={langUrl(`/ventures/${venture.data.slug}`, lang)}
@@ -117,13 +99,9 @@ const artistShortPoints = t.artistPoints;
 										autoplay={venture.data.thumbnailAutoplay !== false}
 										preload="metadata"
 									/>
-								) : venture.data.thumbnail ||
-								  VENTURE_FALLBACK_THUMB[venture.data.slug] ? (
+								) : venture.data.thumbnail ? (
 									<ThumbImage
-										src={
-											venture.data.thumbnail ??
-											VENTURE_FALLBACK_THUMB[venture.data.slug]
-										}
+										src={venture.data.thumbnail}
 										alt=""
 										widths={[72, 144]}
 										sizes="72px"
@@ -141,13 +119,9 @@ const artistShortPoints = t.artistPoints;
 							</span>
 							<span class="mini-text">
 								<b>{venture.data.title}</b>
-								{ventureShort(venture.data.slug) ??
-								venture.data.description ? (
+								{venture.data.description ? (
 									<span>
-										{truncateShort(
-											ventureShort(venture.data.slug) ??
-												venture.data.description,
-										)}
+										{truncateShort(venture.data.description)}
 									</span>
 								) : null}
 							</span>

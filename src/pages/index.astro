@@ -84,7 +84,7 @@ const personJsonLd = {
 ---
 
 <Layout
-	title={isKnowMe ? t.knowMeTitle : t.homeTitle}
+	title={isKnowMe ? t.knowMeTitle : (settings.siteTitle ?? t.homeTitle)}
 	description={isKnowMe ? t.knowMeDescription : t.homeDescription}
 	profile={profile}
 	lang={lang}

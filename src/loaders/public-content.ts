@@ -397,6 +397,12 @@ export interface SettingsBn {
 	knowMeHeadline?: string;
 	knowMeSub?: string;
 	statsLabels?: (string | null)[];
+	/**
+	 * Founder summary in Bangla (settings key
+	 * `founder_summary_bn`, fix plan §3 Break 2). Wins over the
+	 * English founderSummary on /bn/ pages; absent = English.
+	 */
+	founderSummary?: string;
 }
 
 export interface AvailabilitySetting {
@@ -478,6 +484,35 @@ export interface PublicSettings {
 	 * getSiteSettings().
 	 */
 	bn?: SettingsBn;
+	/**
+	 * Homepage SEO title (settings key `site_title`, fix plan §8).
+	 * The homepage passes this as the Layout title when present;
+	 * the dictionary homeTitle stays the fail-safe fallback.
+	 * Absent = no admin title set yet.
+	 */
+	siteTitle?: string;
+	/**
+	 * Homepage SEO description (settings key `site_description`,
+	 * fix plan §8). Parsed for completeness; the homepage keeps
+	 * its dictionary description for now.
+	 */
+	siteDescription?: string;
+	/**
+	 * Founder summary (settings key `founder_summary`, fix plan
+	 * §3 Break 2): the multi-sentence bio from the homepage
+	 * founder section. Combined.astro renders it as its own
+	 * paragraph under "Beyond the code"; the dictionary
+	 * entrepreneurText stays as the fail-safe fallback.
+	 */
+	founderSummary?: string;
+	/**
+	 * Admin-managed Site Copy (settings keys `site_copy` /
+	 * `site_copy_bn`, fix plan §3 Break 1): per-key overrides for
+	 * the dictionary (Know Me bio paragraphs etc.), applied by
+	 * applySiteCopy() in lib/i18n.ts. Absent = dictionary copy.
+	 */
+	siteCopy?: Record<string, unknown>;
+	siteCopyBn?: Record<string, unknown>;
 }
 
 /** Fail-safe defaults: repo portrait + Software Engineer profile. */
@@ -693,6 +728,31 @@ async function fetchPublicSettingsUncached(
 				.map((c) => c.trim());
 			if (parsed.length > 0) heroChips = parsed;
 		}
+		// Homepage SEO title / description (fix plan §8) and founder
+		// summary (fix plan §3 Break 2): plain non-empty strings
+		// only, snake_case spellings accepted. Absent / empty =
+		// omitted, so callers fall back to the dictionary.
+		const strOrUndefined = (v: unknown): string | undefined =>
+			typeof v === "string" && v.trim() ? v : undefined;
+		const siteTitle =
+			strOrUndefined(record.siteTitle) ??
+			strOrUndefined(record.site_title);
+		const siteDescription =
+			strOrUndefined(record.siteDescription) ??
+			strOrUndefined(record.site_description);
+		const founderSummary =
+			strOrUndefined(record.founderSummary) ??
+			strOrUndefined(record.founder_summary);
+		// Site Copy (fix plan §3 Break 1): a plain object of
+		// dictionary-key overrides (EN) / Bangla overrides (BN).
+		// Malformed shapes are ignored, as for `bn` below.
+		const asRecord = (v: unknown): Record<string, unknown> | undefined =>
+			typeof v === "object" && v !== null && !Array.isArray(v)
+				? (v as Record<string, unknown>)
+				: undefined;
+		const siteCopy = asRecord(record.siteCopy);
+		const siteCopyBn =
+			asRecord(record.siteCopyBn) ?? asRecord(record.site_copy_bn);
 		// Optional `bn` object (omitted when nothing is set): same four
 		// fields in Bangla, plus positional statsLabels. A present but
 		// empty `bn` object carries nothing — drop it so consumers can
@@ -701,6 +761,8 @@ async function fetchPublicSettingsUncached(
 		if (typeof record.bn === "object" && record.bn !== null) {
 			const raw = record.bn as Record<string, unknown>;
 			const parsed: SettingsBn = {};
+			if (typeof raw.founderSummary === "string" && raw.founderSummary)
+				parsed.founderSummary = raw.founderSummary;
 			if (typeof raw.heroHeadline === "string" && raw.heroHeadline)
 				parsed.heroHeadline = raw.heroHeadline;
 			if (typeof raw.heroDescription === "string" && raw.heroDescription)
@@ -730,11 +792,72 @@ async function fetchPublicSettingsUncached(
 			knowMeSub,
 			...(stats ? { stats } : {}),
 			...(heroChips ? { heroChips } : {}),
+			...(siteTitle ? { siteTitle } : {}),
+			...(siteDescription ? { siteDescription } : {}),
+			...(founderSummary ? { founderSummary } : {}),
+			...(siteCopy ? { siteCopy } : {}),
+			...(siteCopyBn ? { siteCopyBn } : {}),
 			bn,
 		};
 	} catch {
 		return { ...DEFAULT_PUBLIC_SETTINGS };
 	}
+}
+
+/**
+ * Is the live list for `type` reachable at build time? (Fix plan §1b.)
+ *
+ * Performs the SAME list fetch the collection loader uses, so the
+ * per-build `buildFetchCache` dedupes it — zero extra network cost
+ * (BUILD_GUARD Rule 1). Returns true only on HTTP 200 with a valid
+ * array / `{items}` payload. Any throw, timeout, 401/404/500 counts
+ * as unreachable (fail safe to static). A 200 with `{items: []}` is
+ * reachable with an EMPTY published set — callers must then render
+ * the empty state, not the static rows. This distinction is the
+ * whole fix: today the loader collapses both cases into
+ * `{entries: []}`.
+ *
+ * When the live-build gate is closed (isLiveFetchAllowed false) no
+ * fetch is attempted and this returns false — the build-time
+ * fallback is the designed behaviour there.
+ */
+export async function liveCollectionReachable(
+	type: PublicContentType,
+): Promise<boolean> {
+	try {
+		if (!(await isLiveFetchAllowed())) return false;
+		const cached: ResolvedBase = { done: false };
+		const base = await resolveApiBase({}, cached);
+		if (!base) return false;
+		const token = await resolvePublicContentToken();
+		const raw = await fetchJson(
+			`${base}/api/public/content/${type}`,
+			token,
+		);
+		if (Array.isArray(raw)) return true;
+		if (typeof raw === "object" && raw !== null) {
+			return Array.isArray((raw as { items?: unknown }).items);
+		}
+		return false;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Log the static-fallback warning for a collection, once per build
+ * (fix plan §1b step 4). Silent fallback is how the stale-content
+ * bug shipped unnoticed in rebuild #51 — a build that falls back
+ * must say so, naming the collection.
+ */
+const warnedLiveFallback = new Set<string>();
+
+export function warnLiveFallbackOnce(type: string): void {
+	if (warnedLiveFallback.has(type)) return;
+	warnedLiveFallback.add(type);
+	console.warn(
+		`[portfolio] Public Content API unreachable at build time — "${type}" is falling back to static rows; archived/draft items may still appear until the next successful build.`,
+	);
 }
 
 /** API-client live loader for one content type. */

@@ -6,7 +6,11 @@ import DetailVideoFacade from "../../components/DetailVideoFacade.astro";
 import PrevNext from "../../components/PrevNext.astro";
 import ReleasePlayer from "../../components/ReleasePlayer";
 import { getCollection, getEntry, getLiveEntry } from "astro:content";
-import { createPublicContentLoader } from "../../loaders/public-content";
+import {
+	createPublicContentLoader,
+	liveCollectionReachable,
+	warnLiveFallbackOnce,
+} from "../../loaders/public-content";
 import { getReleases } from "../../lib/content";
 import { youtubeEmbed, youtubeIdFromUrl, youtubeThumb } from "../../lib/youtube";
 import {
@@ -23,8 +27,10 @@ import { getSiteSettings } from "../../lib/settings";
 // Static detail route — hybrid live-then-static, ISSUE 7A (plan §2):
 // known slugs are prerendered at build time, so a click serves static
 // HTML from the edge instead of waiting on the Worker → slow VPS API
-// (~2.2s TTFB). The body still prefers the live entry when the API is
-// reachable at build time, then the build-time row, then a 404.
+// (~2.2s TTFB). When the API is reachable at build time the live
+// entry is authoritative (a missing live entry 404s); the
+// build-time row is only the outage fallback when the API is
+// unreachable (fix plan §1b).
 // Route caching is in astro.config.mjs.
 // NOTE: `export const prerender = false` was REMOVED on purpose —
 // Astro only calls getStaticPaths() for prerendered routes, so keeping
@@ -34,24 +40,33 @@ import { getSiteSettings } from "../../lib/settings";
 // route with the same pattern (Astro serves the static file when one
 // exists and falls through to the SSR route otherwise).
 export async function getStaticPaths() {
-	// Slugs from the build-time collection AND the live API. When the
-	// live API is unreachable at build time, fall back to build-time
-	// slugs only — the build never fails on the live API.
+	// Authoritative live slugs (fix plan §1b): when the live API is
+	// reachable at build time, prerender ONLY live slugs — a static
+	// row for an archived/draft item must not produce a page. When
+	// the API is unreachable, fall back to build-time slugs only —
+	// the build never fails on the live API.
+	if (await liveCollectionReachable("releases")) {
+		try {
+			const { entries } = await createPublicContentLoader(
+				"releases",
+			).loadCollection();
+			return entries
+				.map((entry) =>
+					typeof entry.data.slug === "string"
+						? entry.data.slug
+						: entry.id,
+				)
+				.filter((slug): slug is string => Boolean(slug))
+				.map((slug) => ({ params: { slug } }));
+		} catch {
+			// Live list fetch failed after the reachability probe —
+			// fall through to build-time slugs below.
+		}
+	}
+	warnLiveFallbackOnce("releases");
 	const slugs = new Set<string>();
 	for (const entry of await getCollection("releases")) {
 		slugs.add(entry.data.slug);
-	}
-	try {
-		const { entries } = await createPublicContentLoader(
-			"releases",
-		).loadCollection();
-		for (const entry of entries) {
-			const slug =
-				typeof entry.data.slug === "string" ? entry.data.slug : entry.id;
-			if (slug) slugs.add(slug);
-		}
-	} catch {
-		// Live API unreachable at build time — build-time slugs only.
 	}
 	return [...slugs].map((slug) => ({ params: { slug } }));
 }
@@ -68,7 +83,16 @@ const liveResult = slug
 	: undefined;
 const liveEntry = liveResult?.entry;
 if (liveEntry) Astro.cache.set(liveEntry);
-const buildEntry = slug ? await getEntry("releases", slug) : undefined;
+// When the live API is reachable, the live entry is authoritative:
+	// a missing live entry 404s and the build-time row is never read,
+	// so an archived/draft item cannot render from its static file.
+	// When unreachable, the build-time row is the outage fallback and
+	// mergeDetail() below still fills gaps in the live row.
+	const liveReachable = await liveCollectionReachable("releases");
+	const buildEntry =
+		liveReachable || !slug
+			? undefined
+			: await getEntry("releases", slug);
 const entry = liveEntry ?? buildEntry;
 if (!entry) Astro.response.status = 404;
 
