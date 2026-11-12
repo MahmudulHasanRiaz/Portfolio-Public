@@ -4,6 +4,7 @@ import { getVentures, formatDate, truncateShort } from "../../../lib/content";
 import { applySiteCopy, getDict, langUrl, localizeData, showingLabel } from "../../../lib/i18n";
 import { getSiteSettings } from "../../../lib/settings";
 import ThumbImage from "../../../components/ThumbImage.astro";
+import ArchiveFilter from "../../../components/ArchiveFilter.astro";
 
 const lang = "bn" as const;
 const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
@@ -13,7 +14,16 @@ const ventures = venturesRaw.map((v) => ({
 	...v,
 	data: localizeData(v.data, lang),
 }));
-const allTags = [...new Set(ventures.flatMap((v) => v.data.tags ?? []))].sort();
+// Per-tag counts for the shared archive filter (ArchiveFilter.astro).
+const tagCounts = new Map<string, number>();
+for (const v of ventures)
+	for (const tag of v.data.tags ?? [])
+		tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+const filterItems = [...tagCounts.entries()].map(([value, count]) => ({
+	value,
+	label: value,
+	count,
+}));
 
 // Unsplash card thumbs ship at w=1200 in content/API rows but render at
 // ~360px wide (2x retina ≈ 720px) — request w=800/q=75 instead: measured
@@ -41,17 +51,18 @@ const sizedThumb = (url: string | null | undefined, w = 800) =>
 			</section>
 		) : (
 			<>
-				{allTags.length > 0 ? (
-					<div class="chip-row" id="venture-filters" style="margin-top:16px;">
-						<button type="button" class="chip active" data-tag="all" aria-pressed="true">
-							{t.allChip}
-						</button>
-						{allTags.map((tag) => (
-							<button type="button" class="chip" data-tag={tag} aria-pressed="false">
-								{tag}
-							</button>
-						))}
-					</div>
+				{filterItems.length > 0 ? (
+					<ArchiveFilter
+						id="venture-filters"
+						style="margin-top:16px;"
+						items={filterItems}
+						allLabel={t.allChip}
+						moreLabel={t.moreFilters}
+						mode="card-data-tags"
+						gridSelector="#venture-grid"
+						countSelector="#venture-count"
+						cardSelector=".grid-card"
+					/>
 				) : null}
 				<p class="count-line" id="venture-count" data-count-template={t.showingVentures}>
 					{showingLabel(t.showingVentures, ventures.length, ventures.length)}
@@ -108,37 +119,3 @@ const sizedThumb = (url: string | null | undefined, w = 800) =>
 	}
 </Layout>
 
-<script is:inline>
-	// Client-side tag filter (no framework).
-	const chips = document.querySelectorAll("#venture-filters .chip");
-	const cards = document.querySelectorAll("#venture-grid .grid-card");
-	const count = document.getElementById("venture-count");
-	const total = cards.length;
-	const template = count ? count.getAttribute("data-count-template") || "" : "";
-	const fmt = (n) =>
-		template.includes("টি") ? n.toLocaleString("bn-BD") : String(n);
-	chips.forEach((chip) => {
-		chip.addEventListener("click", () => {
-			chips.forEach((c) => {
-				c.classList.remove("active");
-				c.setAttribute("aria-pressed", "false");
-			});
-			chip.classList.add("active");
-			chip.setAttribute("aria-pressed", "true");
-			const tag = chip.getAttribute("data-tag");
-			let shown = 0;
-			cards.forEach((card) => {
-				const tags = (card.getAttribute("data-tags") || "")
-					.split(",")
-					.filter(Boolean);
-				const show = tag === "all" || tags.includes(tag || "");
-				card.style.display = show ? "" : "none";
-				if (show) shown++;
-			});
-			if (count)
-				count.textContent = template
-					? template.replace("{shown}", fmt(shown)).replace("{total}", fmt(total))
-					: `মোট ${total.toLocaleString("bn-BD")}টি উদ্যোগের মধ্যে ${shown.toLocaleString("bn-BD")}টি দেখাচ্ছে`;
-		});
-	});
-</script>
