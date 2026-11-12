@@ -126,21 +126,59 @@ rules are binding. Do not work around them.
   (the 64 kB sheet would go back to a render-blocking external link
   and PageSpeed would drop).
 - Cache policy (astro.config.mjs routeRules + src/middleware.ts):
-  details fresh 300 s / SWR 60 s; archives, homepage, Know Me,
-  Platforms fresh 60 s / SWR 300 s. NEVER raise these TTLs without a
-  working tag purge on the same change — a long TTL recreates the
-  stale-content problem. If a page ever serves `no-store`, a route
-  rule is missing (the middleware is the backstop — read it).
+  ALL content pages fresh 3600 s (1 h) / SWR 300 s. The long TTL is
+  what makes repeat visits edge hits instead of ~5 s cold Worker
+  renders (measured 2026-11-12: homepage TTFB 4.87 s plain, 5.80 s
+  fresh — a cold miss pays the sequential live-API fetches, and low
+  traffic + a short TTL meant most visits WERE cold misses). Freshness
+  comes from the tag purge (Rule 8), not from a short TTL. If a page
+  ever serves `no-store`, a route rule is missing (the middleware is
+  the backstop — read it).
 - Runtime token: the Worker fetch needs PUBLIC_CONTENT_API_TOKEN as a
   Cloudflare runtime secret (dashboard). With no token the API 401s
   and pages render the static fallback — never a 500. Never commit a
   token; never put one in wrangler.jsonc vars.
 - After a deploy, the live check is now content, not markers: /projects/
   shows 10, /projects/ecomate/ shows the new EcoMate headings, and an
-  admin edit appears live within ~1–6 minutes (TTL/SWR) or instantly
-  after a tag purge — NO rebuild needed. If an edit does not appear,
-  check the Worker log for the fallback warning first (it names the
-  collection), then the token, then the admin API.
+  admin edit appears live within seconds (tag purge, Rule 8) — NO rebuild
+  needed. If an edit does not appear, check the Worker log for the
+  fallback warning first (it names the collection), then the token, then
+  the admin API.
+
+## Rule 8 — Long TTL + instant tag purge (2026-11-12)
+
+- The 1 h TTL (Rule 7) is safe ONLY because the V2 admin purges the
+  affected cache tags on every content save. The two halves live in
+  different repos — if either half is removed, the other becomes a
+  stale-content bug. Never raise the TTLs and never drop the purge
+  without the other half in the same change.
+- How the purge works (no Cloudflare API token, no zone ID needed):
+  every content response carries `Cache-Tag` headers from the
+  route-rule tags in astro.config.mjs (posts / projects / case-studies /
+  ventures / releases / home — the homepage carries all of them) plus an
+  auto path tag. POST /api/cache/invalidate calls Astro's cache API,
+  which calls the Workers Cache purge-by-tag. The next request after a
+  purge re-renders live from the Public Content API.
+- Endpoint auth: `POST /api/cache/invalidate` requires
+  `Authorization: Bearer <CACHE_INVALIDATE_SECRET>`. The secret is a
+  Cloudflare dashboard secret (Production) on this Worker; the V2 admin
+  sends the SAME value from its own env. Until the secret is set, the
+  endpoint answers 503 and nothing is purged — the site keeps working,
+  pages just stay cached up to the 1 h TTL. Never commit the secret;
+  never put it in wrangler.jsonc vars.
+- Failure modes (all fail-safe, never a 500 on a content page): a
+  failed or missed purge leaves pages stale for at most the 1 h TTL;
+  a missing/ wrong secret on the V2 side means purges 503/401 and the
+  same 1 h bound; a missing token for the content API still renders the
+  static fallback. If an admin edit does not show live within seconds,
+  check (1) the admin log for the purge warning, (2) that
+  CACHE_INVALIDATE_SECRET matches on both sides, (3) that the V2
+  PUBLIC_SITE_URL points at this Worker.
+- Known gap: release/venture SUB-resources (platforms, videos, lyrics,
+  timeline, media, categories) do not purge yet — their edits go stale
+  at most 1 h. Same for the robots/sitemap toggle (cached 3600 s in
+  their own endpoints, not tag-purged). Do not "fix" this by shortening
+  the TTL; wire the purge at those save paths instead.
 
 ## If you break one of these rules
 
