@@ -1,14 +1,24 @@
 import type { APIRoute } from "astro";
 
 // POST /api/cache/invalidate — purge cached pages by tag or path.
-// Called by the admin backend on publish / update / delete (plan §6.1):
-// only the affected tags are purged (e.g. ["post:123", "posts",
-// "home:latest"]), never the whole site. The debounced rebuild trigger
-// then makes the content static on the next deploy.
 //
-// Auth: Bearer token. The secret lives in Worker env (wrangler secret) or
-// build-time env — never hardcoded, never in the repo. Until it is set,
-// this endpoint answers 503 (refuses) rather than purging unauthenticated.
+// Called by the V2 admin backend after EVERY successful content save /
+// publish / unpublish / archive (see docs/BUILD_GUARD.md Rule 8):
+// only the affected tags are purged (e.g. ["projects", "home"]), never
+// the whole site. Tags are the route-rule tags in astro.config.mjs
+// (posts / projects / case-studies / ventures / releases / home);
+// every response is also auto-tagged with its path, so a path purge
+// works too. Purging goes through Astro's cache API, which calls the
+// Workers Cache purge-by-tag — no Cloudflare API token or zone ID is
+// needed. The next request after a purge re-renders live from the API,
+// so an admin edit appears on the public site within seconds.
+//
+// Auth: Bearer token. The secret lives in Worker env (Cloudflare
+// dashboard secret CACHE_INVALIDATE_SECRET) or build-time env — never
+// hardcoded, never in the repo. Until it is set, this endpoint answers
+// 503 (refuses) rather than purging unauthenticated. The V2 admin
+// sends the SAME secret value from its own env (CACHE_INVALIDATE_SECRET)
+// together with the public site URL (PUBLIC_SITE_URL).
 export const prerender = false;
 
 async function getSecret(): Promise<string | undefined> {

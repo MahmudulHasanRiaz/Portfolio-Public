@@ -18,12 +18,15 @@ import preact from "@astrojs/preact";
 //     env (PUBLIC_CONTENT_API_TOKEN, Cloudflare dashboard secret —
 //     never in this repo). With no token the API 401s and every page
 //     still renders from the build-time rows (fail-safe, never a 500).
-//   - Route caching below keeps live pages fast: short fresh TTLs +
-//     stale-while-revalidate, so an admin save shows up within minutes
-//     at most (and instantly after a tag purge via
-//     POST /api/cache/invalidate). A long TTL would recreate the stale
-//     content problem — do not raise these values without a purge
-//     wired to the same change.
+//   - Route caching below keeps live pages fast: long fresh TTLs (1 h)
+//     + stale-while-revalidate, so repeat visits are edge hits (~0.1 s)
+//     instead of cold Worker renders (~5 s on a cold miss — measured
+//     2026-11-12). An admin save shows up INSTANTLY, not within the TTL:
+//     the V2 admin POSTs the affected tags to POST /api/cache/invalidate
+//     on every content save (see that endpoint + docs/BUILD_GUARD.md
+//     Rule 8). A long TTL is safe ONLY because that purge is wired —
+//     do not raise these values further, and never remove the purge
+//     call, without re-checking the whole live design.
 //   - No build-time live fetching exists anymore: the build is hermetic
 //     (see docs/BUILD_GUARD.md). Do NOT reintroduce prerendering or
 //     build-time API calls without re-checking the whole live design.
@@ -72,50 +75,55 @@ export default defineConfig({
 		},
 	},
 
-	// Route caching. Detail pages: fresh 5 min, then serve stale while
-	// revalidating for 60s. Archives, homepage, Know Me, Platforms:
-	// fresh 60s so new content shows in lists quickly, then
-	// stale-while-revalidate for 5 min. The homepage aggregates every
-	// collection, so it carries all content tags — any content purge
-	// refreshes it. src/middleware.ts mirrors these policies as a
-	// backstop (the adapter injects `no-store` when no rule matches,
-	// which would silently un-cache a page — see the middleware).
-	// /sitemap.xml and /robots.txt are NOT listed here: they set their
-	// own Cache-Control (3600s) in the endpoint.
+	// Route caching. ALL content pages: fresh 1 hour (3600 s), then serve
+	// stale while revalidating for 5 min (300 s). The long TTL is what
+	// makes repeat visits fast (edge hits instead of ~5 s cold Worker
+	// renders); freshness comes from the tag purge, not from a short
+	// TTL — the V2 admin POSTs the affected tags to
+	// POST /api/cache/invalidate on every content save, so an edit
+	// appears live within seconds (see docs/BUILD_GUARD.md Rule 8).
+	// If a purge ever fails or is missed, the worst case is a page up
+	// to 1 h stale — never a 500, never a broken page. The homepage
+	// aggregates every collection, so it carries all content tags —
+	// any content purge refreshes it. src/middleware.ts mirrors these
+	// policies as a backstop (the adapter injects `no-store` when no
+	// rule matches, which would silently un-cache a page — see the
+	// middleware). /sitemap.xml and /robots.txt are NOT listed here:
+	// they set their own Cache-Control (3600s) in the endpoint.
 	routeRules: {
-		"/posts/[slug]": { maxAge: 300, swr: 60, tags: ["posts"] },
-		"/projects/[slug]": { maxAge: 300, swr: 60, tags: ["projects"] },
-		"/case-studies/[slug]": { maxAge: 300, swr: 60, tags: ["case-studies"] },
-		"/ventures/[slug]": { maxAge: 300, swr: 60, tags: ["ventures"] },
-		"/releases/[slug]": { maxAge: 300, swr: 60, tags: ["releases"] },
-		"/bn/posts/[slug]": { maxAge: 300, swr: 60, tags: ["posts"] },
-		"/bn/projects/[slug]": { maxAge: 300, swr: 60, tags: ["projects"] },
-		"/bn/case-studies/[slug]": { maxAge: 300, swr: 60, tags: ["case-studies"] },
-		"/bn/ventures/[slug]": { maxAge: 300, swr: 60, tags: ["ventures"] },
-		"/bn/releases/[slug]": { maxAge: 300, swr: 60, tags: ["releases"] },
-		"/posts": { maxAge: 60, swr: 300, tags: ["posts"] },
-		"/projects": { maxAge: 60, swr: 300, tags: ["projects"] },
-		"/case-studies": { maxAge: 60, swr: 300, tags: ["case-studies"] },
-		"/ventures": { maxAge: 60, swr: 300, tags: ["ventures"] },
-		"/releases": { maxAge: 60, swr: 300, tags: ["releases"] },
-		"/bn/posts": { maxAge: 60, swr: 300, tags: ["posts"] },
-		"/bn/projects": { maxAge: 60, swr: 300, tags: ["projects"] },
-		"/bn/case-studies": { maxAge: 60, swr: 300, tags: ["case-studies"] },
-		"/bn/ventures": { maxAge: 60, swr: 300, tags: ["ventures"] },
-		"/bn/releases": { maxAge: 60, swr: 300, tags: ["releases"] },
+		"/posts/[slug]": { maxAge: 3600, swr: 300, tags: ["posts"] },
+		"/projects/[slug]": { maxAge: 3600, swr: 300, tags: ["projects"] },
+		"/case-studies/[slug]": { maxAge: 3600, swr: 300, tags: ["case-studies"] },
+		"/ventures/[slug]": { maxAge: 3600, swr: 300, tags: ["ventures"] },
+		"/releases/[slug]": { maxAge: 3600, swr: 300, tags: ["releases"] },
+		"/bn/posts/[slug]": { maxAge: 3600, swr: 300, tags: ["posts"] },
+		"/bn/projects/[slug]": { maxAge: 3600, swr: 300, tags: ["projects"] },
+		"/bn/case-studies/[slug]": { maxAge: 3600, swr: 300, tags: ["case-studies"] },
+		"/bn/ventures/[slug]": { maxAge: 3600, swr: 300, tags: ["ventures"] },
+		"/bn/releases/[slug]": { maxAge: 3600, swr: 300, tags: ["releases"] },
+		"/posts": { maxAge: 3600, swr: 300, tags: ["posts"] },
+		"/projects": { maxAge: 3600, swr: 300, tags: ["projects"] },
+		"/case-studies": { maxAge: 3600, swr: 300, tags: ["case-studies"] },
+		"/ventures": { maxAge: 3600, swr: 300, tags: ["ventures"] },
+		"/releases": { maxAge: 3600, swr: 300, tags: ["releases"] },
+		"/bn/posts": { maxAge: 3600, swr: 300, tags: ["posts"] },
+		"/bn/projects": { maxAge: 3600, swr: 300, tags: ["projects"] },
+		"/bn/case-studies": { maxAge: 3600, swr: 300, tags: ["case-studies"] },
+		"/bn/ventures": { maxAge: 3600, swr: 300, tags: ["ventures"] },
+		"/bn/releases": { maxAge: 3600, swr: 300, tags: ["releases"] },
 		"/": {
-			maxAge: 60,
+			maxAge: 3600,
 			swr: 300,
 			tags: ["home", "projects", "posts", "case-studies", "ventures", "releases"],
 		},
 		"/bn": {
-			maxAge: 60,
+			maxAge: 3600,
 			swr: 300,
 			tags: ["home", "projects", "posts", "case-studies", "ventures", "releases"],
 		},
-		"/know-me": { maxAge: 60, swr: 300, tags: ["home"] },
-		"/bn/know-me": { maxAge: 60, swr: 300, tags: ["home"] },
-		"/platforms": { maxAge: 60, swr: 300, tags: ["home"] },
-		"/bn/platforms": { maxAge: 60, swr: 300, tags: ["home"] },
+		"/know-me": { maxAge: 3600, swr: 300, tags: ["home"] },
+		"/bn/know-me": { maxAge: 3600, swr: 300, tags: ["home"] },
+		"/platforms": { maxAge: 3600, swr: 300, tags: ["home"] },
+		"/bn/platforms": { maxAge: 3600, swr: 300, tags: ["home"] },
 	},
 });
