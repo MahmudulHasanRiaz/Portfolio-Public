@@ -8,6 +8,7 @@ import {
 import { applySiteCopy, getDict, langUrl, localizeData, readingTimeLabel, showingLabel } from "../../../lib/i18n";
 import { getSiteSettings } from "../../../lib/settings";
 import ThumbImage from "../../../components/ThumbImage.astro";
+import ArchiveFilter from "../../../components/ArchiveFilter.astro";
 
 const lang = "bn" as const;
 const t = applySiteCopy(getDict(lang), lang, await getSiteSettings());
@@ -17,7 +18,16 @@ const posts = postsRaw.map((p) => ({
 	...p,
 	data: localizeData(p.data, lang),
 }));
-const allTags = [...new Set(posts.flatMap((p) => p.data.tags ?? []))].sort();
+// Per-tag counts for the shared archive filter (ArchiveFilter.astro).
+const tagCounts = new Map<string, number>();
+for (const p of posts)
+	for (const tag of p.data.tags ?? [])
+		tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+const filterItems = [...tagCounts.entries()].map(([value, count]) => ({
+	value,
+	label: value,
+	count,
+}));
 
 // Unsplash card thumbs ship at w=1200 in content/API rows but render at
 // ~360px wide (2x retina ≈ 720px) — request w=800/q=75 instead: measured
@@ -45,17 +55,18 @@ const sizedThumb = (url: string | null | undefined, w = 800) =>
 			</section>
 		) : (
 			<>
-				{allTags.length > 0 ? (
-					<div class="chip-row" id="post-filters" style="margin-top:16px;">
-						<button type="button" class="chip active" data-tag="all" aria-pressed="true">
-							{t.allChip}
-						</button>
-						{allTags.map((tag) => (
-							<button type="button" class="chip" data-tag={tag} aria-pressed="false">
-								{tag}
-							</button>
-						))}
-					</div>
+				{filterItems.length > 0 ? (
+					<ArchiveFilter
+						id="post-filters"
+						style="margin-top:16px;"
+						items={filterItems}
+						allLabel={t.allChip}
+						moreLabel={t.moreFilters}
+						mode="card-data-tags"
+						gridSelector="#post-grid"
+						countSelector="#post-count"
+						cardSelector=".grid-card"
+					/>
 				) : null}
 				<p class="count-line" id="post-count" data-count-template={t.showingPosts}>
 					{showingLabel(t.showingPosts, posts.length, posts.length)}
@@ -125,37 +136,3 @@ const sizedThumb = (url: string | null | undefined, w = 800) =>
 	}
 </Layout>
 
-<script is:inline>
-	// Client-side tag filter (no framework).
-	const chips = document.querySelectorAll("#post-filters .chip");
-	const cards = document.querySelectorAll("#post-grid .grid-card");
-	const count = document.getElementById("post-count");
-	const total = cards.length;
-	const template = count ? count.getAttribute("data-count-template") || "" : "";
-	const fmt = (n) =>
-		template.includes("টি") ? n.toLocaleString("bn-BD") : String(n);
-	chips.forEach((chip) => {
-		chip.addEventListener("click", () => {
-			chips.forEach((c) => {
-				c.classList.remove("active");
-				c.setAttribute("aria-pressed", "false");
-			});
-			chip.classList.add("active");
-			chip.setAttribute("aria-pressed", "true");
-			const tag = chip.getAttribute("data-tag");
-			let shown = 0;
-			cards.forEach((card) => {
-				const tags = (card.getAttribute("data-tags") || "")
-					.split(",")
-					.filter(Boolean);
-				const show = tag === "all" || tags.includes(tag || "");
-				card.style.display = show ? "" : "none";
-				if (show) shown++;
-			});
-			if (count)
-				count.textContent = template
-					? template.replace("{shown}", fmt(shown)).replace("{total}", fmt(total))
-					: `মোট ${total.toLocaleString("bn-BD")}টি পোস্টের মধ্যে ${shown.toLocaleString("bn-BD")}টি দেখাচ্ছে`;
-		});
-	});
-</script>
