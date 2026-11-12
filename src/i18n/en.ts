@@ -164,6 +164,7 @@ export const en: Dict = {
 	allVentures: "All ventures",
 	allCaseStudies: "All case studies",
 	allChip: "All",
+	moreFilters: "More",
 	showingProjects: "Showing {shown} of {total} projects",
 	showingPosts: "Showing {shown} of {total} posts",
 	showingReleases: "Showing {shown} of {total} releases",

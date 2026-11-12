@@ -124,6 +124,7 @@ export interface Dict {
 	allVentures: string;
 	allCaseStudies: string;
 	allChip: string;
+	moreFilters: string;
 	showingProjects: string;
 	showingPosts: string;
 	showingReleases: string;
@@ -413,6 +414,7 @@ export const bn: Dict = {
 	allVentures: "সব উদ্যোগ",
 	allCaseStudies: "সব কেস স্টাডি",
 	allChip: "সবগুলো",
+	moreFilters: "আরও",
 	showingProjects: "মোট {total}টি প্রজেক্টের মধ্যে {shown}টি দেখাচ্ছে",
 	showingPosts: "মোট {total}টি পোস্টের মধ্যে {shown}টি দেখাচ্ছে",
 	showingReleases: "মোট {total}টি রিলিজের মধ্যে {shown}টি দেখাচ্ছে",
