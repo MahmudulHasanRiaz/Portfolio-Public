@@ -142,6 +142,20 @@ rules are binding. Do not work around them.
   check the Worker log for the fallback warning first (it names the
   collection), then the token, then the admin API.
 
+## Rule 8 — Archive filters are ONE shared component (2026-11-12)
+
+- All archive filter rows (projects, posts, ventures, releases — EN +
+  BN) are `src/components/ArchiveFilter.astro`. Do NOT add a per-page
+  chip row or a per-page filter script again: the old pattern (every
+  tag as a chip in one wrapping row) reached 18 chips / 6 rows on
+  /projects/ and only gets worse as categories grow.
+- The component caps the visible row ("All" + top 5 by count) and puts
+  every option, with counts, in a "More" dropdown; 6 or fewer options
+  render as plain chips with no menu. Filtering stays client-side, no
+  framework, one inline script inside the component (three match
+  modes: card `.tag` text, card `data-tags`, card `data-type`).
+- Case studies has NO filter (one item) — leave it alone.
+
 ## If you break one of these rules
 
 - Revert the single-purpose commit/PR that broke it. Every change on this
