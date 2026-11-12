@@ -223,6 +223,8 @@ export const en: Dict = {
 	next: "Next",
 	previousProject: "Previous project",
 	nextProject: "Next project",
+	previousClient: "Previous client",
+	nextClient: "Next client",
 	loadingProjects: "Loading projects",
 	builtWith: "Built with",
 	notFoundProject: "Project not found",
