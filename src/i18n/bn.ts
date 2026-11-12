@@ -182,6 +182,8 @@ export interface Dict {
 	next: string;
 	previousProject: string;
 	nextProject: string;
+	previousClient: string;
+	nextClient: string;
 	loadingProjects: string;
 	builtWith: string;
 	notFoundProject: string;
@@ -469,6 +471,8 @@ export const bn: Dict = {
 	next: "পরেরটা",
 	previousProject: "আগের প্রজেক্ট",
 	nextProject: "পরের প্রজেক্ট",
+	previousClient: "আগের ক্লায়েন্ট",
+	nextClient: "পরের ক্লায়েন্ট",
 	loadingProjects: "প্রজেক্ট লোড হচ্ছে",
 	builtWith: "যা দিয়ে বানানো",
 	notFoundProject: "প্রজেক্টটা পাওয়া যায়নি",
