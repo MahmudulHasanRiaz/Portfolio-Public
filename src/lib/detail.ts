@@ -177,13 +177,28 @@ export function splitParagraphs(text: string | null | undefined): string[] {
 		.filter(Boolean);
 }
 
+export interface InlineNode {
+	text: string;
+	bold?: boolean;
+	italic?: boolean;
+	underline?: boolean;
+	strike?: boolean;
+	/** Link target — http(s) or site-relative only (see isSafeUrl). */
+	href?: string;
+}
+
 export interface BodyBlock {
-	kind: "h2" | "p" | "img";
+	kind: "h2" | "h3" | "p" | "img" | "ul" | "ol" | "quote";
 	text: string;
 	/** Image URL — img blocks only. */
 	src?: string;
 	/** Image alt text — img blocks only. */
 	alt?: string;
+	/** Rich inline runs — HTML path only; legacy blocks omit it and
+	 * render `text` as escaped plain text. */
+	inline?: InlineNode[];
+	/** List items — ul/ol blocks only; each item is its inline runs. */
+	items?: InlineNode[][];
 }
 
 /**
@@ -231,6 +246,360 @@ export function parseBodyBlocks(
 			}
 		}
 	}
+	return blocks;
+}
+
+/**
+ * Dual-format body parsing (TipTap upgrade, 2026-11-12).
+ *
+ * The admin now edits long text in TipTap and stores HTML; older rows
+ * are plain text in the `## ` + paragraph format above. `parseRichBody`
+ * routes each row to the right parser, so both render and no stored
+ * row is ever rewritten:
+ * - HTML rows (a real allowlisted tag is present) -> parseHtmlBlocks,
+ *   the allowlist sanitizer below.
+ * - Everything else -> parseBodyBlocks, untouched legacy behaviour.
+ *
+ * Detection must see a REAL tag — `<` followed by a letter, i.e. a
+ * tag-shaped fragment — not just a `<` character: prose like
+ * "a < b" or a stray "<3" stays on the legacy path. Any tag-shaped
+ * row (even a disallowed one like `<div>`) routes to the sanitizer,
+ * which strips the tag and keeps its inner text; only tag-shaped
+ * input ever leaves the legacy path.
+ */
+export function isHtmlBody(text: string | null | undefined): boolean {
+	if (!text) return false;
+	return /<[a-zA-Z][a-zA-Z0-9]*(\s[^>]*)?\/?>/.test(text);
+}
+
+/** Route a stored body to the legacy or the sanitized-HTML parser. */
+export function parseRichBody(
+	text: string | null | undefined,
+): BodyBlock[] {
+	if (!text) return [];
+	return isHtmlBody(text) ? parseHtmlBlocks(text) : parseBodyBlocks(text);
+}
+
+/** Tags the HTML path may emit. Everything else is stripped. */
+const ALLOWED_TAGS = new Set([
+	"p",
+	"h2",
+	"h3",
+	"strong",
+	"em",
+	"u",
+	"s",
+	"ul",
+	"ol",
+	"li",
+	"blockquote",
+	"a",
+	"img",
+]);
+
+/** Disallowed tags whose CONTENT is dropped too (never rendered as text). */
+const DROP_CONTENT_TAGS = new Set([
+	"script",
+	"style",
+	"iframe",
+	"object",
+	"embed",
+	"form",
+	"noscript",
+	"template",
+	"svg",
+	"math",
+	"video",
+	"audio",
+]);
+
+const BLOCK_TAGS = new Set(["p", "h2", "h3", "blockquote"]);
+
+/** True for http(s) URLs and site-relative paths. `//host` is rejected:
+ * it is protocol-relative, not site-relative. */
+export function isSafeUrl(url: string | null | undefined): boolean {
+	if (!url) return false;
+	const u = url.trim();
+	if (!u || /[\u0000-\u001f\u007f]/.test(u)) return false;
+	if (/^https?:\/\//i.test(u)) return true;
+	if (u.startsWith("//")) return false;
+	return (
+		u.startsWith("/") ||
+		u.startsWith("./") ||
+		u.startsWith("../") ||
+		u.startsWith("#")
+	);
+}
+
+function decodeEntities(s: string): string {
+	return s
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;|&apos;/g, "'")
+		.replace(/&nbsp;/g, " ");
+}
+
+type Mark = {
+	bold?: boolean;
+	italic?: boolean;
+	underline?: boolean;
+	strike?: boolean;
+	href?: string;
+};
+
+function sameMarks(a: Mark, b: Mark): boolean {
+	return (
+		a.bold === b.bold &&
+		a.italic === b.italic &&
+		a.underline === b.underline &&
+		a.strike === b.strike &&
+		a.href === b.href
+	);
+}
+
+/** Parse one tag's attributes into a name -> value map (quoted or bare). */
+function parseAttrs(tagInner: string): Map<string, string> {
+	const attrs = new Map<string, string>();
+	const re =
+		/([a-zA-Z][a-zA-Z0-9-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+	let m: RegExpExecArray | null;
+	while ((m = re.exec(tagInner)) !== null) {
+		const name = (m[1] ?? "").toLowerCase();
+		const value = m[2] ?? m[3] ?? m[4] ?? "";
+		if (name && !attrs.has(name)) attrs.set(name, value);
+	}
+	return attrs;
+}
+
+/**
+ * Tokenizer-based allowlist sanitizer: TipTap HTML -> typed BodyBlocks.
+ *
+ * Deny by default. Only allowlisted tags reach the page, only `a[href]`
+ * and `img[src, alt]` attributes survive (both URL-allowlisted), and all
+ * text is emitted as typed nodes that MarkdownBody renders through
+ * Astro's escaping — there is NO raw-HTML passthrough anywhere, so
+ * `<script>`, event handlers (`onerror=`), `javascript:` links and
+ * `<style>` can never execute. `<script>`/`<style>`-family content is
+ * dropped entirely; other disallowed tags are stripped but their inner
+ * text is kept, so no content is silently lost.
+ *
+ * Nested lists are flattened into the outer list (items are never
+ * dropped). Malformed `<` sequences that are not real tags stay text.
+ */
+export function parseHtmlBlocks(html: string): BodyBlock[] {
+	const blocks: BodyBlock[] = [];
+	// Current open block (p/h2/h3/quote) and its inline runs.
+	let block: { kind: "p" | "h2" | "h3" | "quote"; inline: InlineNode[] } | null =
+		null;
+	// Open lists, outermost first; a nested list's items flatten into
+	// its parent when the nested list closes. `item` is the in-progress
+	// item of the innermost open list.
+	const listStack: Array<{ kind: "ul" | "ol"; items: InlineNode[][] }> = [];
+	let item: InlineNode[] | null = null;
+	// Open inline marks (bold/italic/underline/strike/link), innermost last.
+	const marks: Mark[] = [];
+	// Depth inside a DROP_CONTENT_TAGS element; while > 0, skip everything.
+	let dropDepth = 0;
+
+	const plainText = (nodes: InlineNode[]): string =>
+		nodes.map((n) => n.text).join("");
+
+	const flushBlock = () => {
+		if (!block) return;
+		if (block.inline.some((n) => n.text.trim() !== "")) {
+			blocks.push({
+				kind: block.kind,
+				text: plainText(block.inline),
+				inline: block.inline,
+			});
+		}
+		block = null;
+	};
+
+	const flushItem = () => {
+		const top = listStack[listStack.length - 1];
+		if (!top || !item) return;
+		if (item.some((n) => n.text.trim() !== "")) top.items.push(item);
+		item = null;
+	};
+
+	/** Close the innermost open list: merge its items into the parent
+	 * list (flattened), or emit it as a block when it is outermost. */
+	const closeList = () => {
+		flushItem();
+		const frame = listStack.pop();
+		if (!frame || frame.items.length === 0) return;
+		const parent = listStack[listStack.length - 1];
+		if (parent) {
+			parent.items.push(...frame.items);
+		} else {
+			blocks.push({
+				kind: frame.kind,
+				text: frame.items.map((it) => plainText(it)).join(" "),
+				items: frame.items,
+			});
+		}
+	};
+
+	/** Close every open list (a block tag or image interrupts a list). */
+	const flushAllLists = () => {
+		while (listStack.length > 0) closeList();
+	};
+
+	const openBlock = (kind: "p" | "h2" | "h3" | "quote") => {
+		flushBlock();
+		flushAllLists();
+		block = { kind, inline: [] };
+	};
+
+	const appendText = (raw: string) => {
+		const text = decodeEntities(raw);
+		if (!text) return;
+		const mark: Mark = {};
+		for (const m of marks) Object.assign(mark, m);
+		const node: InlineNode = { text, ...mark };
+		// Inside a list with no open item (e.g. text after a nested
+		// list closed), resume a fresh item in the innermost list.
+		const target =
+			item ?? (listStack.length > 0 ? (item = []) : block?.inline);
+		if (target) {
+			const last = target[target.length - 1];
+			if (last && sameMarks(last, mark)) {
+				last.text += text;
+			} else {
+				target.push(node);
+			}
+		} else {
+			// Bare text outside any block (lenient): wrap in a paragraph.
+			block = { kind: "p", inline: [node] };
+		}
+	};
+
+	const closeMark = (key: keyof Mark) => {
+		for (let i = marks.length - 1; i >= 0; i -= 1) {
+			if (marks[i]?.[key] !== undefined) {
+				marks.splice(i, 1);
+				return;
+			}
+		}
+	};
+
+	// Split into text runs and tag tokens. A `<` only starts a token when
+	// it opens a comment or a letter-led tag; anything else stays text.
+	const tokenRe = /<!--[\s\S]*?-->|<\/?[a-zA-Z][a-zA-Z0-9]*(?:\s[^>]*)?\/?>/g;
+	let lastIndex = 0;
+	let m: RegExpExecArray | null;
+	const handleToken = (token: string) => {
+		if (token.startsWith("<!--")) return; // comment: skip
+		const isClose = token.startsWith("</");
+		const inner = token.replace(/^<\/?|\/?>$/g, "").trim();
+		const name = (inner.split(/\s+/)[0] ?? "").toLowerCase();
+		if (!name) return;
+		if (DROP_CONTENT_TAGS.has(name)) {
+			if (!isClose) dropDepth += 1;
+			else if (dropDepth > 0) dropDepth -= 1;
+			return;
+		}
+		if (dropDepth > 0) return;
+		if (!ALLOWED_TAGS.has(name)) return; // strip tag, keep inner text
+		if (name === "img" && !isClose) {
+			const attrs = parseAttrs(inner);
+			const src = attrs.get("src") ?? "";
+			if (!isSafeUrl(src)) return;
+			flushBlock();
+			flushAllLists();
+			blocks.push({
+				kind: "img",
+				text: attrs.get("alt") ?? "",
+				src,
+				alt: attrs.get("alt") ?? "",
+			});
+			return;
+		}
+		if (name === "br" && !isClose) {
+			appendText(" ");
+			return;
+		}
+		if (BLOCK_TAGS.has(name)) {
+			if (isClose) flushBlock();
+			else
+				openBlock(
+					name === "blockquote"
+						? "quote"
+						: (name as "p" | "h2" | "h3"),
+				);
+			return;
+		}
+		if (name === "ul" || name === "ol") {
+			if (isClose) {
+				closeList();
+			} else {
+				flushBlock();
+				// Flush the parent item first so its text stays ahead
+				// of the nested items (order is preserved on flatten).
+				flushItem();
+				listStack.push({ kind: name, items: [] });
+			}
+			return;
+		}
+		if (name === "li") {
+			if (isClose) {
+				flushItem();
+			} else {
+				flushItem();
+				if (listStack.length === 0)
+					listStack.push({ kind: "ul", items: [] });
+				item = [];
+			}
+			return;
+		}
+		// Inline marks.
+		switch (name) {
+			case "strong":
+			case "b":
+				if (isClose) closeMark("bold");
+				else marks.push({ bold: true });
+				break;
+			case "em":
+			case "i":
+				if (isClose) closeMark("italic");
+				else marks.push({ italic: true });
+				break;
+			case "u":
+				if (isClose) closeMark("underline");
+				else marks.push({ underline: true });
+				break;
+			case "s":
+			case "strike":
+				if (isClose) closeMark("strike");
+				else marks.push({ strike: true });
+				break;
+			case "a": {
+				if (isClose) {
+					closeMark("href");
+				} else {
+					const href = parseAttrs(inner).get("href") ?? "";
+					if (isSafeUrl(href)) marks.push({ href });
+				}
+				break;
+			}
+			default:
+				break;
+		}
+	};
+
+	while ((m = tokenRe.exec(html)) !== null) {
+		const textRun = html.slice(lastIndex, m.index);
+		if (textRun && dropDepth === 0) appendText(textRun);
+		lastIndex = m.index + m[0].length;
+		handleToken(m[0]); // dropDepth + DROP_CONTENT_TAGS handled inside
+	}
+	const tail = html.slice(lastIndex);
+	if (tail && dropDepth === 0) appendText(tail);
+	flushBlock();
+	flushAllLists();
 	return blocks;
 }
 

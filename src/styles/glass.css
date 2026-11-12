@@ -2639,6 +2639,47 @@ html[lang="bn"] .hero-name {
 	margin: 20px 0 8px;
 }
 
+/* TipTap rich bodies (2026-11-12): h3, lists, quotes and inline marks
+ * from the sanitized-HTML path. Legacy `## ` rows only ever emit h2/p,
+ * so these rules are inert for them. */
+.detail-body h3 {
+	font-size: 16px;
+	margin: 18px 0 6px;
+}
+
+.detail-body ul,
+.detail-body ol {
+	margin: 0 0 12px;
+	padding-left: 22px;
+	color: var(--ink-dim);
+}
+
+.detail-body li {
+	margin: 0 0 4px;
+}
+
+.detail-body li::marker {
+	color: var(--ink-dim);
+}
+
+.detail-body blockquote {
+	margin: 0 0 12px;
+	padding: 8px 0 8px 14px;
+	border-left: 3px solid var(--line, rgba(0, 0, 0, 0.15));
+	color: var(--ink-dim);
+}
+
+.detail-body a {
+	color: inherit;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.detail-body strong {
+	font-weight: 700;
+	color: var(--ink);
+}
+
 .detail-body p {
 	margin: 0 0 12px;
 	color: var(--ink-dim);

@@ -19,7 +19,7 @@ import {
 	absUrl,
 	dedupeBlocks,
 	mergeDetail,
-	parseBodyBlocks,
+	parseRichBody,
 } from "../../lib/detail";
 import { optimizedImageUrl, optimizedSrcset } from "../../lib/images";
 import { applySiteCopy, getDict, langUrl } from "../../lib/i18n";
@@ -137,7 +137,7 @@ const d = mergeDetail(buildData, liveData) as unknown as
 // three paragraphs rendered as cards AND as plain text) is dropped,
 // so each section appears exactly once. What survives is the hook lede.
 const rawBody = d?.content ?? buildEntry?.body ?? "";
-const ledeBlocks = dedupeBlocks(parseBodyBlocks(rawBody), [
+const ledeBlocks = dedupeBlocks(parseRichBody(rawBody), [
 	d?.problem,
 	d?.fix,
 	d?.result,
