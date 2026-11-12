@@ -40,7 +40,7 @@ import {
 	absUrl,
 	dedupeBlocks,
 	isRealUrl,
-	parseBodyBlocks,
+	parseRichBody,
 	yearOf,
 	type BodyBlock,
 } from "./detail";
@@ -471,11 +471,11 @@ async function prepareProject(
 	// then the backend's longDescription, then the live content string,
 	// then the short description (never an invented story).
 	const storyBlocks = bnStory
-		? parseBodyBlocks(bnStory)
+		? parseRichBody(bnStory)
 		: d?.longDescription
-			? parseBodyBlocks(d.longDescription)
+			? parseRichBody(d.longDescription)
 			: d?.content
-				? parseBodyBlocks(d.content)
+				? parseRichBody(d.content)
 				: [];
 	const showDescriptionFallback =
 		!bnStory && storyBlocks.length === 0 && Boolean(d?.description);
@@ -596,7 +596,7 @@ async function prepareCaseStudy(
 	// the Problem / Fix / Result fields is dropped, so each section
 	// appears exactly once. What survives is the hook lede.
 	const rawBody = bnContent ?? d?.content ?? "";
-	const ledeBlocks = dedupeBlocks(parseBodyBlocks(rawBody), [
+	const ledeBlocks = dedupeBlocks(parseRichBody(rawBody), [
 		d?.problem,
 		d?.fix,
 		d?.result,
@@ -710,7 +710,7 @@ async function prepareVenture(
 	// The body is the long description — never the one-liner repeated:
 	// any paragraph that restates the description is dropped.
 	const rawBody = bnContent ?? data?.content ?? "";
-	const bodyBlocks = dedupeBlocks(parseBodyBlocks(rawBody), [
+	const bodyBlocks = dedupeBlocks(parseRichBody(rawBody), [
 		data?.description,
 	]);
 
@@ -971,9 +971,9 @@ async function preparePost(
 	// into content blocks so '## ' lines become real <h2> headings
 	// instead of rendering literally as markdown text.
 	const storyBlocks = bnContent
-		? parseBodyBlocks(bnContent)
+		? parseRichBody(bnContent)
 		: data?.content
-			? parseBodyBlocks(data.content)
+			? parseRichBody(data.content)
 			: [];
 
 	const postsRaw = await getPosts();

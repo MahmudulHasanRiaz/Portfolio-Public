@@ -1,0 +1,39 @@
+---
+/**
+ * InlineNodes — renders one rich inline run list (see detail.ts).
+ * Every node renders through Astro's default escaping: text is never
+ * injected as raw HTML, so sanitized-but-hostile stored text (e.g. a
+ * literal "<script>" that survived as text) can only ever show as text.
+ * Only the allowlisted marks from parseHtmlBlocks reach here.
+ */
+import type { InlineNode } from "../lib/detail";
+
+interface Props {
+	nodes: InlineNode[];
+}
+
+const { nodes } = Astro.props as Props;
+---
+
+{
+	nodes.map((n) => {
+		// Innermost mark first so nesting renders correctly.
+		let out: any = <>{n.text}</>;
+		if (n.href) {
+			out = <a href={n.href}>{out}</a>;
+		}
+		if (n.strike) {
+			out = <s>{out}</s>;
+		}
+		if (n.underline) {
+			out = <u>{out}</u>;
+		}
+		if (n.italic) {
+			out = <em>{out}</em>;
+		}
+		if (n.bold) {
+			out = <strong>{out}</strong>;
+		}
+		return out;
+	})
+}

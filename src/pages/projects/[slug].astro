@@ -26,7 +26,7 @@ import {
 	absUrl,
 	isRealUrl,
 	mergeDetail,
-	parseBodyBlocks,
+	parseRichBody,
 	serviceForTags,
 } from "../../lib/detail";
 import { optimizedImageUrl, optimizedSrcset } from "../../lib/images";
@@ -144,9 +144,9 @@ const d = mergeDetail(buildData, liveData) as unknown as
 // exists, then the build-time markdown body, then the live content
 // string, then the short description (never an invented story).
 const storyBlocks = d?.longDescription
-	? parseBodyBlocks(d.longDescription)
+	? parseRichBody(d.longDescription)
 	: !Content && d?.content
-		? parseBodyBlocks(d.content)
+		? parseRichBody(d.content)
 		: [];
 const showDescriptionFallback =
 	!Content && storyBlocks.length === 0 && Boolean(d?.description);

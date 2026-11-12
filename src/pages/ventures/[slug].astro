@@ -19,7 +19,7 @@ import {
 	dedupeBlocks,
 	isRealUrl,
 	mergeDetail,
-	parseBodyBlocks,
+	parseRichBody,
 } from "../../lib/detail";
 import { optimizedImageUrl, optimizedSrcset } from "../../lib/images";
 import { PROFILE } from "../../data/site";
@@ -137,7 +137,7 @@ const data = mergeDetail(buildData, liveData) as unknown as
 // paragraph that restates the description is dropped (the live
 // duplication bug — the same line rendered as subtitle AND as body).
 const rawBody = data?.content ?? buildEntry?.body ?? "";
-const bodyBlocks = dedupeBlocks(parseBodyBlocks(rawBody), [
+const bodyBlocks = dedupeBlocks(parseRichBody(rawBody), [
 	data?.description,
 ]);
 

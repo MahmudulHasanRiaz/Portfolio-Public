@@ -19,7 +19,7 @@ import {
 	resolveCanonicalBase,
 	absUrl,
 	mergeDetail,
-	parseBodyBlocks,
+	parseRichBody,
 } from "../../../lib/detail";
 import {
 	optimizedImageUrl,
@@ -151,9 +151,9 @@ const bnContent =
 const rendered = buildEntry ? await render(buildEntry) : undefined;
 const Content = rendered?.Content;
 const storyBlocks = bnContent
-	? parseBodyBlocks(bnContent)
+	? parseRichBody(bnContent)
 	: !Content && data?.content
-		? parseBodyBlocks(data.content)
+		? parseRichBody(data.content)
 		: [];
 
 const postsRaw = await getPosts();

@@ -24,7 +24,7 @@ import {
 	absUrl,
 	isRealUrl,
 	mergeDetail,
-	parseBodyBlocks,
+	parseRichBody,
 	serviceForTags,
 } from "../../../lib/detail";
 import { optimizedImageUrl, optimizedSrcset } from "../../../lib/images";
@@ -166,11 +166,11 @@ const bnStory =
 // body, then the live content string, then the short description
 // (never an invented story).
 const storyBlocks = bnStory
-	? parseBodyBlocks(bnStory)
+	? parseRichBody(bnStory)
 	: d?.longDescription
-		? parseBodyBlocks(d.longDescription)
+		? parseRichBody(d.longDescription)
 		: !Content && d?.content
-			? parseBodyBlocks(d.content)
+			? parseRichBody(d.content)
 			: [];
 const showDescriptionFallback =
 	!bnStory &&

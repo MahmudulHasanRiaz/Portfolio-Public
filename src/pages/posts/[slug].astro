@@ -19,7 +19,7 @@ import {
 	resolveCanonicalBase,
 	absUrl,
 	mergeDetail,
-	parseBodyBlocks,
+	parseRichBody,
 } from "../../lib/detail";
 import {
 	optimizedImageUrl,
@@ -134,7 +134,7 @@ const data = mergeDetail(buildData, liveData) as unknown as
 const rendered = buildEntry ? await render(buildEntry) : undefined;
 const Content = rendered?.Content;
 const storyBlocks =
-	!Content && data?.content ? parseBodyBlocks(data.content) : [];
+	!Content && data?.content ? parseRichBody(data.content) : [];
 
 const posts = await getPosts();
 const idx = slug ? posts.findIndex((p) => p.data.slug === slug) : -1;
