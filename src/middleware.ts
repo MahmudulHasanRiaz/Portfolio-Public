@@ -35,9 +35,12 @@
 // no-store.
 //
 // Policies (keep in sync with the routeRules in astro.config.mjs):
-//   detail pages  — fresh 300 s, stale-while-revalidate 60 s.
-//   archives, homepage, Know Me, Platforms — fresh 60 s,
-//     stale-while-revalidate 300 s (new content shows quickly).
+//   ALL content pages — fresh 3600 s (1 h), stale-while-revalidate
+//     300 s. Freshness comes from the tag purge (POST
+//     /api/cache/invalidate, fired by the V2 admin on every content
+//     save), NOT from a short TTL — see docs/BUILD_GUARD.md Rule 8.
+//     The long TTL is what makes repeat visits edge hits instead of
+//     ~5 s cold Worker renders (measured 2026-11-12).
 //
 // Deliberately NOT applied to: /api/* (settings is cached 60s at its
 // own route — see src/pages/api/settings.ts — and /api/contact is a
@@ -58,10 +61,11 @@ const LIST_ROUTE_RE =
 	/^\/(bn\/)?(posts|projects|case-studies|ventures|releases|know-me|platforms)\/?$/;
 const HOME_ROUTE_RE = /^\/(bn\/?)?$/;
 
-// Keep in sync with the detail routeRules in astro.config.mjs.
-const DETAIL_CACHE_CONTROL = "public, max-age=300, stale-while-revalidate=60";
-// Keep in sync with the archive/home routeRules in astro.config.mjs.
-const LIST_CACHE_CONTROL = "public, max-age=60, stale-while-revalidate=300";
+// Keep in sync with the routeRules in astro.config.mjs (all content
+// routes: 1 h fresh, 5 min SWR — see Rule 8).
+const DETAIL_CACHE_CONTROL = "public, max-age=3600, stale-while-revalidate=300";
+// Keep in sync with the routeRules in astro.config.mjs (same policy).
+const LIST_CACHE_CONTROL = "public, max-age=3600, stale-while-revalidate=300";
 
 export const onRequest = defineMiddleware(async (context, next) => {
 	const response = await next();
