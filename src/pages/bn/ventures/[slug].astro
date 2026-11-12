@@ -6,11 +6,9 @@ import DetailVideoFacade from "../../../components/DetailVideoFacade.astro";
 import KeyStrip from "../../../components/KeyStrip.astro";
 import MarkdownBody from "../../../components/MarkdownBody.astro";
 import PrevNext from "../../../components/PrevNext.astro";
-import { getCollection, getEntry, getLiveEntry } from "astro:content";
+import { getEntry, getLiveEntry } from "astro:content";
 import {
-	createPublicContentLoader,
 	liveCollectionReachable,
-	warnLiveFallbackOnce,
 } from "../../../loaders/public-content";
 import { getVentures, formatDate } from "../../../lib/content";
 import {
@@ -26,56 +24,16 @@ import { PROFILE } from "../../../data/site";
 import { applySiteCopy, getDict, langUrl, localizeData } from "../../../lib/i18n";
 import { getSiteSettings } from "../../../lib/settings";
 
-// Bangla static detail route — same hybrid as the English route.
+// Bangla live detail route — same live route as the English one.
 // Bangla fields come from the item's optional nested `bn` object (live
 // API or build-time frontmatter); English is the fallback, never a blank.
-// Static detail route — hybrid live-then-static, ISSUE 7A (plan §2):
-// known slugs are prerendered at build time, so a click serves static
-// HTML from the edge instead of waiting on the Worker → slow VPS API
-// (~2.2s TTFB). When the API is reachable at build time the live
-// entry is authoritative (a missing live entry 404s); the
-// build-time row is only the outage fallback when the API is
-// unreachable (fix plan §1b).
-// Route caching is in astro.config.mjs.
-// NOTE: `export const prerender = false` was REMOVED on purpose —
-// Astro only calls getStaticPaths() for prerendered routes, so keeping
-// it made getStaticPaths dead code (no static files were ever built).
-// Trade-off: a slug published after the build 404s until the next
-// rebuild — the on-demand fallback for new slugs needs a twin SSR
-// route with the same pattern (Astro serves the static file when one
-// exists and falls through to the SSR route otherwise).
-export async function getStaticPaths() {
-	// Authoritative live slugs (fix plan §1b): when the live API is
-	// reachable at build time, prerender ONLY live slugs — a static
-	// row for an archived/draft item must not produce a page. When
-	// the API is unreachable, fall back to build-time slugs only —
-	// the build never fails on the live API.
-	if (await liveCollectionReachable("ventures")) {
-		try {
-			const { entries } = await createPublicContentLoader(
-				"ventures",
-			).loadCollection();
-			return entries
-				.map((entry) =>
-					typeof entry.data.slug === "string"
-						? entry.data.slug
-						: entry.id,
-				)
-				.filter((slug): slug is string => Boolean(slug))
-				.map((slug) => ({ params: { slug } }));
-		} catch {
-			// Live list fetch failed after the reachability probe —
-			// fall through to build-time slugs below.
-		}
-	}
-	warnLiveFallbackOnce("ventures");
-	const slugs = new Set<string>();
-	for (const entry of await getCollection("ventures")) {
-		slugs.add(entry.data.slug);
-	}
-	return [...slugs].map((slug) => ({ params: { slug } }));
-}
-
+// Live detail route — on-demand SSR (2026-11-12, output "server"):
+// every request renders this page in the Worker from the Public
+// Content API. When the API is reachable the live entry is
+// authoritative (a missing live entry 404s); the build-time row is
+// only the outage fallback when the API is unreachable (fix plan §1b).
+// A slug published after a deploy shows instantly — no rebuild.
+// Route caching is in astro.config.mjs + src/middleware.ts.
 const lang = "bn" as const;
 const settings = await getSiteSettings();
 const t = applySiteCopy(getDict(lang), lang, settings);

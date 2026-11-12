@@ -1,12 +1,11 @@
-// Edge-cache backstop for on-demand detail pages (Issue 7B).
+// Edge-cache backstop for live pages (Issue 7B, extended 2026-11-12
+// for the all-live site).
 //
 // DIAGNOSIS (2026-11-09, measured from this VM): the `routeRules` in
-// astro.config.mjs ARE correct and complete (all 10 EN + BN detail
-// routes, maxAge 300 / swr 60 — verified in the fresh build manifest),
-// and the currently deployed Worker DOES serve repeats from the edge
-// (cold MISS TTFB 3.25–3.6 s → immediate repeat HIT TTFB ~0.35 s).
-// But the caching has two silent single points of failure, both
-// invisible in the response headers:
+// astro.config.mjs ARE correct and complete, and the currently deployed
+// Worker DOES serve repeats from the edge (cold MISS TTFB 3.25–3.6 s →
+// immediate repeat HIT TTFB ~0.35 s). But the caching has two silent
+// single points of failure, both invisible in the response headers:
 //
 //   1. The cache provider only emits `Cloudflare-CDN-Cache-Control`
 //      when a route rule matched (or Astro.cache.set carried a maxAge —
@@ -25,38 +24,55 @@
 //      must revalidate on EVERY navigation — a wasted round trip on
 //      every back/forward and repeat visit.
 //
-// This middleware closes both gaps for the 10 detail routes, and only
-// for them: it sets an explicit plain `Cache-Control` (same 300 s fresh
-// / 60 s stale-while-revalidate as the edge policy, so browser and edge
-// staleness agree and tag purges still bound staleness) and, as a
-// belt-and-braces, a `Cloudflare-CDN-Cache-Control` with the same
-// values. It runs BEFORE Astro's cache-header step, so when a route
-// rule did match, the provider overwrites the CDN header with its own
-// identical 300/60 directive; when no rule matched, this value stands
-// instead of the adapter's no-store.
+// This middleware closes both gaps for ALL content pages, and only for
+// them: it sets an explicit plain `Cache-Control` (same values as the
+// edge policy, so browser and edge staleness agree and tag purges still
+// bound staleness) and, as a belt-and-braces, a
+// `Cloudflare-CDN-Cache-Control` with the same values. It runs BEFORE
+// Astro's cache-header step, so when a route rule did match, the
+// provider overwrites the CDN header with its own identical directive;
+// when no rule matched, this value stands instead of the adapter's
+// no-store.
 //
-// Deliberately NOT applied to: prerendered pages (static assets bypass
-// the Worker entirely), /api/* (settings is cached 60s at its own route
-// — see src/pages/api/settings.ts — and /api/contact is a POST), non-GET,
-// non-200, non-HTML, or responses carrying Set-Cookie. After 7A lands
-// getStaticPaths the detail pages become static files and this
-// middleware stops seeing them — it is a bridge for the live-then-static
-// interim, and harmless once that lands.
+// Policies (keep in sync with the routeRules in astro.config.mjs):
+//   detail pages  — fresh 300 s, stale-while-revalidate 60 s.
+//   archives, homepage, Know Me, Platforms — fresh 60 s,
+//     stale-while-revalidate 300 s (new content shows quickly).
+//
+// Deliberately NOT applied to: /api/* (settings is cached 60s at its
+// own route — see src/pages/api/settings.ts — and /api/contact is a
+// POST), /sitemap.xml and /robots.txt (they set their own Cache-Control
+// of 3600 s), non-GET, non-200, non-HTML, or responses carrying
+// Set-Cookie. Since the 2026-11-12 switch to output "server" there are
+// no prerendered pages left: every content page goes through the Worker
+// and through this middleware.
 
 import { defineMiddleware } from "astro:middleware";
 
 const DETAIL_ROUTE_RE =
 	/^\/(bn\/)?(posts|projects|case-studies|ventures|releases)\/[^/]+\/?$/;
 
+// Archives, Know Me, Platforms (EN + BN). The homepage pattern also
+// matches "/bn" and "/bn/".
+const LIST_ROUTE_RE =
+	/^\/(bn\/)?(posts|projects|case-studies|ventures|releases|know-me|platforms)\/?$/;
+const HOME_ROUTE_RE = /^\/(bn\/?)?$/;
+
 // Keep in sync with the detail routeRules in astro.config.mjs.
 const DETAIL_CACHE_CONTROL = "public, max-age=300, stale-while-revalidate=60";
+// Keep in sync with the archive/home routeRules in astro.config.mjs.
+const LIST_CACHE_CONTROL = "public, max-age=60, stale-while-revalidate=300";
 
 export const onRequest = defineMiddleware(async (context, next) => {
 	const response = await next();
 	if (context.request.method !== "GET") return response;
-	if (!DETAIL_ROUTE_RE.test(new URL(context.request.url).pathname)) {
-		return response;
-	}
+	const pathname = new URL(context.request.url).pathname;
+	const policy = DETAIL_ROUTE_RE.test(pathname)
+		? DETAIL_CACHE_CONTROL
+		: LIST_ROUTE_RE.test(pathname) || HOME_ROUTE_RE.test(pathname)
+			? LIST_CACHE_CONTROL
+			: null;
+	if (!policy) return response;
 	if (response.status !== 200) return response;
 	if (!(response.headers.get("content-type") ?? "").includes("text/html")) {
 		return response;
@@ -64,15 +80,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	if (response.headers.has("set-cookie")) return response;
 	// Plain Cache-Control for browsers (kills the `no-cache` fallback).
 	if (!response.headers.has("cache-control")) {
-		response.headers.set("Cache-Control", DETAIL_CACHE_CONTROL);
+		response.headers.set("Cache-Control", policy);
 	}
 	// Edge directive backstop (see header comment). The cache provider
 	// overwrites this with the same values when a route rule matched.
 	if (!response.headers.has("cloudflare-cdn-cache-control")) {
-		response.headers.set(
-			"Cloudflare-CDN-Cache-Control",
-			DETAIL_CACHE_CONTROL,
-		);
+		response.headers.set("Cloudflare-CDN-Cache-Control", policy);
 	}
 	return response;
 });

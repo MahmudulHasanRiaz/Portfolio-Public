@@ -100,6 +100,48 @@ rules are binding. Do not work around them.
   hero + services in Bangla, dark-mode logos white. If the build took more
   than 2 min, something regressed — check Rules 1–5 before retrying.
 
+## Rule 7 — The site is LIVE (server output, 2026-11-12)
+
+- `output: "server"` (astro.config.mjs). EVERY page renders live at
+  request time in the Worker from the Public Content API. There is no
+  prerendered HTML anymore. This supersedes the hybrid live-then-static
+  plan (ASTRO_HYBRID_PLAN.md) — do not reintroduce prerendering,
+  `getStaticPaths`, or build-time API calls without re-checking the
+  whole live design first.
+- Why (the failure class this kills): rebuilds #54/#55 (2026-11-12)
+  were "successful" builds that silently rendered STALE static rows —
+  the build-time live fetch hung 8 s × 5 collections and every
+  collection fell back to static. The live site showed 4 projects
+  instead of 10 and the old EcoMate text for hours, while every build
+  reported Success. With server output there IS no build-time fetch,
+  so this failure class cannot recur. The build is hermetic: it must
+  complete in well under 1 minute with zero live API calls (verify:
+  no "Public Content API unreachable" lines in the build log at all —
+  those warnings now only ever appear at REQUEST time in the Worker).
+- Critical CSS: `build.inlineStylesheets: "always"` inlines the full
+  built stylesheet (~64 kB minified) into every page at render time.
+  The old build-time critters step (scripts/inline-critical.mjs) is
+  deleted — it had no HTML to process in server mode. Do not re-add a
+  build-time inliner; do not switch inlineStylesheets back to "auto"
+  (the 64 kB sheet would go back to a render-blocking external link
+  and PageSpeed would drop).
+- Cache policy (astro.config.mjs routeRules + src/middleware.ts):
+  details fresh 300 s / SWR 60 s; archives, homepage, Know Me,
+  Platforms fresh 60 s / SWR 300 s. NEVER raise these TTLs without a
+  working tag purge on the same change — a long TTL recreates the
+  stale-content problem. If a page ever serves `no-store`, a route
+  rule is missing (the middleware is the backstop — read it).
+- Runtime token: the Worker fetch needs PUBLIC_CONTENT_API_TOKEN as a
+  Cloudflare runtime secret (dashboard). With no token the API 401s
+  and pages render the static fallback — never a 500. Never commit a
+  token; never put one in wrangler.jsonc vars.
+- After a deploy, the live check is now content, not markers: /projects/
+  shows 10, /projects/ecomate/ shows the new EcoMate headings, and an
+  admin edit appears live within ~1–6 minutes (TTL/SWR) or instantly
+  after a tag purge — NO rebuild needed. If an edit does not appear,
+  check the Worker log for the fallback warning first (it names the
+  collection), then the token, then the admin API.
+
 ## If you break one of these rules
 
 - Revert the single-purpose commit/PR that broke it. Every change on this
