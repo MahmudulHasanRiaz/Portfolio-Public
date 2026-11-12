@@ -847,8 +847,11 @@ export async function liveCollectionReachable(
 /**
  * Log the static-fallback warning for a collection, once per build
  * (fix plan §1b step 4). Silent fallback is how the stale-content
- * bug shipped unnoticed in rebuild #51 — a build that falls back
- * must say so, naming the collection.
+ * bug shipped unnoticed in rebuild #51 — a render that falls back
+ * must say so, naming the collection. (Since the 2026-11-12 switch
+ * to output "server" this fires at REQUEST time in the Worker, not
+ * at build time: the fallback is per-request, the next request retries
+ * live, and the edge cache bounds how long a fallback render is served.)
  */
 const warnedLiveFallback = new Set<string>();
 
@@ -856,7 +859,7 @@ export function warnLiveFallbackOnce(type: string): void {
 	if (warnedLiveFallback.has(type)) return;
 	warnedLiveFallback.add(type);
 	console.warn(
-		`[portfolio] Public Content API unreachable at build time — "${type}" is falling back to static rows; archived/draft items may still appear until the next successful build.`,
+		`[portfolio] Public Content API unreachable — "${type}" is falling back to static rows for this request; archived/draft items may still appear until the API answers again.`,
 	);
 }
 

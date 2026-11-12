@@ -3,37 +3,51 @@ import { defineConfig } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
 import preact from "@astrojs/preact";
 
-// Public site for riaz.com.bd — Astro + Cloudflare Workers (static assets).
-// Hybrid live-then-static (plan ASTRO_HYBRID_PLAN.md §§2–6):
-//   - Static-first: homepage, Know Me and archives build to static HTML.
-//   - Detail routes are on-demand (prerender = false): a new/updated slug
-//     shows live instantly via the Worker fallback, then becomes static
-//     after the next scheduled rebuild.
-//   - Live content comes from the read-only Public Content API (HTTP) via
-//     the live loader in src/loaders/ — the Worker cannot TCP to Postgres.
-//   - Route caching below keeps live pages fast; publish events purge by
-//     tag (POST /api/cache/invalidate) and trigger a debounced rebuild.
+// Public site for riaz.com.bd — Astro + Cloudflare Workers, LIVE
+// (on-demand SSR, 2026-11-12 — supersedes the hybrid live-then-static
+// plan ASTRO_HYBRID_PLAN.md §§2–6):
+//   - EVERY page renders live at request time in the Worker: the
+//     detail pages, the archives, the homepage, Know Me, Platforms.
+//     There is no prerendered HTML anymore, so a build can never ship
+//     stale content — the failure that bit rebuilds #54/#55 (build-time
+//     live fetches hung 8s × 5 collections, every build silently fell
+//     back to static rows while reporting "Success").
+//   - Live content comes from the read-only Public Content API (HTTP)
+//     via the live loader in src/loaders/ — the Worker cannot TCP to
+//     Postgres. The request-time token comes from the Worker runtime
+//     env (PUBLIC_CONTENT_API_TOKEN, Cloudflare dashboard secret —
+//     never in this repo). With no token the API 401s and every page
+//     still renders from the build-time rows (fail-safe, never a 500).
+//   - Route caching below keeps live pages fast: short fresh TTLs +
+//     stale-while-revalidate, so an admin save shows up within minutes
+//     at most (and instantly after a tag purge via
+//     POST /api/cache/invalidate). A long TTL would recreate the stale
+//     content problem — do not raise these values without a purge
+//     wired to the same change.
+//   - No build-time live fetching exists anymore: the build is hermetic
+//     (see docs/BUILD_GUARD.md). Do NOT reintroduce prerendering or
+//     build-time API calls without re-checking the whole live design.
 export default defineConfig({
-	output: "static",
-	// Prerender in Node, NOT in workerd (the adapter default).
-	//
-	// WHY (build c77c0055, 2026-11-09 — 30m 59s FAILED build): the
-	// adapter's default `prerenderEnvironment: "workerd"` runs `astro
-	// build` prerendering inside a workerd preview server, where
-	// `navigator.userAgent === "Cloudflare-Workers"`. The live loader
-	// gate in src/loaders/public-content.ts (isLiveFetchAllowed) uses
-	// exactly that userAgent to tell "deployed Worker" from "build" —
-	// so under workerd prerender the gate OPENED and every prerendered
-	// page made its live API fetches (2–4 per page; the build machine
-	// cannot reach admin.riaz.com.bd, so each hung for the full 8s
-	// timeout: +16s/+24s/+32s per route, 29m 25s of Building). With
-	// Node prerender, navigator.userAgent is "Node.js/24", the gate
-	// stays closed, and the build is ~1 min with byte-identical
-	// output (callers already fall back to build-time rows). DO NOT
-	// flip this back to "workerd" without also reworking the loader
-	// gate — there is no in-workerd signal that separates prerender
-	// from a real request. Request-time behaviour is untouched: the
-	// deployed Worker still runs in workerd and still fetches live.
+	output: "server",
+	// Critical CSS (PageSpeed): with no prerendered HTML the old
+	// build-time critters step (scripts/inline-critical.mjs, deleted
+	// with this change) has nothing to process. Instead Astro inlines
+	// the full built stylesheet (~64 kB minified, @font-face included)
+	// into every page's <head> at render time — no render-blocking
+	// stylesheet request at all, and the [data-theme] variable blocks
+	// are present, so the View Transitions theme bug (a page running
+	// on critical CSS only could not override the system preference)
+	// stays fixed. The inlined bytes are edge-cached with the HTML,
+	// so repeat visits pay nothing extra.
+	build: {
+		inlineStylesheets: "always",
+	},
+	// No prerendering happens in server mode, so prerenderEnvironment
+	// is inert here — kept only so the adapter config stays familiar.
+	// (History: with output "static" it had to be "node", never
+	// "workerd", or the loader gate opened during prerender and every
+	// page paid 8s API timeouts — see the loader's isLiveFetchAllowed
+	// comment. That failure class is gone with server output.)
 	adapter: cloudflare({ prerenderEnvironment: "node" }),
 	// Preact (not React) for the islands — the React 19 runtime was
 	// 212KB raw / 64.7KiB transfer with ~95KB unused (PageSpeed +
@@ -58,9 +72,16 @@ export default defineConfig({
 		},
 	},
 
-	// Route caching (plan §5). Detail pages: fresh 5 min, then serve stale
-	// while revalidating for 60s. Archives: fresh 60s so new content shows
-	// in lists quickly, then stale-while-revalidate for 5 min.
+	// Route caching. Detail pages: fresh 5 min, then serve stale while
+	// revalidating for 60s. Archives, homepage, Know Me, Platforms:
+	// fresh 60s so new content shows in lists quickly, then
+	// stale-while-revalidate for 5 min. The homepage aggregates every
+	// collection, so it carries all content tags — any content purge
+	// refreshes it. src/middleware.ts mirrors these policies as a
+	// backstop (the adapter injects `no-store` when no rule matches,
+	// which would silently un-cache a page — see the middleware).
+	// /sitemap.xml and /robots.txt are NOT listed here: they set their
+	// own Cache-Control (3600s) in the endpoint.
 	routeRules: {
 		"/posts/[slug]": { maxAge: 300, swr: 60, tags: ["posts"] },
 		"/projects/[slug]": { maxAge: 300, swr: 60, tags: ["projects"] },
@@ -82,5 +103,19 @@ export default defineConfig({
 		"/bn/case-studies": { maxAge: 60, swr: 300, tags: ["case-studies"] },
 		"/bn/ventures": { maxAge: 60, swr: 300, tags: ["ventures"] },
 		"/bn/releases": { maxAge: 60, swr: 300, tags: ["releases"] },
+		"/": {
+			maxAge: 60,
+			swr: 300,
+			tags: ["home", "projects", "posts", "case-studies", "ventures", "releases"],
+		},
+		"/bn": {
+			maxAge: 60,
+			swr: 300,
+			tags: ["home", "projects", "posts", "case-studies", "ventures", "releases"],
+		},
+		"/know-me": { maxAge: 60, swr: 300, tags: ["home"] },
+		"/bn/know-me": { maxAge: 60, swr: 300, tags: ["home"] },
+		"/platforms": { maxAge: 60, swr: 300, tags: ["home"] },
+		"/bn/platforms": { maxAge: 60, swr: 300, tags: ["home"] },
 	},
 });

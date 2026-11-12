@@ -1,29 +1,23 @@
 ---
 // Twin SSR fallback — catch-all on-demand detail route.
 //
-// The live half of the hybrid plan (ASTRO_HYBRID_PLAN.md §2). The 10
-// detail routes are FULLY STATIC (getStaticPaths; prerender=false was
-// removed because Astro 7.4.7 never calls getStaticPaths for
-// prerender=false routes), so a slug published AFTER the build 404s
-// until the next rebuild. This route closes that gap:
-//
-//   - Astro serves the STATIC page when one exists for a slug —
-//     static routes take precedence over this rest route, so a known
-//     slug never reaches here.
-//   - A path with no static match falls through to this route, which
-//     renders the slug LIVE from the Public Content API with the SAME
-//     detail templates + SEO the static pages use (see
-//     src/lib/twin-detail.ts and src/components/details/).
+// The live half of the hybrid plan (ASTRO_HYBRID_PLAN.md §2), kept
+// after the 2026-11-12 switch to output "server": the 10 detail routes
+// are live too now, so this route no longer rescues new slugs — it is
+// the catch-all for paths no other route matches. It renders the slug
+// LIVE from the Public Content API with the SAME detail templates +
+// SEO the detail pages use (see src/lib/twin-detail.ts and
+// src/components/details/).
+//   - A path with no match anywhere else falls through to this route.
 //   - A slug the API does not know returns a proper 404 (the type's
 //     not-found section, never an empty detail page), and a path that
 //     is not a detail URL at all returns a generic 404.
 //
 // On-demand by design: `export const prerender = false` — this route
 // runs in the deployed Cloudflare Worker, where isLiveFetchAllowed()
-// lets the live loader fetch (build-time prerender skips live fetches,
-// so this route is never built to a static file). Edge caching comes
-// from src/middleware.ts (detail-shaped paths get 300/60) + the cache
-// tags set on the live entry below, so publish events purge it by tag.
+// lets the live loader fetch. Edge caching comes from src/middleware.ts
+// (detail-shaped paths get 300/60) + the cache tags set on the live
+// entry below, so publish events purge it by tag.
 import Layout from "../layouts/Layout.astro";
 import CaseStudyDetail from "../components/details/CaseStudyDetail.astro";
 import PostDetail from "../components/details/PostDetail.astro";

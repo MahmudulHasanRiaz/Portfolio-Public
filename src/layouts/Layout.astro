@@ -401,21 +401,22 @@ const isHome =
 					}, 250);
 				}
 
-				// Full stylesheet: critters inlines critical CSS and loads
-				// the full stylesheet non-blockingly via a
-				// <script data-href> loader in <head> ($loadcss — creates
-				// a <link rel="stylesheet">). That loader is deduped by
-				// View Transitions (identical script on every page), so
-				// after a client-side navigation the new <head> has only
-				// the <link rel="preload"> and the full stylesheet is
-				// gone — the page runs on critical CSS only, which has
-				// no [data-theme] variable blocks, so the stored theme
-				// cannot override the system preference (system-dark:
-				// every navigated-to page renders dark whatever is
-				// stored; 2026-11-10 theme/language order bug). Re-apply
-				// it on every page-load: the preload link in the new
-				// <head> carries the hashed href, and the guard below
-				// keeps the initial load to exactly one stylesheet link.
+				// Full stylesheet: since the 2026-11-12 switch to output
+				// "server", Astro inlines the whole built stylesheet
+				// into every page (build.inlineStylesheets: "always" —
+				// the old build-time critters step is gone, there is no
+				// preload link and no $loadcss loader anymore). This
+				// function is kept as a no-op backstop: if a future
+				// change ever brings back an external stylesheet, it
+				// re-applies the preload link on every page-load so a
+				// View Transitions navigation cannot leave the page
+				// running on inlined CSS only (which has no [data-theme]
+				// variable blocks, so the stored theme could not
+				// override the system preference — the 2026-11-10
+				// theme/language order bug). With the full stylesheet
+				// inlined, the [data-theme] blocks are always present
+				// and the bug cannot occur; the guard below still keeps
+				// the initial load to exactly one stylesheet link.
 				function ensureStylesheet() {
 					try {
 						var preload = document.querySelector(
